@@ -43,6 +43,9 @@
   #hintcard h2 { color:#b7791f; font-size:clamp(20px,4vw,28px); font-weight:900; margin-bottom:12px; }
   #hinttext { color:#4a3200; font-size:clamp(20px,4.4vw,32px); font-weight:800; line-height:1.9; }
   #gameover { display:none; }
+  #map { display:none; }
+  #storyIntro { display:none; }
+  #stageClear { display:none; }
   #finalstats { color:#fff; font-size:clamp(18px,3.6vw,28px); font-weight:800; line-height:2; }
   #run-gems { color:#ffd93d; font-size:clamp(15px,3vw,20px); font-weight:800; }
   #continuebtn { display:none; background:linear-gradient(#7cfc9a,#3ec46d); box-shadow:0 6px 0 #1b7a3d, 0 10px 24px rgba(0,0,0,.4); }
@@ -58,6 +61,31 @@
   #zukanRow { display:flex; gap:10px; margin-top:2px; }
   .zukan-icon { width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:20px; filter:grayscale(1) brightness(.6); }
   .zukan-icon.got { background:rgba(255,217,61,.18); border-color:#ffd93d; filter:none; }
+
+  /* ---------- stage progress (in-run HUD) ---------- */
+  #stageStat { display:flex; align-items:center; gap:6px; }
+  #stageIcon { font-size:1.3em; }
+
+  /* ---------- stage map ---------- */
+  #map { overflow-y:auto; }
+  #mapTitle { color:#fff; font-size:clamp(22px,4.4vw,32px); font-weight:900; margin-bottom:4px; }
+  #mapList { display:flex; flex-direction:column; align-items:center; gap:0; padding:6px 0 10px; }
+  .stage-node-wrap { display:flex; flex-direction:column; align-items:center; }
+  .stage-connector { width:4px; height:26px; background:rgba(255,255,255,.3); }
+  .stage-node { display:flex; align-items:center; gap:14px; width:min(88vw,420px); background:rgba(8,20,45,.72); border:2px solid rgba(255,255,255,.25); border-radius:20px; padding:12px 20px; font-family:inherit; text-align:left; }
+  .stage-node .stage-node-icon { font-size:34px; width:44px; text-align:center; }
+  .stage-node .stage-node-name { color:#fff; font-weight:900; font-size:clamp(15px,2.8vw,19px); }
+  .stage-node .stage-node-sub { color:#cfe0ff; font-size:12px; font-weight:700; }
+  .stage-node.cleared { border-color:#7cfc9a; box-shadow:0 0 16px rgba(124,252,154,.4); }
+  .stage-node.locked { opacity:.45; }
+  .stage-node.locked .stage-node-icon { filter:grayscale(1); }
+  #mapBackBtn { margin-top:6px; }
+
+  /* ---------- story / stage-clear cards ---------- */
+  .story-icon { font-size:56px; }
+  #storyIntro h2, #stageClear h2 { color:#ffd93d; font-size:clamp(20px,4vw,28px); font-weight:900; }
+  #storyIntro p, #stageClear p { max-width:560px; }
+  #stageClearGems { color:#ffd93d; font-weight:800; font-size:clamp(15px,3vw,20px); }
 </style>
 </head>
 <body class="kids-app kids-reset">
@@ -69,7 +97,7 @@
     <div class="pill" id="problem">8 + 7 = ?</div>
     <div class="pill" id="stats">
       <div class="stat">スコア <span id="score">0</span></div>
-      <div class="stat">レベル <span id="level">1</span>&nbsp;&nbsp;&#128293;<span id="combo">0</span></div>
+      <div class="stat" id="stageStat"><span id="stageIcon">🌲</span><span id="stageProgress">0/6</span>&nbsp;&nbsp;&#128293;<span id="combo">0</span></div>
     </div>
   </div>
   <div id="combo-pop"></div>
@@ -83,20 +111,38 @@
 
 <div class="overlay" id="start">
   <h1>モンスター<br><span class="em">けいさん</span>シューター</h1>
-  <p>ただしい こたえの モンスターを タップして やっつけよう!<br>まちがえずに れんぞくで たおすと コンボボーナス!<br>コンボで アイテムを ゲットしよう!</p>
+  <p>すうじおうこくの すうじを、モンスターたちから とりもどす ぼうけんに でよう!<br>ただしい こたえの モンスターを タップして やっつけよう!</p>
   <div id="profileStrip">
     <div id="levelBadge">Lv.1 けいさんみならい</div>
     <div id="xpBarWrap"><div id="xpBarFill"></div></div>
     <div id="gemsDisplay">💎 0</div>
     <div id="zukanRow"></div>
   </div>
-  <div class="modes">
-    <button class="modebtn sel" data-mode="mix">ミックス</button>
-    <button class="modebtn" data-mode="add">たし算だけ</button>
-    <button class="modebtn" data-mode="sub">ひき算だけ</button>
-  </div>
-  <button class="bigbtn" id="startbtn">スタート!</button>
+  <button class="bigbtn" id="startbtn">ぼうけんに でる!</button>
   <p id="rotate-tip">&#128241; iPadは よこむきが おすすめ</p>
+</div>
+
+<div class="overlay" id="map">
+  <div id="mapTitle">&#128506;&#65039; ぼうけんマップ</div>
+  <div id="mapList"></div>
+  <button class="bigbtn" id="mapBackBtn">もどる</button>
+</div>
+
+<div class="overlay" id="storyIntro">
+  <div class="story-icon" id="storyIcon">&#127795;</div>
+  <h2 id="storyTitle">しずかなもり</h2>
+  <p id="storyText"></p>
+  <button class="bigbtn" id="storyStartBtn">たたかう!</button>
+  <button class="bigbtn" id="storyBackBtn">マップへもどる</button>
+</div>
+
+<div class="overlay" id="stageClear">
+  <h1><span class="em">ステージクリア</span>!</h1>
+  <div class="story-icon" id="clearIcon">&#127881;</div>
+  <p id="clearText"></p>
+  <div id="stageClearGems"></div>
+  <button class="bigbtn" id="nextStageBtn"></button>
+  <button class="bigbtn" id="clearMapBtn">マップへ もどる</button>
 </div>
 
 <div class="overlay" id="hintoverlay">
@@ -108,11 +154,12 @@
 </div>
 
 <div class="overlay" id="gameover">
-  <h1>ゲーム<span class="em">オーバー</span></h1>
+  <h1>ステージ<span class="em">しっぱい</span></h1>
   <div id="finalstats"></div>
   <div id="run-gems"></div>
   <button class="bigbtn" id="continuebtn"></button>
   <button class="bigbtn" id="retrybtn">もういちど!</button>
+  <button class="bigbtn" id="gameoverMapBtn">マップへ もどる</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
@@ -261,12 +308,12 @@ function buildModelTemplate(key){
 const MODEL_TEMPLATES = {};
 MODEL_KEYS.forEach(key=>{ MODEL_TEMPLATES[key] = buildModelTemplate(key); });
 
-function makeMonster(num){
+function makeMonster(num, forceGolden){
   const g = new THREE.Group();
   const key = MODEL_KEYS[Math.floor(Math.random()*MODEL_KEYS.length)];
   const model = MODEL_TEMPLATES[key].clone(true);
   const mainMat = MODEL_META[key].mainMat;
-  const golden = Math.random() < Progression.GOLDEN_CHANCE;
+  const golden = !!forceGolden || Math.random() < Progression.GOLDEN_CHANCE;
   const tintColor = golden ? 0xffd93d : palette[Math.floor(Math.random()*palette.length)];
   model.traverse(o=>{
     if(!o.isMesh) return;
@@ -274,7 +321,7 @@ function makeMonster(num){
     o.material = Array.isArray(o.material) ? mats : mats[0];
     mats.forEach(m=>{ if(m.name === mainMat) m.color.set(tintColor); });
   });
-  if(golden) model.scale.multiplyScalar(1.12);
+  if(golden) model.scale.multiplyScalar(forceGolden ? 1.3 : 1.12);
   g.add(model);
 
   /* number board above head */
@@ -282,15 +329,15 @@ function makeMonster(num){
   label.position.set(0, TARGET_HEIGHT + 0.55, 0);
   g.add(label);
 
-  g.userData = { answer:num, alive:true, bobPhase:Math.random()*Math.PI*2, label:label, bodyColor:tintColor, species:key, golden:golden };
+  g.userData = { answer:num, alive:true, bobPhase:Math.random()*Math.PI*2, label:label, bodyColor:tintColor, species:key, golden:golden, boss:!!forceGolden };
   g.traverse(o=>{ o.userData.root = g; });
   return g;
 }
 
 /* ================= GAME STATE ================= */
 const S = {
-  mode:"mix", running:false, paused:false, advancing:false,
-  score:0, combo:0, bestCombo:0, level:1, solved:0, hearts:3,
+  stage:null, isBossWave:false, running:false, paused:false, advancing:false,
+  score:0, combo:0, bestCombo:0, solved:0, hearts:3,
   monsters:[], particles:[], lasers:[],
   a:0, b:0, op:"+", answer:0,
   speed:0.9, lastT:0,
@@ -407,13 +454,23 @@ function useItem(slotIndex){
 }
 
 function genProblem(){
-  S.op = S.mode==="add" ? "+" : S.mode==="sub" ? "-" : (Math.random()<0.5?"+":"-");
+  const st = S.stage;
+  S.op = st.opMode==="add" ? "+" : st.opMode==="sub" ? "-" : (Math.random()<0.5?"+":"-");
   if(S.op==="+"){
-    do { S.a = 2+Math.floor(Math.random()*8); S.b = 2+Math.floor(Math.random()*8); } while(S.a+S.b < 11);
+    if(st.carry){
+      do { S.a = 2+Math.floor(Math.random()*8); S.b = 2+Math.floor(Math.random()*8); } while(S.a+S.b < 11);
+    } else {
+      do { S.a = 1+Math.floor(Math.random()*8); S.b = 1+Math.floor(Math.random()*8); } while(S.a+S.b > 9);
+    }
     S.answer = S.a+S.b;
   } else {
-    S.a = 11+Math.floor(Math.random()*8);
-    do { S.b = 2+Math.floor(Math.random()*8); } while(S.b <= S.a%10 || S.a-S.b < 1);
+    if(st.carry){
+      S.a = 11+Math.floor(Math.random()*8);
+      do { S.b = 2+Math.floor(Math.random()*8); } while(S.b <= S.a%10 || S.a-S.b < 1);
+    } else {
+      S.a = 3+Math.floor(Math.random()*7);
+      do { S.b = 1+Math.floor(Math.random()*6); } while(S.b >= S.a);
+    }
     S.answer = S.a-S.b;
   }
   $("problem").textContent = S.a+" "+S.op+" "+S.b+" = ?";
@@ -443,13 +500,15 @@ function spawnWave(){
   S.advancing = false;
   clearMonsters();
   genProblem();
-  const count = S.level >= 4 ? 4 : 3;
+  S.isBossWave = !!(S.stage.boss && S.solved === S.stage.clearTarget - 1);
+  if(S.isBossWave) showMsg("⚔️ ボスもんだい!");
+  const count = S.stage.monsterCount;
   const nums = distractors(S.answer, count-1);
   nums.splice(Math.floor(Math.random()*count), 0, S.answer);
   const spread = 11;
   const order = nums.map((n,i)=>i).sort(()=>Math.random()-0.5);
   nums.forEach((n,i)=>{
-    const m = makeMonster(n);
+    const m = makeMonster(n, S.isBossWave && n===S.answer);
     const slot = order[i];
     const x = -spread/2 + spread*(slot/(count-1)) + (Math.random()*1.2-0.6);
     m.position.set(x, 1.3, -34 - Math.random()*6);
@@ -511,7 +570,8 @@ function popCombo(){
 
 function updateHUD(){
   $("score").textContent = S.score;
-  $("level").textContent = S.level;
+  $("stageIcon").textContent = S.stage.icon;
+  $("stageProgress").textContent = S.solved + "/" + S.stage.clearTarget;
   $("combo").textContent = S.combo;
   $("hearts").innerHTML = "&#10084;&#65039;".repeat(S.hearts) + "&#129293;".repeat(3-S.hearts);
 }
@@ -530,6 +590,7 @@ function hitCorrect(monster){
   S.monsters = S.monsters.filter(m=>m!==monster);
 
   const golden = monster.userData.golden;
+  const boss = monster.userData.boss;
   let gain = 10 + S.combo*2;
   if(golden) gain *= Progression.GOLDEN_MULTIPLIER;
   S.score += gain;
@@ -540,14 +601,17 @@ function hitCorrect(monster){
   S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo);
   S.solved++;
   popCombo();
-  if(golden){
+
+  const stageCleared = S.solved >= S.stage.clearTarget;
+  if(boss){
+    sfx.golden();
+    showMsg("👑 ボスを たおした!");
+  } else if(golden){
     sfx.golden();
     showMsg("✨ きんいろモンスター! " + Progression.GOLDEN_MULTIPLIER + "ばいボーナス!");
-  } else if(S.solved % 5 === 0){
-    S.level++;
-    S.speed += 0.22;
+  } else if(stageCleared){
     sfx.levelup();
-    showMsg("レベルアップ! レベル " + S.level + "!");
+    showMsg("🎉 ステージクリア!");
   } else {
     sfx.good();
     showMsg(cheers[Math.floor(Math.random()*cheers.length)]);
@@ -555,7 +619,10 @@ function hitCorrect(monster){
   if(S.combo > 0 && S.combo % 3 === 0) grantRandomItem();
   updateHUD();
   S.advancing = true;
-  setTimeout(()=>{ if(S.running) spawnWave(); }, 650);
+  setTimeout(()=>{
+    if(!S.running) return;
+    if(stageCleared) clearStage(); else spawnWave();
+  }, 650);
 }
 
 function hitWrong(monster){
@@ -598,10 +665,10 @@ function gameOver(){
   clearMonsters();
   $("hud").style.display = "none";
   $("finalstats").innerHTML =
+    S.stage.icon + " " + S.stage.name + " で ちからつきた…<br>" +
     "スコア: <b style='color:#ffd93d'>" + S.score + "</b><br>" +
-    "たおした もんだい: " + S.solved + " もん<br>" +
-    "さいこうコンボ: " + S.bestCombo + " れんぞく<br>" +
-    "とうたつレベル: " + S.level;
+    "たおした もんだい: " + S.solved + " / " + S.stage.clearTarget + " もん<br>" +
+    "さいこうコンボ: " + S.bestCombo + " れんぞく";
   profile.bestScore = Math.max(profile.bestScore, S.score);
   profile.bestCombo = Math.max(profile.bestCombo, S.bestCombo);
   Progression.saveProfile(profile);
@@ -627,6 +694,99 @@ function continueRun(){
   spawnWave();
 }
 $("continuebtn").addEventListener("click", continueRun);
+$("gameoverMapBtn").addEventListener("click", ()=>{ $("gameover").style.display = "none"; openMap(); });
+
+/* ================= STAGE MAP / STORY ================= */
+function hideAllOverlays(){
+  ["start","map","storyIntro","stageClear","gameover","hud"].forEach(id=>{ $(id).style.display = "none"; });
+}
+
+function renderMap(){
+  const list = $("mapList");
+  list.innerHTML = "";
+  Progression.STAGES.forEach((stage,i)=>{
+    if(i>0){
+      const connector = document.createElement("div");
+      connector.className = "stage-connector";
+      list.appendChild(connector);
+    }
+    const unlocked = Progression.isStageUnlocked(profile, stage.id);
+    const cleared = profile.clearedStages.indexOf(stage.id) >= 0;
+    const wrap = document.createElement("div");
+    wrap.className = "stage-node-wrap";
+    const btn = document.createElement("button");
+    btn.className = "stage-node" + (cleared ? " cleared" : "") + (unlocked ? "" : " locked");
+    btn.innerHTML =
+      '<div class="stage-node-icon">' + (unlocked ? stage.icon : "🔒") + '</div>' +
+      '<div><div class="stage-node-name">' + (i+1) + ". " + stage.name + (cleared ? " ✅" : "") + '</div>' +
+      '<div class="stage-node-sub">もくひょう ' + stage.clearTarget + 'もん</div></div>';
+    if(unlocked) btn.addEventListener("click", ()=>openStoryIntro(stage.id));
+    wrap.appendChild(btn);
+    list.appendChild(wrap);
+  });
+}
+
+function openMap(){
+  hideAllOverlays();
+  renderMap();
+  $("map").style.display = "flex";
+}
+$("startbtn").addEventListener("click", ()=>{ audioInit(); openMap(); });
+$("mapBackBtn").addEventListener("click", ()=>{ hideAllOverlays(); $("start").style.display = "flex"; });
+
+let storyStageId = null;
+function openStoryIntro(stageId){
+  const stage = Progression.getStage(stageId);
+  storyStageId = stageId;
+  $("storyIcon").textContent = stage.icon;
+  $("storyTitle").textContent = (stageId) + ". " + stage.name;
+  $("storyText").textContent = stage.intro;
+  hideAllOverlays();
+  $("storyIntro").style.display = "flex";
+}
+$("storyStartBtn").addEventListener("click", ()=>{ if(storyStageId!=null) startStage(storyStageId); });
+$("storyBackBtn").addEventListener("click", openMap);
+
+function startStage(stageId){
+  const stage = Progression.getStage(stageId);
+  S.stage = stage;
+  S.score = 0; S.combo = 0; S.bestCombo = 0; S.solved = 0; S.hearts = 3;
+  S.speed = stage.speedBase; S.running = true; S.paused = false; S.advancing = false;
+  S.inventory = []; S.hasShield = false; S.runGems = 0;
+  if(S.slowTimer){ clearTimeout(S.slowTimer); S.slowTimer = null; S.preSlowSpeed = null; }
+  updateHUD();
+  renderInventory();
+  $("hintbtn").style.display = stage.carry ? "" : "none";
+  hideAllOverlays();
+  $("hud").style.display = "block";
+  spawnWave();
+}
+
+function clearStage(){
+  S.running = false;
+  clearMonsters();
+  hideAllOverlays();
+  const stage = S.stage;
+  const bonus = 20 + stage.clearTarget*2;
+  awardGems(bonus);
+  Progression.markStageCleared(profile, stage.id);
+  Progression.saveProfile(profile);
+  renderProfileStrip();
+  $("clearIcon").textContent = stage.icon;
+  $("clearText").textContent = stage.clear;
+  $("stageClearGems").textContent = "💎+" + bonus + " ボーナス! (この プレイで 💎+" + S.runGems + ")";
+  const next = Progression.getStage(stage.id+1);
+  const nextBtn = $("nextStageBtn");
+  if(next){
+    nextBtn.style.display = "inline-block";
+    nextBtn.textContent = "つぎの ステージへ";
+    nextBtn.onclick = ()=>openStoryIntro(next.id);
+  } else {
+    nextBtn.style.display = "none";
+  }
+  $("stageClear").style.display = "flex";
+}
+$("clearMapBtn").addEventListener("click", openMap);
 
 /* ================= INPUT (touch + mouse) ================= */
 const ray = new THREE.Raycaster();
@@ -672,29 +832,8 @@ $("hintclose").addEventListener("click", ()=>{
   S.paused = false;
 });
 
-/* ================= START / RETRY ================= */
-document.querySelectorAll(".modebtn").forEach(btn=>{
-  btn.addEventListener("click", ()=>{
-    document.querySelectorAll(".modebtn").forEach(b=>b.classList.remove("sel"));
-    btn.classList.add("sel");
-    S.mode = btn.dataset.mode;
-  });
-});
-function startGame(){
-  audioInit();
-  S.score = 0; S.combo = 0; S.bestCombo = 0; S.level = 1; S.solved = 0; S.hearts = 3;
-  S.speed = 0.9; S.running = true; S.paused = false; S.advancing = false;
-  S.inventory = []; S.hasShield = false; S.runGems = 0;
-  if(S.slowTimer){ clearTimeout(S.slowTimer); S.slowTimer = null; S.preSlowSpeed = null; }
-  updateHUD();
-  renderInventory();
-  $("start").style.display = "none";
-  $("gameover").style.display = "none";
-  $("hud").style.display = "block";
-  spawnWave();
-}
-$("startbtn").addEventListener("click", startGame);
-$("retrybtn").addEventListener("click", startGame);
+/* ================= RETRY ================= */
+$("retrybtn").addEventListener("click", ()=>{ if(S.stage) startStage(S.stage.id); });
 
 /* ================= MAIN LOOP ================= */
 function animate(t){

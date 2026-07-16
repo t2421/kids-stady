@@ -36,6 +36,29 @@
     skeleton: { icon: "💀", name: "がいこつ" },
   };
 
+  const STORY_INTRO = "すうじおうこくに あらわれた モンスターたちが、だいじな こたえの すうじを ぜんぶ もっていってしまった!ぼうけんしゃの きみが、けいさんの ちからで もりから おしろまで すすんで、すうじを とりもどそう!";
+
+  const STAGES = [
+    { id: 1, name: "しずかなもり",     icon: "🌲", opMode: "add", carry: false, speedBase: 0.65, monsterCount: 3, clearTarget: 6,  boss: false,
+      intro: "もりの いりぐちに、ちいさな モンスターたちが すうじを かくして いるみたい。かんたんな けいさんで やっつけよう!",
+      clear: "もりの モンスターを やっつけた!つぎは あついさばくが まっているよ。" },
+    { id: 2, name: "すなのさばく",     icon: "🏜️", opMode: "add", carry: true,  speedBase: 0.85, monsterCount: 3, clearTarget: 7,  boss: false,
+      intro: "あつい すなの さばくには、たしざんが とくいな モンスターが たくさん!くりあがりに ちゅうい!",
+      clear: "さばくを こえた!つぎは つめたい こおりの やまだ。" },
+    { id: 3, name: "こおりのやま",     icon: "🏔️", opMode: "sub", carry: true,  speedBase: 0.95, monsterCount: 3, clearTarget: 7,  boss: false,
+      intro: "こおりの やまでは、ひきざんモンスターが まちぶせしている!くりさがりを おもいだそう。",
+      clear: "やまを のりこえた!つぎは くらい どうくつが まっている。" },
+    { id: 4, name: "ようがんどうくつ", icon: "🌋", opMode: "mix", carry: true,  speedBase: 1.1,  monsterCount: 4, clearTarget: 8,  boss: false,
+      intro: "まっくらな どうくつには、たしざんも ひきざんも まざった モンスターが すんでいる!",
+      clear: "どうくつを ぬけだした!つぎは あらしの かいがんだ。" },
+    { id: 5, name: "あらしのかいがん", icon: "🌊", opMode: "mix", carry: true,  speedBase: 1.3,  monsterCount: 4, clearTarget: 9,  boss: false,
+      intro: "あらしの かいがんで、モンスターたちの スピードが ぐんと あがってきた!しゅうちゅう!",
+      clear: "かいがんを つきやぶった!いよいよ さいごは モンスターじょうだ。" },
+    { id: 6, name: "モンスターじょう", icon: "🏰", opMode: "mix", carry: true,  speedBase: 1.5,  monsterCount: 4, clearTarget: 10, boss: true,
+      intro: "ここが さいごの おしろ。ボスモンスターが すうじの おうかんを もっている!たおして とりかえそう!",
+      clear: "やった!ボスを たおして、すうじの おうかんを とりもどした!きみは りっぱな けいさんゆうしゃだ!" },
+  ];
+
   function defaultProfile() {
     return {
       gems: 0,
@@ -43,6 +66,8 @@
       bestCombo: 0,
       defeated: {},
       goldDefeated: 0,
+      clearedStages: [],
+      unlockedStage: 1,
     };
   }
 
@@ -61,7 +86,22 @@
       bestCombo: Number(saved.bestCombo) || 0,
       defeated: Object.assign({}, base.defeated, saved.defeated),
       goldDefeated: Number(saved.goldDefeated) || 0,
+      clearedStages: Array.isArray(saved.clearedStages) ? saved.clearedStages.slice() : [],
+      unlockedStage: Number(saved.unlockedStage) || 1,
     };
+  }
+
+  function getStage(stageId) {
+    return STAGES.find(function (s) { return s.id === stageId; }) || null;
+  }
+
+  function isStageUnlocked(profile, stageId) {
+    return stageId <= (profile.unlockedStage || 1);
+  }
+
+  function markStageCleared(profile, stageId) {
+    if (profile.clearedStages.indexOf(stageId) < 0) profile.clearedStages.push(stageId);
+    profile.unlockedStage = Math.max(profile.unlockedStage || 1, stageId + 1);
   }
 
   function saveProfile(profile) {
@@ -97,6 +137,8 @@
     LEVELS: LEVELS,
     ITEM_DEFS: ITEM_DEFS,
     SPECIES_INFO: SPECIES_INFO,
+    STAGES: STAGES,
+    STORY_INTRO: STORY_INTRO,
     MAX_INVENTORY: MAX_INVENTORY,
     CONTINUE_COST: CONTINUE_COST,
     ITEM_TRADE_GEMS: ITEM_TRADE_GEMS,
@@ -106,5 +148,8 @@
     saveProfile: saveProfile,
     levelInfo: levelInfo,
     randomItemKey: randomItemKey,
+    getStage: getStage,
+    isStageUnlocked: isStageUnlocked,
+    markStageCleared: markStageCleared,
   };
 })(window);
