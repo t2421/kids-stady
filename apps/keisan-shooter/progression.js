@@ -5,7 +5,9 @@
 (function (global) {
   "use strict";
 
-  const STORAGE_KEY = "kidsStudy.keisanShooter.profile.v1";
+  const LEGACY_STORAGE_KEY = "kidsStudy.keisanShooter.profile.v1";
+  const PROFILES_INDEX_KEY = "kidsStudy.keisanShooter.profiles.v1";
+  const AVATARS = ["🦊", "🐱", "🐶", "🐰", "🐻", "🐼", "🦁", "🐸", "🐵", "🐧"];
 
   const LEVELS = [
     { need: 0,    title: "けいさんみならい" },
@@ -59,6 +61,8 @@
       clear: "やった!ボスを たおして、すうじの おうかんを とりもどした!きみは りっぱな けいさんゆうしゃだ!" },
   ];
 
+  const HISTORY_LIMIT = 30;
+
   function defaultProfile() {
     return {
       gems: 0,
@@ -68,16 +72,29 @@
       goldDefeated: 0,
       clearedStages: [],
       unlockedStage: 1,
+      totalCorrect: 0,
+      totalWrong: 0,
+      history: [],
     };
   }
 
-  function loadProfile() {
-    let saved = null;
+  function readJSON(key) {
     try {
-      saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return JSON.parse(localStorage.getItem(key));
     } catch (e) {
-      saved = null;
+      return null;
     }
+  }
+
+  function writeJSON(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+      /* ストレージが使えない環境ではメモリ上の値だけで続行する */
+    }
+  }
+
+  function normalizeProfileData(saved) {
     const base = defaultProfile();
     if (!saved || typeof saved !== "object") return base;
     return {
@@ -88,7 +105,92 @@
       goldDefeated: Number(saved.goldDefeated) || 0,
       clearedStages: Array.isArray(saved.clearedStages) ? saved.clearedStages.slice() : [],
       unlockedStage: Number(saved.unlockedStage) || 1,
+      totalCorrect: Number(saved.totalCorrect) || 0,
+      totalWrong: Number(saved.totalWrong) || 0,
+      history: Array.isArray(saved.history) ? saved.history.slice(-HISTORY_LIMIT) : [],
     };
+  }
+
+  function addHistoryEntry(profile, entry){
+    profile.history.push(entry);
+    if (profile.history.length > HISTORY_LIMIT) {
+      profile.history.splice(0, profile.history.length - HISTORY_LIMIT);
+    }
+  }
+
+  function profileDataKey(id) {
+    return "kidsStudy.keisanShooter.profileData." + id;
+  }
+
+  function makeId() {
+    return "p" + Math.random().toString(36).slice(2, 9);
+  }
+
+  function loadIndex() {
+    let idx = readJSON(PROFILES_INDEX_KEY);
+    if (!idx || !Array.isArray(idx.profiles)) idx = { activeId: null, profiles: [] };
+
+    /* 一度だけ: プレイヤー切り替え機能が無かった頃のセーブデータを、
+       「プレイヤー1」として引き継ぐ */
+    if (idx.profiles.length === 0) {
+      const legacy = readJSON(LEGACY_STORAGE_KEY);
+      if (legacy) {
+        const id = makeId();
+        idx.profiles.push({ id: id, name: "プレイヤー1", avatar: AVATARS[0] });
+        idx.activeId = id;
+        writeJSON(profileDataKey(id), normalizeProfileData(legacy));
+        writeJSON(PROFILES_INDEX_KEY, idx);
+      }
+    }
+    return idx;
+  }
+
+  function saveIndex(idx) {
+    writeJSON(PROFILES_INDEX_KEY, idx);
+  }
+
+  function listProfiles() {
+    return loadIndex().profiles.slice();
+  }
+
+  function getActiveId() {
+    return loadIndex().activeId;
+  }
+
+  function setActiveId(id) {
+    const idx = loadIndex();
+    idx.activeId = id;
+    saveIndex(idx);
+  }
+
+  function createProfile(name, avatar) {
+    const idx = loadIndex();
+    const id = makeId();
+    idx.profiles.push({ id: id, name: name || "プレイヤー", avatar: avatar || AVATARS[0] });
+    idx.activeId = id;
+    saveIndex(idx);
+    writeJSON(profileDataKey(id), defaultProfile());
+    return id;
+  }
+
+  function deleteProfile(id) {
+    const idx = loadIndex();
+    idx.profiles = idx.profiles.filter(function (p) { return p.id !== id; });
+    if (idx.activeId === id) idx.activeId = null;
+    saveIndex(idx);
+    try {
+      localStorage.removeItem(profileDataKey(id));
+    } catch (e) {
+      /* noop */
+    }
+  }
+
+  function loadProfileData(id) {
+    return normalizeProfileData(readJSON(profileDataKey(id)));
+  }
+
+  function saveProfileData(id, data) {
+    writeJSON(profileDataKey(id), data);
   }
 
   function getStage(stageId) {
@@ -102,14 +204,6 @@
   function markStageCleared(profile, stageId) {
     if (profile.clearedStages.indexOf(stageId) < 0) profile.clearedStages.push(stageId);
     profile.unlockedStage = Math.max(profile.unlockedStage || 1, stageId + 1);
-  }
-
-  function saveProfile(profile) {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
-    } catch (e) {
-      /* ストレージが使えない環境ではメモリ上の値だけで続行する */
-    }
   }
 
   function levelInfo(gems) {
@@ -139,17 +233,24 @@
     SPECIES_INFO: SPECIES_INFO,
     STAGES: STAGES,
     STORY_INTRO: STORY_INTRO,
+    AVATARS: AVATARS,
     MAX_INVENTORY: MAX_INVENTORY,
     CONTINUE_COST: CONTINUE_COST,
     ITEM_TRADE_GEMS: ITEM_TRADE_GEMS,
     GOLDEN_CHANCE: GOLDEN_CHANCE,
     GOLDEN_MULTIPLIER: GOLDEN_MULTIPLIER,
-    loadProfile: loadProfile,
-    saveProfile: saveProfile,
+    listProfiles: listProfiles,
+    getActiveId: getActiveId,
+    setActiveId: setActiveId,
+    createProfile: createProfile,
+    deleteProfile: deleteProfile,
+    loadProfileData: loadProfileData,
+    saveProfileData: saveProfileData,
     levelInfo: levelInfo,
     randomItemKey: randomItemKey,
     getStage: getStage,
     isStageUnlocked: isStageUnlocked,
     markStageCleared: markStageCleared,
+    addHistoryEntry: addHistoryEntry,
   };
 })(window);

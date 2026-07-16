@@ -46,6 +46,10 @@
   #map { display:none; }
   #storyIntro { display:none; }
   #stageClear { display:none; }
+  #start { display:none; }
+  #createProfile { display:none; }
+  #mistakeOverlay { display:none; }
+  #statsScreen { display:none; }
   #finalstats { color:#fff; font-size:clamp(18px,3.6vw,28px); font-weight:800; line-height:2; }
   #run-gems { color:#ffd93d; font-size:clamp(15px,3vw,20px); font-weight:800; }
   #continuebtn { display:none; background:linear-gradient(#7cfc9a,#3ec46d); box-shadow:0 6px 0 #1b7a3d, 0 10px 24px rgba(0,0,0,.4); }
@@ -89,6 +93,41 @@
   #storyIntro h2, #stageClear h2 { color:#ffd93d; font-size:clamp(20px,4vw,28px); font-weight:900; }
   #storyIntro p, #stageClear p { max-width:560px; }
   #stageClearGems { color:#ffd93d; font-weight:800; font-size:clamp(15px,3vw,20px); }
+
+  /* ---------- player select / create profile ---------- */
+  .start-subrow { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+  #switchPlayerBtn, #statsBtn { background:rgba(255,255,255,.14); box-shadow:none; font-size:clamp(13px,2.2vw,16px); padding:12px 20px; }
+  #switchPlayerBtn:active, #statsBtn:active { transform:translateY(2px); }
+  #playerList { display:flex; flex-wrap:wrap; justify-content:center; gap:14px; max-width:720px; }
+  .player-card { position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; width:130px; background:rgba(8,20,45,.72); border:2px solid rgba(255,255,255,.25); border-radius:20px; padding:16px 10px; font-family:inherit; }
+  .player-card:active { transform:translateY(2px); }
+  .player-avatar { font-size:44px; }
+  .player-name { color:#fff; font-weight:900; font-size:15px; }
+  .player-sub { color:#cfe0ff; font-size:11px; font-weight:700; }
+  .player-delete { position:absolute; top:6px; right:8px; width:24px; height:24px; border-radius:999px; border:none; background:rgba(255,123,123,.85); color:#fff; font-size:13px; font-weight:900; line-height:24px; padding:0; font-family:inherit; }
+  .player-card.confirm-delete { border-color:#ff7b7b; }
+  .player-card.confirm-delete .player-delete { background:#ff3b3b; }
+
+  #avatarPicker { display:flex; flex-wrap:wrap; justify-content:center; gap:10px; max-width:420px; }
+  .avatar-opt { width:52px; height:52px; border-radius:14px; background:rgba(255,255,255,.1); border:2px solid rgba(255,255,255,.25); font-size:26px; font-family:inherit; }
+  .avatar-opt.sel { background:rgba(255,217,61,.22); border-color:#ffd93d; box-shadow:0 0 12px rgba(255,217,61,.5); }
+  .create-title { color:#ffd93d; font-size:clamp(20px,4vw,28px); font-weight:900; }
+  #nameInput { width:min(80vw,280px); padding:12px 16px; border-radius:16px; border:2px solid rgba(255,255,255,.3); background:rgba(255,255,255,.95); color:#0b1e3a; font-size:18px; font-weight:700; font-family:inherit; text-align:center; }
+
+  /* ---------- mistake explanation ---------- */
+  #mistakeCard { background:#fff0ea; border-radius:24px; padding:26px 30px; max-width:520px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  #mistakeCard h2 { color:#d85a30; font-size:clamp(20px,4vw,28px); font-weight:900; margin-bottom:12px; }
+  #mistakeText { color:#4a2200; font-size:clamp(18px,4vw,26px); font-weight:800; line-height:1.8; }
+  #mistakeText .eq-line { font-size:1.15em; margin-bottom:8px; }
+
+  /* ---------- stats screen ---------- */
+  #statsScreen { overflow-y:auto; }
+  #statsSummary { color:#fff; font-size:clamp(15px,3vw,20px); font-weight:800; text-align:center; line-height:1.8; background:rgba(8,20,45,.55); border:2px solid rgba(255,255,255,.2); border-radius:20px; padding:14px 24px; }
+  #statsHistory { display:flex; flex-direction:column; gap:8px; width:min(90vw,480px); }
+  .history-row { display:flex; align-items:center; justify-content:space-between; gap:10px; background:rgba(8,20,45,.55); border:2px solid rgba(255,255,255,.15); border-radius:14px; padding:10px 16px; }
+  .history-date { color:#cfe0ff; font-size:12px; font-weight:700; width:78px; }
+  .history-stage { color:#fff; font-size:13px; font-weight:800; flex:1; text-align:left; }
+  .history-acc { font-weight:900; font-size:15px; }
 </style>
 </head>
 <body class="kids-app kids-reset">
@@ -112,6 +151,20 @@
 <div id="levelup-pop"></div>
 <div id="flash"></div>
 
+<div class="overlay" id="playerSelect">
+  <h1><span class="em">だれが</span> あそぶ?</h1>
+  <div id="playerList"></div>
+  <button class="bigbtn" id="newPlayerBtn">&#10133; あたらしい プレイヤー</button>
+</div>
+
+<div class="overlay" id="createProfile">
+  <h2 class="create-title">プレイヤーを つくろう</h2>
+  <div id="avatarPicker"></div>
+  <input id="nameInput" type="text" maxlength="8" placeholder="なまえ (8もじまで)">
+  <button class="bigbtn" id="createConfirmBtn">つくる!</button>
+  <button class="bigbtn" id="createBackBtn">もどる</button>
+</div>
+
 <div class="overlay" id="start">
   <h1>モンスター<br><span class="em">けいさん</span>シューター</h1>
   <p>すうじおうこくの すうじを、モンスターたちから とりもどす ぼうけんに でよう!<br>ただしい こたえの モンスターを タップして やっつけよう!</p>
@@ -124,6 +177,10 @@
     <div id="zukanRow"></div>
   </div>
   <button class="bigbtn" id="startbtn">ぼうけんに でる!</button>
+  <div class="start-subrow">
+    <button class="bigbtn" id="statsBtn">&#128202; せいせきを みる</button>
+    <button class="bigbtn" id="switchPlayerBtn">&#128260; ちがう ひとが あそぶ</button>
+  </div>
   <p id="rotate-tip">&#128241; iPadは よこむきが おすすめ</p>
 </div>
 
@@ -156,6 +213,21 @@
     <div id="hinttext"></div>
   </div>
   <button class="bigbtn" id="hintclose">わかった!</button>
+</div>
+
+<div class="overlay" id="mistakeOverlay">
+  <div id="mistakeCard">
+    <h2>&#128161; かいせつ</h2>
+    <div id="mistakeText"></div>
+  </div>
+  <button class="bigbtn" id="mistakeNextBtn">つぎの もんだいへ</button>
+</div>
+
+<div class="overlay" id="statsScreen">
+  <h1><span class="em">せいせき</span></h1>
+  <div id="statsSummary"></div>
+  <div id="statsHistory"></div>
+  <button class="bigbtn" id="statsBackBtn">もどる</button>
 </div>
 
 <div class="overlay" id="gameover">
@@ -346,14 +418,19 @@ const S = {
   monsters:[], particles:[], lasers:[],
   a:0, b:0, op:"+", answer:0,
   speed:0.9, lastT:0,
-  inventory:[], hasShield:false, runGems:0,
+  inventory:[], hasShield:false, runGems:0, runCorrect:0, runWrong:0,
   slowTimer:null, preSlowSpeed:null,
 };
 
 const $ = id=>document.getElementById(id);
 
 /* ================= PLAYER PROGRESSION (localStorage) ================= */
-const profile = Progression.loadProfile();
+let profile = null;
+let activeProfileId = null;
+
+function saveProfile(){
+  Progression.saveProfileData(activeProfileId, profile);
+}
 
 function renderProfileStrip(){
   const info = Progression.levelInfo(profile.gems);
@@ -376,13 +453,93 @@ function renderProfileStrip(){
     zukan.appendChild(el);
   });
 }
-renderProfileStrip();
+
+/* ================= PLAYER SELECT / CREATE ================= */
+let deleteArmedId = null;
+
+function selectProfile(id){
+  activeProfileId = id;
+  profile = Progression.loadProfileData(id);
+  Progression.setActiveId(id);
+  renderProfileStrip();
+  hideAllOverlays();
+  $("start").style.display = "flex";
+}
+
+function renderPlayerSelect(){
+  deleteArmedId = null;
+  const list = $("playerList");
+  list.innerHTML = "";
+  Progression.listProfiles().forEach(p=>{
+    const data = Progression.loadProfileData(p.id);
+    const info = Progression.levelInfo(data.gems);
+    const card = document.createElement("div");
+    card.className = "player-card";
+    card.innerHTML =
+      '<button class="player-delete">&times;</button>' +
+      '<div class="player-avatar">' + p.avatar + '</div>' +
+      '<div class="player-name">' + p.name + '</div>' +
+      '<div class="player-sub">Lv.' + info.level + ' ・ 💎' + data.gems + '</div>';
+    card.addEventListener("click", e=>{
+      if(e.target.closest(".player-delete")) return;
+      selectProfile(p.id);
+    });
+    card.querySelector(".player-delete").addEventListener("click", e=>{
+      e.stopPropagation();
+      if(deleteArmedId !== p.id){
+        deleteArmedId = p.id;
+        renderPlayerSelect();
+        return;
+      }
+      Progression.deleteProfile(p.id);
+      deleteArmedId = null;
+      renderPlayerSelect();
+    });
+    if(deleteArmedId === p.id) card.classList.add("confirm-delete");
+    list.appendChild(card);
+  });
+}
+
+function openPlayerSelect(){
+  hideAllOverlays();
+  renderPlayerSelect();
+  $("playerSelect").style.display = "flex";
+}
+$("switchPlayerBtn").addEventListener("click", openPlayerSelect);
+
+let selectedAvatar = Progression.AVATARS[0];
+function renderAvatarPicker(){
+  const wrap = $("avatarPicker");
+  wrap.innerHTML = "";
+  Progression.AVATARS.forEach(a=>{
+    const btn = document.createElement("button");
+    btn.className = "avatar-opt" + (a === selectedAvatar ? " sel" : "");
+    btn.textContent = a;
+    btn.addEventListener("click", ()=>{ selectedAvatar = a; renderAvatarPicker(); });
+    wrap.appendChild(btn);
+  });
+}
+
+$("newPlayerBtn").addEventListener("click", ()=>{
+  selectedAvatar = Progression.AVATARS[Math.floor(Math.random()*Progression.AVATARS.length)];
+  renderAvatarPicker();
+  $("nameInput").value = "";
+  hideAllOverlays();
+  $("createProfile").style.display = "flex";
+});
+$("createBackBtn").addEventListener("click", openPlayerSelect);
+$("createConfirmBtn").addEventListener("click", ()=>{
+  const name = $("nameInput").value.trim().slice(0,8) || "プレイヤー";
+  const id = Progression.createProfile(name, selectedAvatar);
+  selectProfile(id);
+});
+renderPlayerSelect();
 
 function awardGems(amount){
   const before = Progression.levelInfo(profile.gems).level;
   profile.gems += amount;
   S.runGems += amount;
-  Progression.saveProfile(profile);
+  saveProfile();
   const after = Progression.levelInfo(profile.gems);
   if(after.level > before) showLevelUp(after);
 }
@@ -602,12 +759,15 @@ function hitCorrect(monster){
 
   const golden = monster.userData.golden;
   const boss = monster.userData.boss;
+  S.runCorrect++;
+  profile.totalCorrect++;
   let gain = 10 + S.combo*2;
   if(golden) gain *= Progression.GOLDEN_MULTIPLIER;
   S.score += gain;
   awardGems(gain);
   profile.defeated[monster.userData.species] = true;
-  if(golden){ profile.goldDefeated++; Progression.saveProfile(profile); }
+  if(golden) profile.goldDefeated++;
+  saveProfile();
 
   S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo);
   S.solved++;
@@ -636,12 +796,33 @@ function hitCorrect(monster){
   }, 650);
 }
 
+function buildMistakeExplanation(){
+  const st = S.stage;
+  if(!st.carry){
+    return "<div class='eq-line'>" + S.a + " " + S.op + " " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b></div>" +
+      "<p>こたえは <b style='color:#d85a30'>" + S.answer + "</b> だよ。ゆびを つかわずに もう一かい かぞえてみよう!</p>";
+  }
+  if(S.op === "+"){
+    const need = 10 - S.a, rest = S.b - need;
+    return "<div class='eq-line'>" + S.a + " + " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b></div>" +
+      "<p>" + S.b + " を <span style='color:#d85a30'>" + need + "</span> と <span style='color:#d85a30'>" + rest + "</span> に わける<br>" +
+      S.a + " + " + need + " = 10<br>10 + " + rest + " = " + S.answer + "</p>";
+  }
+  const ones = S.a % 10, rem = S.b - ones;
+  return "<div class='eq-line'>" + S.a + " - " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b></div>" +
+    "<p>" + S.b + " を <span style='color:#d85a30'>" + ones + "</span> と <span style='color:#d85a30'>" + rem + "</span> に わける<br>" +
+    S.a + " - " + ones + " = 10<br>10 - " + rem + " = " + S.answer + "</p>";
+}
+
 function hitWrong(monster){
   sfx.bad();
   S.combo = 0;
+  S.runWrong++;
+  profile.totalWrong++;
+  saveProfile();
   updateHUD();
-  showMsg("ちがうよ! つぎのもんだいへ!", true);
-  /* wrong monster shakes briefly before the wave moves on */
+  showMsg("ちがうよ!", true);
+  /* wrong monster shakes briefly before the explanation appears */
   const base = monster.position.x;
   let n = 0;
   const iv = setInterval(()=>{
@@ -650,8 +831,17 @@ function hitWrong(monster){
   }, 55);
   S.speed += 0.05;
   S.advancing = true;
-  setTimeout(()=>{ if(S.running) spawnWave(); }, 500);
+  S.paused = true;
+  setTimeout(()=>{
+    $("mistakeText").innerHTML = buildMistakeExplanation();
+    $("mistakeOverlay").style.display = "flex";
+  }, 550);
 }
+$("mistakeNextBtn").addEventListener("click", ()=>{
+  $("mistakeOverlay").style.display = "none";
+  S.paused = false;
+  if(S.running) spawnWave();
+});
 
 function loseHeart(){
   if(S.hasShield){
@@ -671,6 +861,19 @@ function loseHeart(){
   else { showMsg("モンスターが きちゃった!", true); spawnWave(); }
 }
 
+function pushHistoryEntry(){
+  const total = S.runCorrect + S.runWrong;
+  if(total === 0) return;
+  Progression.addHistoryEntry(profile, {
+    ts: Date.now(),
+    stageId: S.stage.id,
+    stageName: S.stage.icon + " " + S.stage.name,
+    correct: S.runCorrect,
+    wrong: S.runWrong,
+    accuracy: Math.round((S.runCorrect/total)*100),
+  });
+}
+
 function gameOver(){
   S.running = false;
   clearMonsters();
@@ -682,7 +885,8 @@ function gameOver(){
     "さいこうコンボ: " + S.bestCombo + " れんぞく";
   profile.bestScore = Math.max(profile.bestScore, S.score);
   profile.bestCombo = Math.max(profile.bestCombo, S.bestCombo);
-  Progression.saveProfile(profile);
+  pushHistoryEntry();
+  saveProfile();
   renderProfileStrip();
   $("run-gems").textContent = "この プレイで 💎+" + S.runGems + " かくとく!";
   const canContinue = profile.gems >= Progression.CONTINUE_COST;
@@ -695,9 +899,10 @@ function gameOver(){
 function continueRun(){
   if(profile.gems < Progression.CONTINUE_COST) return;
   profile.gems -= Progression.CONTINUE_COST;
-  Progression.saveProfile(profile);
+  saveProfile();
   renderProfileStrip();
   S.hearts = 1;
+  S.runCorrect = 0; S.runWrong = 0;
   S.running = true;
   $("gameover").style.display = "none";
   $("hud").style.display = "block";
@@ -709,8 +914,50 @@ $("gameoverMapBtn").addEventListener("click", ()=>{ $("gameover").style.display 
 
 /* ================= STAGE MAP / STORY ================= */
 function hideAllOverlays(){
-  ["start","map","storyIntro","stageClear","gameover","hud"].forEach(id=>{ $(id).style.display = "none"; });
+  ["playerSelect","createProfile","start","map","storyIntro","stageClear","gameover","hud","mistakeOverlay","statsScreen"].forEach(id=>{ $(id).style.display = "none"; });
 }
+
+function formatHistoryDate(ts){
+  const d = new Date(ts);
+  return (d.getMonth()+1) + "/" + d.getDate() + " " + String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0");
+}
+
+function renderStats(){
+  const totalC = profile.totalCorrect, totalW = profile.totalWrong;
+  const total = totalC + totalW;
+  const acc = total > 0 ? Math.round((totalC/total)*100) : null;
+  $("statsSummary").innerHTML =
+    "せいかい <b style='color:#7cfc9a'>" + totalC + "</b>もん ・ まちがい <b style='color:#ff7b7b'>" + totalW + "</b>もん<br>" +
+    (acc!=null ? "せいとうりつ <b style='color:#ffd93d;font-size:1.3em'>" + acc + "%</b>" : "まだ きろくが ないよ");
+  const list = $("statsHistory");
+  list.innerHTML = "";
+  const hist = profile.history.slice().reverse();
+  if(hist.length === 0){
+    const p = document.createElement("p");
+    p.style.color = "#cfe0ff";
+    p.textContent = "まだ プレイきろくが ないよ。ぼうけんしてみよう!";
+    list.appendChild(p);
+    return;
+  }
+  hist.forEach(h=>{
+    const accColor = h.accuracy==null ? "#cfe0ff" : h.accuracy>=80 ? "#7cfc9a" : h.accuracy>=50 ? "#ffd93d" : "#ff7b7b";
+    const row = document.createElement("div");
+    row.className = "history-row";
+    row.innerHTML =
+      "<span class='history-date'>" + formatHistoryDate(h.ts) + "</span>" +
+      "<span class='history-stage'>" + h.stageName + " (" + h.correct + "/" + (h.correct+h.wrong) + ")</span>" +
+      "<span class='history-acc' style='color:" + accColor + "'>" + h.accuracy + "%</span>";
+    list.appendChild(row);
+  });
+}
+
+function openStats(){
+  hideAllOverlays();
+  renderStats();
+  $("statsScreen").style.display = "flex";
+}
+$("statsBtn").addEventListener("click", openStats);
+$("statsBackBtn").addEventListener("click", ()=>{ hideAllOverlays(); $("start").style.display = "flex"; });
 
 function renderMap(){
   const list = $("mapList");
@@ -763,7 +1010,7 @@ function startStage(stageId){
   S.stage = stage;
   S.score = 0; S.combo = 0; S.bestCombo = 0; S.solved = 0; S.hearts = 3;
   S.speed = stage.speedBase; S.running = true; S.paused = false; S.advancing = false;
-  S.inventory = []; S.hasShield = false; S.runGems = 0;
+  S.inventory = []; S.hasShield = false; S.runGems = 0; S.runCorrect = 0; S.runWrong = 0;
   if(S.slowTimer){ clearTimeout(S.slowTimer); S.slowTimer = null; S.preSlowSpeed = null; }
   updateHUD();
   renderInventory();
@@ -783,7 +1030,8 @@ function clearStage(){
   profile.bestScore = Math.max(profile.bestScore, S.score);
   profile.bestCombo = Math.max(profile.bestCombo, S.bestCombo);
   Progression.markStageCleared(profile, stage.id);
-  Progression.saveProfile(profile);
+  pushHistoryEntry();
+  saveProfile();
   renderProfileStrip();
   $("clearIcon").textContent = stage.icon;
   $("clearText").textContent = stage.clear;
