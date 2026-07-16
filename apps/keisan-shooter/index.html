@@ -27,6 +27,16 @@
   #hintbtn:active { transform:translateY(3px); box-shadow:0 1px 0 #b7791f; }
   #flash { position:fixed; inset:0; background:#ff3b3b; opacity:0; pointer-events:none; transition:opacity .35s; }
 
+  /* ---------- item bar ---------- */
+  #itemBar { position:absolute; bottom:max(14px, env(safe-area-inset-bottom)); right:14px; display:flex; gap:8px; pointer-events:auto; }
+  .item-slot { width:56px; height:56px; border-radius:16px; background:rgba(8,20,45,.72); border:2px solid rgba(255,255,255,.25); font-size:26px; display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  .item-slot.filled { background:linear-gradient(#fff2c4,#ffd93d); border-color:#b7791f; box-shadow:0 4px 0 #b7791f; }
+  .item-slot.filled:active { transform:translateY(3px); box-shadow:0 1px 0 #b7791f; }
+  #item-pop { position:absolute; top:52%; left:50%; transform:translate(-50%,-50%) scale(0); font-size:clamp(20px,4.4vw,32px); font-weight:900; color:#fff; background:rgba(8,20,45,.82); border:2px solid #ffd93d; border-radius:20px; padding:10px 22px; text-align:center; transition:transform .18s ease-out; white-space:nowrap; }
+  #item-pop.show { transform:translate(-50%,-50%) scale(1); }
+  #levelup-pop { position:fixed; top:16%; left:50%; transform:translateX(-50%) translateY(-30px); opacity:0; font-size:clamp(22px,4.8vw,36px); font-weight:900; color:#fff; text-shadow:0 3px 0 #b7791f, 0 0 24px rgba(255,217,61,.8); background:rgba(8,20,45,.85); border:3px solid #ffd93d; border-radius:22px; padding:16px 30px; text-align:center; z-index:30; transition:opacity .3s, transform .3s; pointer-events:none; }
+  #levelup-pop.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
   /* ---------- overlay display toggles (このゲーム固有) ---------- */
   #hintoverlay { display:none; }
   #hintcard { background:#fffbe8; border-radius:24px; padding:26px 30px; max-width:520px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.5); }
@@ -34,7 +44,20 @@
   #hinttext { color:#4a3200; font-size:clamp(20px,4.4vw,32px); font-weight:800; line-height:1.9; }
   #gameover { display:none; }
   #finalstats { color:#fff; font-size:clamp(18px,3.6vw,28px); font-weight:800; line-height:2; }
+  #run-gems { color:#ffd93d; font-size:clamp(15px,3vw,20px); font-weight:800; }
+  #continuebtn { display:none; background:linear-gradient(#7cfc9a,#3ec46d); box-shadow:0 6px 0 #1b7a3d, 0 10px 24px rgba(0,0,0,.4); }
+  #continuebtn:active { box-shadow:0 2px 0 #1b7a3d; }
   #rotate-tip { color:#8fb4e8; font-size:13px; margin-top:6px; }
+
+  /* ---------- persistent profile strip (start screen) ---------- */
+  #profileStrip { display:flex; flex-direction:column; align-items:center; gap:8px; background:rgba(8,20,45,.55); border:2px solid rgba(255,255,255,.2); border-radius:20px; padding:14px 24px; }
+  #levelBadge { color:#ffd93d; font-weight:900; font-size:clamp(16px,3vw,22px); }
+  #xpBarWrap { width:min(70vw,320px); height:12px; border-radius:999px; background:rgba(255,255,255,.2); overflow:hidden; }
+  #xpBarFill { height:100%; width:0%; background:linear-gradient(90deg,#7cfc9a,#3aa0ff); transition:width .4s ease-out; }
+  #gemsDisplay { color:#cfe0ff; font-weight:800; font-size:clamp(13px,2.4vw,17px); }
+  #zukanRow { display:flex; gap:10px; margin-top:2px; }
+  .zukan-icon { width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:20px; filter:grayscale(1) brightness(.6); }
+  .zukan-icon.got { background:rgba(255,217,61,.18); border-color:#ffd93d; filter:none; }
 </style>
 </head>
 <body class="kids-app kids-reset">
@@ -50,14 +73,23 @@
     </div>
   </div>
   <div id="combo-pop"></div>
+  <div id="item-pop"></div>
   <div id="msg"></div>
   <button id="hintbtn">&#127826; さくらんぼヒント</button>
+  <div id="itemBar"></div>
 </div>
+<div id="levelup-pop"></div>
 <div id="flash"></div>
 
 <div class="overlay" id="start">
   <h1>モンスター<br><span class="em">けいさん</span>シューター</h1>
-  <p>ただしい こたえの モンスターを タップして やっつけよう!<br>まちがえずに れんぞくで たおすと コンボボーナス!</p>
+  <p>ただしい こたえの モンスターを タップして やっつけよう!<br>まちがえずに れんぞくで たおすと コンボボーナス!<br>コンボで アイテムを ゲットしよう!</p>
+  <div id="profileStrip">
+    <div id="levelBadge">Lv.1 けいさんみならい</div>
+    <div id="xpBarWrap"><div id="xpBarFill"></div></div>
+    <div id="gemsDisplay">💎 0</div>
+    <div id="zukanRow"></div>
+  </div>
   <div class="modes">
     <button class="modebtn sel" data-mode="mix">ミックス</button>
     <button class="modebtn" data-mode="add">たし算だけ</button>
@@ -78,6 +110,8 @@
 <div class="overlay" id="gameover">
   <h1>ゲーム<span class="em">オーバー</span></h1>
   <div id="finalstats"></div>
+  <div id="run-gems"></div>
+  <button class="bigbtn" id="continuebtn"></button>
   <button class="bigbtn" id="retrybtn">もういちど!</button>
 </div>
 
@@ -86,6 +120,7 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js" integrity="sha384-UWFC8mrevmKCZhKbJ/8/dqLrRAvHArRwJCKjwruJuXyhsebGMFsIK5zrn+R9r+fT" crossorigin="anonymous"></script>
 <script src="assets/models-data.js"></script>
 <script src="../../shared/js/audio.js"></script>
+<script src="progression.js"></script>
 <script>
 (function(){
 "use strict";
@@ -101,6 +136,8 @@ const sfx = {
   levelup(){ [523,659,784,1047].forEach((f,i)=>tone(f,0.12,"square",0.14,i*0.1)); },
   bad(){ tone(200,0.25,"sawtooth",0.16); tone(150,0.3,"sawtooth",0.14,0.08); },
   hurt(){ tone(120,0.4,"sawtooth",0.22); tone(80,0.5,"triangle",0.2,0.1); },
+  item(){ [660,880,1180].forEach((f,i)=>tone(f,0.1,"triangle",0.14,i*0.08)); },
+  golden(){ [784,988,1175,1568].forEach((f,i)=>tone(f,0.1,"sine",0.16,i*0.08)); },
 };
 
 /* ================= THREE SETUP ================= */
@@ -229,13 +266,15 @@ function makeMonster(num){
   const key = MODEL_KEYS[Math.floor(Math.random()*MODEL_KEYS.length)];
   const model = MODEL_TEMPLATES[key].clone(true);
   const mainMat = MODEL_META[key].mainMat;
-  const tintColor = palette[Math.floor(Math.random()*palette.length)];
+  const golden = Math.random() < Progression.GOLDEN_CHANCE;
+  const tintColor = golden ? 0xffd93d : palette[Math.floor(Math.random()*palette.length)];
   model.traverse(o=>{
     if(!o.isMesh) return;
     const mats = (Array.isArray(o.material) ? o.material : [o.material]).map(m=>m.clone());
     o.material = Array.isArray(o.material) ? mats : mats[0];
     mats.forEach(m=>{ if(m.name === mainMat) m.color.set(tintColor); });
   });
+  if(golden) model.scale.multiplyScalar(1.12);
   g.add(model);
 
   /* number board above head */
@@ -243,7 +282,7 @@ function makeMonster(num){
   label.position.set(0, TARGET_HEIGHT + 0.55, 0);
   g.add(label);
 
-  g.userData = { answer:num, alive:true, bobPhase:Math.random()*Math.PI*2, label:label, bodyColor:tintColor };
+  g.userData = { answer:num, alive:true, bobPhase:Math.random()*Math.PI*2, label:label, bodyColor:tintColor, species:key, golden:golden };
   g.traverse(o=>{ o.userData.root = g; });
   return g;
 }
@@ -255,9 +294,117 @@ const S = {
   monsters:[], particles:[], lasers:[],
   a:0, b:0, op:"+", answer:0,
   speed:0.9, lastT:0,
+  inventory:[], hasShield:false, runGems:0,
+  slowTimer:null, preSlowSpeed:null,
 };
 
 const $ = id=>document.getElementById(id);
+
+/* ================= PLAYER PROGRESSION (localStorage) ================= */
+const profile = Progression.loadProfile();
+
+function renderProfileStrip(){
+  const info = Progression.levelInfo(profile.gems);
+  $("levelBadge").textContent = "Lv." + info.level + " " + info.title;
+  $("gemsDisplay").textContent = "💎 " + profile.gems;
+  $("xpBarFill").style.width = (info.progress*100) + "%";
+  const zukan = $("zukanRow");
+  zukan.innerHTML = "";
+  Object.keys(Progression.SPECIES_INFO).forEach(key=>{
+    const got = !!profile.defeated[key];
+    const el = document.createElement("div");
+    el.className = "zukan-icon" + (got ? " got" : "");
+    el.textContent = got ? Progression.SPECIES_INFO[key].icon : "❔";
+    zukan.appendChild(el);
+  });
+}
+renderProfileStrip();
+
+function awardGems(amount){
+  const before = Progression.levelInfo(profile.gems).level;
+  profile.gems += amount;
+  S.runGems += amount;
+  Progression.saveProfile(profile);
+  const after = Progression.levelInfo(profile.gems);
+  if(after.level > before) showLevelUp(after);
+}
+
+let levelupTimer = null;
+function showLevelUp(info){
+  sfx.golden();
+  const el = $("levelup-pop");
+  el.textContent = "🎉 プレイヤーレベルアップ! Lv." + info.level + " " + info.title;
+  el.classList.add("show");
+  clearTimeout(levelupTimer);
+  levelupTimer = setTimeout(()=>el.classList.remove("show"), 2400);
+}
+
+function renderInventory(){
+  const bar = $("itemBar");
+  bar.innerHTML = "";
+  for(let i=0;i<Progression.MAX_INVENTORY;i++){
+    const key = S.inventory[i];
+    const slot = document.createElement("button");
+    slot.className = "item-slot" + (key ? " filled" : "");
+    slot.textContent = key ? Progression.ITEM_DEFS[key].icon : "";
+    if(key){
+      slot.title = Progression.ITEM_DEFS[key].name;
+      slot.addEventListener("click", ()=>useItem(i));
+    }
+    bar.appendChild(slot);
+  }
+}
+
+let itemPopTimer = null;
+function showItemPop(text){
+  const el = $("item-pop");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(itemPopTimer);
+  itemPopTimer = setTimeout(()=>el.classList.remove("show"), 1100);
+}
+
+function grantRandomItem(){
+  if(S.inventory.length >= Progression.MAX_INVENTORY){
+    awardGems(Progression.ITEM_TRADE_GEMS);
+    showItemPop("🎒 アイテムいっぱい! かわりに 💎+" + Progression.ITEM_TRADE_GEMS);
+    return;
+  }
+  const key = Progression.randomItemKey();
+  S.inventory.push(key);
+  sfx.item();
+  showItemPop("🎁 アイテムゲット! " + Progression.ITEM_DEFS[key].icon + " " + Progression.ITEM_DEFS[key].name);
+  renderInventory();
+}
+
+function useItem(slotIndex){
+  if(!S.running || S.paused || S.advancing) return;
+  const key = S.inventory[slotIndex];
+  if(!key) return;
+  S.inventory.splice(slotIndex,1);
+  renderInventory();
+  if(key === "blast"){
+    sfx.levelup();
+    const gain = 20 + S.combo*2;
+    S.score += gain;
+    awardGems(gain);
+    S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo); S.solved++;
+    showMsg("💥 ばくはつショット!");
+    popCombo();
+    updateHUD();
+    S.advancing = true;
+    S.monsters.forEach(m=>{ explode(m.position.clone(), m.userData.bodyColor); scene.remove(m); });
+    S.monsters = [];
+    setTimeout(()=>{ if(S.running) spawnWave(); }, 500);
+  } else if(key === "shield"){
+    S.hasShield = true;
+    showMsg("🛡️ まもりのたてを セット!");
+  } else if(key === "slow"){
+    if(S.slowTimer){ clearTimeout(S.slowTimer); } else { S.preSlowSpeed = S.speed; S.speed *= 0.5; }
+    showMsg("🐌 スローモード!");
+    S.slowTimer = setTimeout(()=>{ S.speed = S.preSlowSpeed; S.slowTimer = null; }, 10000);
+  }
+}
 
 function genProblem(){
   S.op = S.mode==="add" ? "+" : S.mode==="sub" ? "-" : (Math.random()<0.5?"+":"-");
@@ -382,11 +529,21 @@ function hitCorrect(monster){
   }, 90);
   S.monsters = S.monsters.filter(m=>m!==monster);
 
-  S.score += 10 + S.combo*2;
+  const golden = monster.userData.golden;
+  let gain = 10 + S.combo*2;
+  if(golden) gain *= Progression.GOLDEN_MULTIPLIER;
+  S.score += gain;
+  awardGems(gain);
+  profile.defeated[monster.userData.species] = true;
+  if(golden){ profile.goldDefeated++; Progression.saveProfile(profile); }
+
   S.combo++; S.bestCombo = Math.max(S.bestCombo, S.combo);
   S.solved++;
   popCombo();
-  if(S.solved % 5 === 0){
+  if(golden){
+    sfx.golden();
+    showMsg("✨ きんいろモンスター! " + Progression.GOLDEN_MULTIPLIER + "ばいボーナス!");
+  } else if(S.solved % 5 === 0){
     S.level++;
     S.speed += 0.22;
     sfx.levelup();
@@ -395,6 +552,7 @@ function hitCorrect(monster){
     sfx.good();
     showMsg(cheers[Math.floor(Math.random()*cheers.length)]);
   }
+  if(S.combo > 0 && S.combo % 3 === 0) grantRandomItem();
   updateHUD();
   S.advancing = true;
   setTimeout(()=>{ if(S.running) spawnWave(); }, 650);
@@ -418,6 +576,13 @@ function hitWrong(monster){
 }
 
 function loseHeart(){
+  if(S.hasShield){
+    S.hasShield = false;
+    sfx.good();
+    showMsg("🛡️ たてが まもった!");
+    spawnWave();
+    return;
+  }
   S.hearts--;
   sfx.hurt();
   S.combo = 0;
@@ -437,8 +602,31 @@ function gameOver(){
     "たおした もんだい: " + S.solved + " もん<br>" +
     "さいこうコンボ: " + S.bestCombo + " れんぞく<br>" +
     "とうたつレベル: " + S.level;
+  profile.bestScore = Math.max(profile.bestScore, S.score);
+  profile.bestCombo = Math.max(profile.bestCombo, S.bestCombo);
+  Progression.saveProfile(profile);
+  renderProfileStrip();
+  $("run-gems").textContent = "この プレイで 💎+" + S.runGems + " かくとく!";
+  const canContinue = profile.gems >= Progression.CONTINUE_COST;
+  const cbtn = $("continuebtn");
+  cbtn.style.display = canContinue ? "inline-block" : "none";
+  cbtn.textContent = "💎" + Progression.CONTINUE_COST + " で つづける";
   $("gameover").style.display = "flex";
 }
+
+function continueRun(){
+  if(profile.gems < Progression.CONTINUE_COST) return;
+  profile.gems -= Progression.CONTINUE_COST;
+  Progression.saveProfile(profile);
+  renderProfileStrip();
+  S.hearts = 1;
+  S.running = true;
+  $("gameover").style.display = "none";
+  $("hud").style.display = "block";
+  updateHUD();
+  spawnWave();
+}
+$("continuebtn").addEventListener("click", continueRun);
 
 /* ================= INPUT (touch + mouse) ================= */
 const ray = new THREE.Raycaster();
@@ -495,8 +683,11 @@ document.querySelectorAll(".modebtn").forEach(btn=>{
 function startGame(){
   audioInit();
   S.score = 0; S.combo = 0; S.bestCombo = 0; S.level = 1; S.solved = 0; S.hearts = 3;
-  S.speed = 0.9; S.running = true; S.paused = false;
+  S.speed = 0.9; S.running = true; S.paused = false; S.advancing = false;
+  S.inventory = []; S.hasShield = false; S.runGems = 0;
+  if(S.slowTimer){ clearTimeout(S.slowTimer); S.slowTimer = null; S.preSlowSpeed = null; }
   updateHUD();
+  renderInventory();
   $("start").style.display = "none";
   $("gameover").style.display = "none";
   $("hud").style.display = "block";
