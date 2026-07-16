@@ -58,6 +58,9 @@
   #xpBarWrap { width:min(70vw,320px); height:12px; border-radius:999px; background:rgba(255,255,255,.2); overflow:hidden; }
   #xpBarFill { height:100%; width:0%; background:linear-gradient(90deg,#7cfc9a,#3aa0ff); transition:width .4s ease-out; }
   #gemsDisplay { color:#cfe0ff; font-weight:800; font-size:clamp(13px,2.4vw,17px); }
+  #bestRow { color:#cfe0ff; font-size:12px; font-weight:700; opacity:.85; }
+  #completeBadge { color:#0b1e3a; background:linear-gradient(#fff2c4,#ffd93d); border-radius:999px; padding:4px 14px; font-weight:900; font-size:13px; }
+  #completeBadge:empty { display:none; }
   #zukanRow { display:flex; gap:10px; margin-top:2px; }
   .zukan-icon { width:40px; height:40px; border-radius:12px; background:rgba(255,255,255,.08); border:2px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:20px; filter:grayscale(1) brightness(.6); }
   .zukan-icon.got { background:rgba(255,217,61,.18); border-color:#ffd93d; filter:none; }
@@ -113,9 +116,11 @@
   <h1>モンスター<br><span class="em">けいさん</span>シューター</h1>
   <p>すうじおうこくの すうじを、モンスターたちから とりもどす ぼうけんに でよう!<br>ただしい こたえの モンスターを タップして やっつけよう!</p>
   <div id="profileStrip">
+    <div id="completeBadge"></div>
     <div id="levelBadge">Lv.1 けいさんみならい</div>
     <div id="xpBarWrap"><div id="xpBarFill"></div></div>
     <div id="gemsDisplay">💎 0</div>
+    <div id="bestRow"></div>
     <div id="zukanRow"></div>
   </div>
   <button class="bigbtn" id="startbtn">ぼうけんに でる!</button>
@@ -355,6 +360,12 @@ function renderProfileStrip(){
   $("levelBadge").textContent = "Lv." + info.level + " " + info.title;
   $("gemsDisplay").textContent = "💎 " + profile.gems;
   $("xpBarFill").style.width = (info.progress*100) + "%";
+  $("bestRow").textContent = profile.bestScore > 0
+    ? "🏆 さいこうスコア " + profile.bestScore + " ・ 🔥さいこうコンボ " + profile.bestCombo
+    : "";
+  $("completeBadge").textContent = profile.clearedStages.length >= Progression.STAGES.length
+    ? "👑 ぜんステージ コンプリート!"
+    : "";
   const zukan = $("zukanRow");
   zukan.innerHTML = "";
   Object.keys(Progression.SPECIES_INFO).forEach(key=>{
@@ -769,6 +780,8 @@ function clearStage(){
   const stage = S.stage;
   const bonus = 20 + stage.clearTarget*2;
   awardGems(bonus);
+  profile.bestScore = Math.max(profile.bestScore, S.score);
+  profile.bestCombo = Math.max(profile.bestCombo, S.bestCombo);
   Progression.markStageCleared(profile, stage.id);
   Progression.saveProfile(profile);
   renderProfileStrip();
