@@ -1,0 +1,121 @@
+/*
+ * kids-stady 共通デザイントークン & UIシェル
+ * 各アプリはこのファイルを <link> し、ゲーム固有のスタイルだけを自分の <style> に書く。
+ */
+
+:root {
+  --kids-font: "Hiragino Maru Gothic ProN", "BIZ UDGothic", "Yu Gothic", sans-serif;
+  --kids-bg: #0b1e3a;
+  --kids-accent: #ffd93d;
+  --kids-accent-shadow: #b7791f;
+  --kids-good: #7cfc9a;
+  --kids-good-shadow: #1b7a3d;
+  --kids-bad: #ff7b7b;
+  --kids-bad-shadow: #8f1f1f;
+  --kids-panel-bg: rgba(8, 20, 45, 0.72);
+  --kids-panel-border: rgba(255, 255, 255, 0.25);
+  --kids-overlay-bg: rgba(5, 12, 30, 0.82);
+  --kids-text-soft: #cfe0ff;
+}
+
+/* ---------- base reset ---------- */
+.kids-reset,
+.kids-reset * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+}
+html.kids-app,
+body.kids-app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--kids-bg);
+  font-family: var(--kids-font);
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+/* ---------- shared HUD chrome ---------- */
+.pill {
+  background: var(--kids-panel-bg);
+  border: 2px solid var(--kids-panel-border);
+  border-radius: 18px;
+  padding: 8px 16px;
+  color: #fff;
+  backdrop-filter: blur(4px);
+}
+
+/* ---------- overlays (start / pause / hint / game-over screens) ---------- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 18px;
+  background: var(--kids-overlay-bg);
+  z-index: 20;
+  padding: 20px;
+  text-align: center;
+}
+.overlay h1 {
+  color: #fff;
+  font-size: clamp(30px, 7vw, 60px);
+  font-weight: 900;
+  text-shadow: 0 4px 0 #1a2a55, 0 0 30px rgba(120, 180, 255, 0.5);
+  line-height: 1.3;
+}
+.overlay h1 .em {
+  color: var(--kids-accent);
+}
+.overlay p {
+  color: var(--kids-text-soft);
+  font-size: clamp(14px, 2.6vw, 20px);
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+/* ---------- buttons ---------- */
+.bigbtn {
+  background: linear-gradient(#ff9f43, #ff7f2a);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 18px 46px;
+  font-size: clamp(20px, 4vw, 30px);
+  font-weight: 900;
+  box-shadow: 0 6px 0 #b35314, 0 10px 24px rgba(0, 0, 0, 0.4);
+  font-family: inherit;
+  letter-spacing: 2px;
+}
+.bigbtn:active {
+  transform: translateY(4px);
+  box-shadow: 0 2px 0 #b35314;
+}
+
+.modes {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.modebtn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  padding: 12px 22px;
+  font-size: clamp(15px, 2.8vw, 21px);
+  font-weight: 800;
+  font-family: inherit;
+}
+.modebtn.sel {
+  background: #3aa0ff;
+  border-color: #bfe3ff;
+  box-shadow: 0 0 16px rgba(58, 160, 255, 0.7);
+}

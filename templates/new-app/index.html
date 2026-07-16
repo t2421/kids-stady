@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ja" class="kids-app">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>アプリのタイトル</title>
+<link rel="stylesheet" href="../../shared/css/tokens.css">
+<style>
+  /* ここに このアプリだけの見た目 (HUD・盤面など) を書く。
+     .pill / .overlay / .bigbtn / .modebtn は shared/css/tokens.css で共通定義済み。 */
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body class="kids-app kids-reset">
+  <div id="stage">
+    <!-- ゲーム本体のDOM/canvasをここに置く -->
+  </div>
+
+  <div class="overlay" id="start">
+    <h1>アプリの<span class="em">タイトル</span></h1>
+    <p>あそびかたの せつめいを ここに かく。</p>
+    <button class="bigbtn" id="startbtn">スタート!</button>
+  </div>
+
+  <div class="overlay" id="gameover" style="display:none;">
+    <h1>ゲーム<span class="em">オーバー</span></h1>
+    <div id="finalstats"></div>
+    <button class="bigbtn" id="retrybtn">もういちど!</button>
+  </div>
+
+  <script src="../../shared/js/audio.js"></script>
+  <script>
+  (function () {
+    "use strict";
+
+    const kidsAudio = KidsAudio();
+    const $ = (id) => document.getElementById(id);
+
+    function startGame() {
+      kidsAudio.init();
+      $("start").style.display = "none";
+      $("gameover").style.display = "none";
+      // TODO: ゲームの初期化処理をここに書く
+    }
+
+    $("startbtn").addEventListener("click", startGame);
+    $("retrybtn").addEventListener("click", startGame);
+  })();
+  </script>
+</body>
+</html>

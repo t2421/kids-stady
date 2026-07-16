@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja" class="kids-app">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>きっずスタディ - まなびのしま</title>
+<link rel="stylesheet" href="shared/css/tokens.css">
+<style>
+  html.kids-app, body.kids-app { overflow-y: auto; touch-action: pan-y; }
+
+  body {
+    min-height: 100%;
+    background:
+      radial-gradient(circle at 15% 15%, rgba(255, 217, 61, 0.25), transparent 40%),
+      radial-gradient(circle at 85% 25%, rgba(90, 184, 255, 0.3), transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(124, 252, 154, 0.2), transparent 45%),
+      linear-gradient(180deg, #0b1e3a 0%, #142c52 100%);
+    color: #fff;
+    padding: max(28px, env(safe-area-inset-top)) 20px 48px;
+  }
+
+  .hub {
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  .hub-header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  .hub-header h1 {
+    font-size: clamp(32px, 6vw, 56px);
+    font-weight: 900;
+    letter-spacing: 2px;
+    text-shadow: 0 4px 0 #1a2a55, 0 0 30px rgba(120, 180, 255, 0.5);
+  }
+  .hub-header h1 .em { color: var(--kids-accent); }
+  .hub-header p {
+    margin-top: 10px;
+    color: var(--kids-text-soft);
+    font-size: clamp(14px, 2.4vw, 19px);
+    font-weight: 700;
+  }
+
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 22px;
+  }
+
+  .app-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--kids-panel-bg);
+    border: 2px solid var(--kids-panel-border);
+    border-radius: 26px;
+    padding: 22px;
+    text-decoration: none;
+    color: #fff;
+    overflow: hidden;
+    box-shadow: 0 10px 0 rgba(0, 0, 0, 0.18), 0 16px 30px rgba(0, 0, 0, 0.35);
+    transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, border-color 0.16s ease-out;
+  }
+  .app-card::before {
+    content: "";
+    position: absolute;
+    inset: -40% -40% auto auto;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle, var(--card-color, #3aa0ff) 0%, transparent 70%);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  .app-card:hover,
+  .app-card:focus-visible {
+    transform: translateY(-4px);
+    border-color: var(--card-color, #3aa0ff);
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.18), 0 22px 38px rgba(0, 0, 0, 0.4), 0 0 0 3px var(--card-color, #3aa0ff);
+    outline: none;
+  }
+  .app-card:active { transform: translateY(0); }
+
+  .app-emoji {
+    font-size: 52px;
+    line-height: 1;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
+  }
+  .app-subject {
+    align-self: flex-start;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #0b1e3a;
+    background: var(--card-color, #ffd93d);
+    border-radius: 999px;
+    padding: 4px 12px;
+  }
+  .app-title {
+    font-size: clamp(18px, 3vw, 22px);
+    font-weight: 900;
+  }
+  .app-desc {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--kids-text-soft);
+    flex: 1;
+  }
+  .app-play {
+    align-self: flex-start;
+    font-weight: 900;
+    font-size: 14px;
+    color: var(--card-color, #ffd93d);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .app-card:hover .app-play,
+  .app-card:focus-visible .app-play {
+    text-decoration: underline;
+  }
+
+  .empty-note {
+    text-align: center;
+    color: var(--kids-text-soft);
+    font-size: 15px;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body class="kids-app kids-reset">
+  <div class="hub">
+    <header class="hub-header">
+      <h1>きっずスタディ <span class="em">まなびのしま</span></h1>
+      <p>すきなアプリを えらんで あそびながら べんきょうしよう！</p>
+    </header>
+    <main class="app-grid" id="app-grid" aria-label="べんきょうアプリ いちらん"></main>
+    <p class="empty-note" id="empty-note" hidden>まだ あぷりが ありません。</p>
+  </div>
+
+  <script src="shared/js/apps-registry.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    const apps = window.KIDS_APPS || [];
+    const grid = document.getElementById("app-grid");
+    const emptyNote = document.getElementById("empty-note");
+
+    if (!apps.length) {
+      emptyNote.hidden = false;
+      return;
+    }
+
+    apps.forEach(function (app) {
+      const card = document.createElement("a");
+      card.className = "app-card";
+      card.href = app.path;
+      card.style.setProperty("--card-color", app.color || "#3aa0ff");
+
+      card.innerHTML =
+        '<div class="app-emoji">' + app.emoji + "</div>" +
+        '<div class="app-subject">' + app.subject + "</div>" +
+        '<div class="app-title">' + app.title + "</div>" +
+        '<div class="app-desc">' + app.description + "</div>" +
+        '<div class="app-play">▶ あそぶ</div>';
+
+      grid.appendChild(card);
+    });
+  })();
+  </script>
+</body>
+</html>
