@@ -39,9 +39,27 @@
 
   /* ---------- overlay display toggles (このゲーム固有) ---------- */
   #hintoverlay { display:none; }
-  #hintcard { background:#fffbe8; border-radius:24px; padding:26px 30px; max-width:520px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.5); }
-  #hintcard h2 { color:#b7791f; font-size:clamp(20px,4vw,28px); font-weight:900; margin-bottom:12px; }
-  #hinttext { color:#4a3200; font-size:clamp(20px,4.4vw,32px); font-weight:800; line-height:1.9; }
+  #hintcard { background:#fffbe8; border-radius:24px; padding:26px 30px; max-width:520px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.5); display:flex; flex-direction:column; align-items:center; gap:10px; }
+  #hintcard h2 { color:#b7791f; font-size:clamp(20px,4vw,28px); font-weight:900; }
+  #hintProblem { color:#4a3200; font-size:clamp(22px,4.4vw,32px); font-weight:900; }
+  .cherry-instruction { color:#7a5a1a; font-size:clamp(14px,2.8vw,18px); font-weight:700; }
+  .cherry-diagram { display:flex; flex-direction:column; align-items:center; }
+  .cherry-card-top { font-size:clamp(28px,5vw,40px); font-weight:900; color:#4a3200; background:#fff; border:3px solid #4a3200; border-radius:16px; padding:2px 20px; }
+  .cherry-lines { position:relative; width:170px; height:34px; }
+  .cherry-lines::before, .cherry-lines::after { content:""; position:absolute; top:0; left:50%; width:2px; height:34px; background:#4a3200; }
+  .cherry-lines::before { transform: rotate(-32deg) translateX(-38px); transform-origin:top; }
+  .cherry-lines::after { transform: rotate(32deg) translateX(38px); transform-origin:top; }
+  .cherry-slots-row { display:flex; gap:34px; }
+  .cherry-slot { width:62px; height:62px; border-radius:50%; background:#ff6b6b; border:3px solid #b71c1c; color:#fff; font-size:clamp(20px,4vw,28px); font-weight:900; font-family:inherit; display:flex; align-items:center; justify-content:center; }
+  .cherry-slot.filled { background:#3ec46d; border-color:#1b7a3d; }
+  #cherryFeedback { min-height:1.6em; font-size:clamp(16px,3.2vw,22px); font-weight:900; }
+  #cherrySteps { color:#4a3200; font-size:clamp(17px,3.6vw,26px); font-weight:800; line-height:1.7; min-height:1em; }
+  #cherryPad { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .cherry-num { width:46px; height:46px; border-radius:12px; border:2px solid #4a3200; background:#fff; color:#4a3200; font-size:clamp(15px,3vw,20px); font-weight:900; font-family:inherit; }
+  .cherry-num:active { transform:translateY(2px); }
+  .cherry-num:disabled { opacity:.35; }
+  .small-btn { padding:8px 18px; font-size:14px; box-shadow:none; background:rgba(74,50,0,.12); color:#4a3200; }
+  .small-btn:active { transform:translateY(2px); }
   #gameover { display:none; }
   #map { display:none; }
   #storyIntro { display:none; }
@@ -115,10 +133,11 @@
   #nameInput { width:min(80vw,280px); padding:12px 16px; border-radius:16px; border:2px solid rgba(255,255,255,.3); background:rgba(255,255,255,.95); color:#0b1e3a; font-size:18px; font-weight:700; font-family:inherit; text-align:center; }
 
   /* ---------- mistake explanation ---------- */
-  #mistakeCard { background:#fff0ea; border-radius:24px; padding:26px 30px; max-width:520px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.5); }
-  #mistakeCard h2 { color:#d85a30; font-size:clamp(20px,4vw,28px); font-weight:900; margin-bottom:12px; }
-  #mistakeText { color:#4a2200; font-size:clamp(18px,4vw,26px); font-weight:800; line-height:1.8; }
-  #mistakeText .eq-line { font-size:1.15em; margin-bottom:8px; }
+  #mistakeCard { background:#fff0ea; border-radius:24px; padding:26px 30px; max-width:520px; width:92%; box-shadow:0 10px 40px rgba(0,0,0,.5); display:flex; flex-direction:column; align-items:center; gap:10px; }
+  #mistakeCard h2 { color:#d85a30; font-size:clamp(20px,4vw,28px); font-weight:900; }
+  #mistakeProblem { color:#4a2200; font-size:clamp(20px,4.2vw,30px); font-weight:900; }
+  #mistakeSteps { color:#4a2200; font-size:clamp(18px,4vw,26px); font-weight:800; line-height:1.8; }
+  #mistakeDiagramHost .cherry-slot { cursor:default; }
 
   /* ---------- stats screen ---------- */
   #statsScreen { overflow-y:auto; }
@@ -210,7 +229,13 @@
 <div class="overlay" id="hintoverlay">
   <div id="hintcard">
     <h2>&#127826; さくらんぼ けいさん</h2>
-    <div id="hinttext"></div>
+    <div id="hintProblem"></div>
+    <p class="cherry-instruction" id="cherryInstruction"></p>
+    <div id="hintDiagramHost"></div>
+    <div id="cherryFeedback"></div>
+    <div id="cherrySteps"></div>
+    <div id="cherryPad"></div>
+    <button class="bigbtn small-btn" id="cherryResetBtn">&#8635; やりなおす</button>
   </div>
   <button class="bigbtn" id="hintclose">わかった!</button>
 </div>
@@ -218,7 +243,9 @@
 <div class="overlay" id="mistakeOverlay">
   <div id="mistakeCard">
     <h2>&#128161; かいせつ</h2>
-    <div id="mistakeText"></div>
+    <div id="mistakeProblem"></div>
+    <div id="mistakeDiagramHost"></div>
+    <div id="mistakeSteps"></div>
   </div>
   <button class="bigbtn" id="mistakeNextBtn">つぎの もんだいへ</button>
 </div>
@@ -796,22 +823,44 @@ function hitCorrect(monster){
   }, 650);
 }
 
-function buildMistakeExplanation(){
+/* ================= CHERRY (さくらんぼ) SPLIT DIAGRAM ================= */
+/* 共通の「さくらんぼ図」HTML。value が null なら "?" (対話式ヒント用)、
+   数値が入っていれば すでに わかっている こたえとして 緑色で表示する (まちがい解説用)。 */
+function cherryDiagramHTML(topNumber, values){
+  function slot(i){
+    const v = values[i];
+    const filled = v != null;
+    return '<button class="cherry-slot' + (filled ? ' filled' : '') + '" data-slot="' + i + '">' + (filled ? v : "?") + '</button>';
+  }
+  return '<div class="cherry-diagram">' +
+    '<div class="cherry-card-top">' + topNumber + '</div>' +
+    '<div class="cherry-lines"></div>' +
+    '<div class="cherry-slots-row">' + slot(0) + slot(1) + '</div>' +
+  '</div>';
+}
+
+function cherrySplitFor(a, op, b){
+  if(op === "+"){
+    const first = 10 - a;
+    return { first: first, second: b - first };
+  }
+  const first = a % 10;
+  return { first: first, second: b - first };
+}
+
+function renderMistakeExplanation(){
   const st = S.stage;
+  $("mistakeProblem").innerHTML = S.a + " " + S.op + " " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b>";
   if(!st.carry){
-    return "<div class='eq-line'>" + S.a + " " + S.op + " " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b></div>" +
-      "<p>こたえは <b style='color:#d85a30'>" + S.answer + "</b> だよ。ゆびを つかわずに もう一かい かぞえてみよう!</p>";
+    $("mistakeDiagramHost").innerHTML = "";
+    $("mistakeSteps").innerHTML = "<p>こたえは <b style='color:#d85a30'>" + S.answer + "</b> だよ。ゆびを つかわずに もう一かい かぞえてみよう!</p>";
+    return;
   }
-  if(S.op === "+"){
-    const need = 10 - S.a, rest = S.b - need;
-    return "<div class='eq-line'>" + S.a + " + " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b></div>" +
-      "<p>" + S.b + " を <span style='color:#d85a30'>" + need + "</span> と <span style='color:#d85a30'>" + rest + "</span> に わける<br>" +
-      S.a + " + " + need + " = 10<br>10 + " + rest + " = " + S.answer + "</p>";
-  }
-  const ones = S.a % 10, rem = S.b - ones;
-  return "<div class='eq-line'>" + S.a + " - " + S.b + " = <b style='color:#d85a30'>" + S.answer + "</b></div>" +
-    "<p>" + S.b + " を <span style='color:#d85a30'>" + ones + "</span> と <span style='color:#d85a30'>" + rem + "</span> に わける<br>" +
-    S.a + " - " + ones + " = 10<br>10 - " + rem + " = " + S.answer + "</p>";
+  const split = cherrySplitFor(S.a, S.op, S.b);
+  $("mistakeDiagramHost").innerHTML = cherryDiagramHTML(S.b, [split.first, split.second]);
+  $("mistakeSteps").innerHTML = S.op === "+"
+    ? (S.a + " + " + split.first + " = 10<br>10 + " + split.second + " = " + S.answer)
+    : (S.a + " - " + split.first + " = 10<br>10 - " + split.second + " = " + S.answer);
 }
 
 function hitWrong(monster){
@@ -819,9 +868,20 @@ function hitWrong(monster){
   S.combo = 0;
   S.runWrong++;
   profile.totalWrong++;
+
+  let heartLost = false;
+  if(S.hasShield){
+    S.hasShield = false;
+    sfx.good();
+  } else {
+    S.hearts--;
+    heartLost = true;
+    $("flash").style.opacity = 0.45;
+    setTimeout(()=>$("flash").style.opacity = 0, 120);
+  }
   saveProfile();
   updateHUD();
-  showMsg("ちがうよ!", true);
+  showMsg(heartLost ? "ちがうよ! ハートが へった…" : "🛡️ たてが まもった!", true);
   /* wrong monster shakes briefly before the explanation appears */
   const base = monster.position.x;
   let n = 0;
@@ -833,14 +893,17 @@ function hitWrong(monster){
   S.advancing = true;
   S.paused = true;
   setTimeout(()=>{
-    $("mistakeText").innerHTML = buildMistakeExplanation();
+    renderMistakeExplanation();
+    $("mistakeNextBtn").textContent = S.hearts <= 0 ? "けっかを みる" : "つぎの もんだいへ";
     $("mistakeOverlay").style.display = "flex";
   }, 550);
 }
 $("mistakeNextBtn").addEventListener("click", ()=>{
   $("mistakeOverlay").style.display = "none";
   S.paused = false;
-  if(S.running) spawnWave();
+  if(!S.running) return;
+  if(S.hearts <= 0) gameOver();
+  else spawnWave();
 });
 
 function loseHeart(){
@@ -1071,21 +1134,82 @@ renderer.domElement.addEventListener("pointerdown", e=>{ e.preventDefault(); onT
 document.addEventListener("gesturestart", e=>e.preventDefault());
 document.addEventListener("dblclick", e=>e.preventDefault());
 
-/* ================= HINT ================= */
+/* ================= HINT (対話式さくらんぼ計算) ================= */
+let cherrySlots = [null, null];
+let cherryTarget = { first:0, second:0 };
+
+function renderHintDiagram(){
+  $("hintDiagramHost").innerHTML = cherryDiagramHTML(S.b, cherrySlots);
+}
+
+function renderCherryPad(){
+  const pad = $("cherryPad");
+  pad.innerHTML = "";
+  for(let n=0;n<=9;n++){
+    const btn = document.createElement("button");
+    btn.className = "cherry-num";
+    btn.textContent = n;
+    btn.addEventListener("click", ()=>onCherryNumTap(n));
+    pad.appendChild(btn);
+  }
+}
+
+function onCherryNumTap(n){
+  const idx = cherrySlots[0]==null ? 0 : (cherrySlots[1]==null ? 1 : null);
+  if(idx === null) return;
+  cherrySlots[idx] = n;
+  renderHintDiagram();
+  if(cherrySlots[0]!=null && cherrySlots[1]!=null) checkCherrySplit();
+}
+
+function checkCherrySplit(){
+  const t = cherryTarget;
+  const ok = (cherrySlots[0]===t.first && cherrySlots[1]===t.second) ||
+             (cherrySlots[0]===t.second && cherrySlots[1]===t.first);
+  if(ok){
+    sfx.good();
+    $("cherryFeedback").innerHTML = "<span style='color:#3ec46d'>せいかい! &#127881;</span>";
+    $("cherrySteps").innerHTML = S.op === "+"
+      ? (S.a + " + " + t.first + " = 10<br>10 + " + t.second + " = " + S.answer)
+      : (S.a + " - " + t.first + " = 10<br>10 - " + t.second + " = " + S.answer);
+  } else {
+    sfx.bad();
+    $("cherryFeedback").innerHTML = "<span style='color:#ff7b7b'>おしい! もういちど!</span>";
+    setTimeout(()=>{
+      cherrySlots = [null, null];
+      renderHintDiagram();
+      $("cherryFeedback").textContent = "";
+    }, 900);
+  }
+}
+
+function resetCherry(){
+  cherrySlots = [null, null];
+  $("cherryFeedback").textContent = "";
+  $("cherrySteps").innerHTML = "";
+  renderHintDiagram();
+}
+$("cherryResetBtn").addEventListener("click", resetCherry);
+$("hintDiagramHost").addEventListener("click", e=>{
+  const btn = e.target.closest(".cherry-slot");
+  if(!btn || !btn.classList.contains("filled")) return;
+  cherrySlots[Number(btn.dataset.slot)] = null;
+  $("cherryFeedback").textContent = "";
+  $("cherrySteps").innerHTML = "";
+  renderHintDiagram();
+});
+
 $("hintbtn").addEventListener("click", ()=>{
   if(!S.running) return;
   S.paused = true;
-  let h;
-  if(S.op === "+"){
-    const need = 10 - S.a, rest = S.b - need;
-    h = S.b + " を <span style='color:#d85a30'>" + need + "</span> と <span style='color:#d85a30'>" + rest + "</span> に わける<br>" +
-        S.a + " + " + need + " = 10<br>10 + " + rest + " = ?";
-  } else {
-    const ones = S.a % 10, rem = S.b - ones;
-    h = S.b + " を <span style='color:#d85a30'>" + ones + "</span> と <span style='color:#d85a30'>" + rem + "</span> に わける<br>" +
-        S.a + " - " + ones + " = 10<br>10 - " + rem + " = ?";
-  }
-  $("hinttext").innerHTML = h;
+  cherryTarget = cherrySplitFor(S.a, S.op, S.b);
+  cherrySlots = [null, null];
+  $("hintProblem").textContent = S.a + " " + S.op + " " + S.b + " = ?";
+  $("cherryInstruction").textContent = S.b + " を さくらんぼに わけよう! すうじを タップしてね。";
+  $("cherryFeedback").textContent = "";
+  $("cherrySteps").innerHTML = "";
+  renderHintDiagram();
+  renderCherryPad();
   $("hintoverlay").style.display = "flex";
 });
 $("hintclose").addEventListener("click", ()=>{
