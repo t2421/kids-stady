@@ -20,10 +20,10 @@
       id: "mathematics",
       title: "マスマティクス",
       subject: "さんすう",
-      description: "じゅんびちゅう！ もうすこし まってね。",
-      emoji: "📐",
+      description: "けいさんで パワーアップする シューティング！じゅんびちゅう、おたのしみに。",
+      emoji: "🚀",
       color: "#ff9f43",
-      path: "apps/mathematics/index.html",
+      path: "apps/mathematics/",
     },
   ];
 })(window);

@@ -1,0 +1,67 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時デプロイを直列化 (進行中のものは完走させる)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mathematics/package-lock.json
+
+      - name: Install dependencies (mathematics)
+        working-directory: apps/mathematics
+        run: npm ci
+
+      - name: Type-check & unit tests (mathematics)
+        working-directory: apps/mathematics
+        run: |
+          npm run typecheck
+          npm run test --if-present
+
+      - name: Build mathematics (static export)
+        working-directory: apps/mathematics
+        env:
+          NEXT_PUBLIC_BASE_PATH: /kids-stady/apps/mathematics
+        run: npm run build
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site/apps
+          cp index.html _site/
+          cp -r shared _site/shared
+          cp -r docs _site/docs
+          cp -r apps/keisan-shooter _site/apps/keisan-shooter
+          cp -r apps/mathematics/out _site/apps/mathematics
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

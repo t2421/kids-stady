@@ -1,0 +1,68 @@
+import Phaser, { Scene } from "phaser";
+import { EventBus } from "../EventBus";
+import { GAME_HEIGHT, GAME_WIDTH } from "../main";
+
+export class TitleScene extends Scene {
+  constructor() {
+    super("Title");
+  }
+
+  create() {
+    this.addStarfield();
+
+    this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.35, "マスマティクス", {
+        fontFamily: "sans-serif",
+        fontSize: "64px",
+        fontStyle: "bold",
+        color: "#ffd93d",
+        stroke: "#1a2a55",
+        strokeThickness: 8,
+      })
+      .setOrigin(0.5);
+
+    this.add
+      .text(
+        GAME_WIDTH / 2,
+        GAME_HEIGHT * 0.52,
+        "けいさんで パワーアップする シューティング!",
+        {
+          fontFamily: "sans-serif",
+          fontSize: "22px",
+          color: "#b8cdea",
+        },
+      )
+      .setOrigin(0.5);
+
+    const start = this.add
+      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.72, "▶ タップして スタート", {
+        fontFamily: "sans-serif",
+        fontSize: "28px",
+        fontStyle: "bold",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+
+    this.tweens.add({
+      targets: start,
+      alpha: { from: 1, to: 0.35 },
+      duration: 700,
+      yoyo: true,
+      repeat: -1,
+    });
+
+    EventBus.emit("current-scene-ready", this);
+  }
+
+  private addStarfield() {
+    for (let i = 0; i < 80; i++) {
+      const star = this.add.image(
+        Phaser.Math.Between(0, GAME_WIDTH),
+        Phaser.Math.Between(0, GAME_HEIGHT),
+        "star",
+      );
+      const depth = Phaser.Math.FloatBetween(0.3, 1);
+      star.setAlpha(depth).setScale(depth);
+    }
+  }
+}
