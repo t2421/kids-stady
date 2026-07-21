@@ -148,6 +148,20 @@ export const TILE_ART: Record<string, PixelArt> = {
       "cccccccc",
     ],
   },
+  chest: {
+    scale: 2,
+    palette: { t: "#8a5a35", T: "#a8763f", y: "#ffd93d", k: "#3a2a18" },
+    rows: [
+      "........",
+      ".TTTTTT.",
+      "TttttttT",
+      "TkkkkkkT",
+      "TttyyttT",
+      "TttyyttT",
+      "TttttttT",
+      ".kkkkkk.",
+    ],
+  },
   caveWall: {
     scale: 2,
     palette: { k: "#26202e", K: "#332b3d", d: "#1a1622" },

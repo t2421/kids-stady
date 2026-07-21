@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { startGame } from "@/game/main";
+import { getSave } from "@/game/session";
 import type Phaser from "phaser";
 
 /*
@@ -22,6 +23,9 @@ export function PhaserGame() {
       game = startGame("game-container");
       /* E2E・デバッグ用フック (Playwright スモークでも使う) */
       (window as unknown as Record<string, unknown>).__KAZUQUEST_GAME__ = game;
+      (window as unknown as Record<string, unknown>).__KAZUQUEST_DEBUG__ = {
+        getSave,
+      };
     }
   }, []);
 

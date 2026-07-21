@@ -62,6 +62,8 @@ export interface MapEvent {
   trigger: "step" | "inspect";
   /* 実行済みフラグが立っていたら発火しない (宝箱など)。省略 = 毎回発火 */
   onceFlag?: string;
+  /* 見た目を持つイベント (宝箱など)。tiles の art 名。onceFlag 済みなら消える */
+  art?: string;
   commands: EventCommand[];
 }
 

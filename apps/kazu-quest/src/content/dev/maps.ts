@@ -44,7 +44,18 @@ export const DEV_VILLAGE: MapDef = {
       y: 6,
       art: "mother",
       movement: "static",
-      dialog: [{ pages: ["おはよう! きょうは だいじな ひ ですよ。"] }],
+      dialog: [
+        {
+          if: { flag: "dev.metKing", op: "set" },
+          pages: ["おうさまに あえたのね! りっぱに なって…"],
+        },
+        {
+          pages: [
+            "おはよう! きょうは だいじな ひ ですよ。",
+            "おうさまが よんでいたわ。あいさつ してきなさい。",
+          ],
+        },
+      ],
     },
     {
       id: "dev-king",
@@ -52,10 +63,74 @@ export const DEV_VILLAGE: MapDef = {
       y: 6,
       art: "king",
       movement: "static",
-      dialog: [{ pages: ["わしが カウントおう じゃ。"] }],
+      dialog: [
+        {
+          if: { flag: "dev.metKing", op: "set" },
+          pages: ["うむ、たのんだぞ ゆうしゃよ。"],
+        },
+        {
+          pages: ["わしが カウントおう じゃ。", "そなたに 50ゴールド さずけよう!"],
+          then: [
+            { type: "giveGold", amount: 50 },
+            { type: "setFlag", flag: "dev.metKing" },
+          ],
+        },
+      ],
+    },
+    {
+      id: "dev-inn",
+      x: 12,
+      y: 4,
+      art: "villager",
+      movement: "static",
+      dialog: [
+        {
+          pages: ["ここは やどや。ひとばん 10ゴールド だよ。"],
+          then: [
+            {
+              type: "choice",
+              prompt: "とまって いく?",
+              yes: [{ type: "healInn", price: 10 }],
+              no: [{ type: "message", pages: ["また きてね!"] }],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: "dev-priest",
+      x: 4,
+      y: 4,
+      art: "scholar",
+      movement: "static",
+      dialog: [
+        {
+          pages: ["ここは めがみの ほこら。"],
+          then: [
+            {
+              type: "choice",
+              prompt: "ぼうけんを きろくする?",
+              yes: [{ type: "savePoint" }],
+              no: [],
+            },
+          ],
+        },
+      ],
     },
   ],
   events: [
+    {
+      id: "dev-chest1",
+      x: 17,
+      y: 10,
+      trigger: "inspect",
+      onceFlag: "dev.chest1",
+      art: "chest",
+      commands: [
+        { type: "message", pages: ["たからばこを あけた!", "やくそうを 2つ てにいれた!"] },
+        { type: "giveItem", itemId: "yakusou", count: 2 },
+      ],
+    },
     {
       id: "to-field",
       x: 7,

@@ -2,6 +2,7 @@ import Phaser, { AUTO, Game, Scale } from "phaser";
 import { BootScene } from "./scenes/BootScene";
 import { TitleScene } from "./scenes/TitleScene";
 import { FieldScene } from "./scenes/FieldScene";
+import { UiScene } from "./scenes/UiScene";
 
 /* 論理解像度。全シーンはこの座標系で描き、Scale.FIT で画面に合わせる */
 export const GAME_WIDTH = 960;
@@ -28,7 +29,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Scale.FIT,
     autoCenter: Scale.CENTER_BOTH,
   },
-  scene: [BootScene, TitleScene, FieldScene],
+  scene: [BootScene, TitleScene, FieldScene, UiScene],
 };
 
 export function startGame(parent: string): Phaser.Game {

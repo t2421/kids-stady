@@ -1,15 +1,20 @@
 import Phaser, { Scene } from "phaser";
-import type { MapDef } from "../../content/types";
+import type { EventCommand, MapDef, MapEvent, NpcDef } from "../../content/types";
 import { getMapDef } from "../../content/maps";
 import { TILE_SIZE } from "../../content/art/tiles";
 import type { Dir } from "../../lib/save";
+import type { RunnerInput, RunnerState } from "../../lib/events/runner";
+import { evalCond, startRun, step } from "../../lib/events/runner";
 import { actorTextureKey, tileTextureKey } from "../textures";
 import { autosave, getSave, updateSave } from "../session";
 import { EventBus } from "../EventBus";
 import { fadeIn, fadeOutThen } from "../transition";
+import type { UiScene } from "./UiScene";
 
 const STEP_MS = 150;
 const ZOOM = 3;
+/* ダイアログを閉じた直後の action キー誤爆を防ぐクールダウン */
+const INTERACT_COOLDOWN_MS = 200;
 
 const DELTA: Record<Dir, { dx: number; dy: number }> = {
   up: { dx: 0, dy: -1 },
@@ -31,14 +36,18 @@ export class FieldScene extends Scene {
   private map!: MapDef;
   private player!: Phaser.GameObjects.Image;
   private npcSprites = new Map<string, Phaser.GameObjects.Image>();
+  private eventSprites = new Map<string, Phaser.GameObjects.Image>();
   private gridX = 0;
   private gridY = 0;
   private facing: Dir = "down";
   private moving = false;
   private transferring = false;
+  private runActive = false;
+  private lastRunEndAt = 0;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private pointerHeld = false;
+  private ui!: UiScene;
 
   constructor() {
     super("Field");
@@ -68,12 +77,26 @@ export class FieldScene extends Scene {
 
     this.moving = false;
     this.transferring = false;
+    this.runActive = false;
     this.npcSprites.clear();
+    this.eventSprites.clear();
   }
 
   create() {
+    /* 入場時点で現在地をセーブに確定させる (以後 save.location が常に真) */
+    updateSave((save) => ({
+      ...save,
+      location: {
+        mapId: this.map.id,
+        x: this.gridX,
+        y: this.gridY,
+        facing: this.facing,
+      },
+    }));
+
     this.buildMapLayer();
     this.buildNpcs();
+    this.buildEventSprites();
 
     this.player = this.add
       .image(...this.tileCenter(this.gridX, this.gridY), actorTextureKey("hero"))
@@ -97,19 +120,39 @@ export class FieldScene extends Scene {
       S: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
       D: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
+    keyboard.on("keydown-Z", () => this.interact());
+    keyboard.on("keydown-ENTER", () => this.interact());
+    keyboard.on("keydown-SPACE", () => this.interact());
 
-    this.input.on("pointerdown", () => (this.pointerHeld = true));
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (this.isUiBusy()) return;
+      if (this.tryPointerInteract(pointer)) return;
+      this.pointerHeld = true;
+    });
     this.input.on("pointerup", () => (this.pointerHeld = false));
 
+    /* 常駐UIシーンを確保 (初回のみ起動) */
+    if (!this.scene.isActive("Ui")) {
+      this.scene.launch("Ui");
+    }
+    this.ui = this.scene.get("Ui") as UiScene;
+    /* Ui の create 完了を待ってからマップ名を出す */
+    this.time.delayedCall(50, () => this.ui.showMapName?.(this.map.name));
+
     EventBus.emit("current-scene-ready", this);
-    /* マップ名の一時表示などの画面UIは UiScene (M5) が担当する */
     EventBus.emit("map-entered", { mapId: this.map.id, name: this.map.name });
   }
 
   update() {
-    if (this.moving || this.transferring) return;
+    if (this.moving || this.transferring || this.runActive || this.isUiBusy()) {
+      return;
+    }
     const dir = this.readDirection();
     if (dir) this.tryMove(dir);
+  }
+
+  private isUiBusy(): boolean {
+    return typeof this.ui?.isBusy === "function" && this.ui.isBusy();
   }
 
   /* ---------- 描画 ---------- */
@@ -138,6 +181,33 @@ export class FieldScene extends Scene {
         .image(...this.tileCenter(npc.x, npc.y), actorTextureKey(npc.art))
         .setDepth(5);
       this.npcSprites.set(npc.id, sprite);
+    }
+  }
+
+  /* 宝箱など、見た目を持つイベントを描画する (onceFlag 済みなら出さない) */
+  private buildEventSprites() {
+    const flags = getSave().flags;
+    for (const ev of this.map.events) {
+      if (!ev.art) continue;
+      if (ev.onceFlag && evalCond({ flag: ev.onceFlag, op: "set" }, flags)) {
+        continue;
+      }
+      const sprite = this.add
+        .image(...this.tileCenter(ev.x, ev.y), tileTextureKey(ev.art))
+        .setDepth(4);
+      this.eventSprites.set(ev.id, sprite);
+    }
+  }
+
+  private refreshEventSprites() {
+    const flags = getSave().flags;
+    for (const ev of this.map.events) {
+      const sprite = this.eventSprites.get(ev.id);
+      if (!sprite) continue;
+      if (ev.onceFlag && evalCond({ flag: ev.onceFlag, op: "set" }, flags)) {
+        sprite.destroy();
+        this.eventSprites.delete(ev.id);
+      }
     }
   }
 
@@ -175,6 +245,10 @@ export class FieldScene extends Scene {
     const spec = this.map.legend[row[x]];
     if (!spec || !spec.walkable) return false;
     if (this.map.npcs.some((n) => n.x === x && n.y === y)) return false;
+    /* 見えている宝箱などのイベントもふさぐ */
+    for (const ev of this.map.events) {
+      if (ev.x === x && ev.y === y && this.eventSprites.has(ev.id)) return false;
+    }
     return true;
   }
 
@@ -201,7 +275,7 @@ export class FieldScene extends Scene {
     });
   }
 
-  /* 1歩ごとの処理: 座標イベント (M5で本実装のランナーに委譲) */
+  /* 1歩ごとの処理: 座標イベント → イベントランナー */
   private onStep() {
     updateSave((save) => ({
       ...save,
@@ -213,16 +287,173 @@ export class FieldScene extends Scene {
       },
     }));
 
-    const event = this.map.events.find(
-      (e) => e.trigger === "step" && e.x === this.gridX && e.y === this.gridY,
-    );
-    if (!event) return;
+    const event = this.findEvent("step", this.gridX, this.gridY);
+    if (event) this.runEvent(event);
+  }
 
-    /* M4時点では transfer のみ処理する (他コマンドは M5 のイベントランナー) */
-    const transfer = event.commands.find((c) => c.type === "transfer");
-    if (transfer && transfer.type === "transfer") {
-      this.transferTo(transfer.mapId, transfer.spawn);
+  /* ---------- 調べる / 話しかける ---------- */
+
+  private interact() {
+    if (
+      this.moving ||
+      this.transferring ||
+      this.runActive ||
+      this.isUiBusy() ||
+      this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS
+    ) {
+      return;
     }
+    const { dx, dy } = DELTA[this.facing];
+    this.interactAt(this.gridX + dx, this.gridY + dy);
+  }
+
+  /* タップした隣接タイルの NPC・宝箱に触れる。処理したら true */
+  private tryPointerInteract(pointer: Phaser.Input.Pointer): boolean {
+    if (this.moving || this.runActive) return false;
+    if (this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS) return false;
+    const world = pointer.positionToCamera(
+      this.cameras.main,
+    ) as Phaser.Math.Vector2;
+    const tx = Math.floor(world.x / TILE_SIZE);
+    const ty = Math.floor(world.y / TILE_SIZE);
+    const adjacent =
+      Math.abs(tx - this.gridX) + Math.abs(ty - this.gridY) === 1;
+    if (!adjacent) return false;
+    if (!this.findNpc(tx, ty) && !this.findEvent("inspect", tx, ty)) {
+      return false;
+    }
+    /* 向きを合わせてから実行 */
+    if (tx > this.gridX) this.facing = "right";
+    else if (tx < this.gridX) this.facing = "left";
+    else if (ty > this.gridY) this.facing = "down";
+    else this.facing = "up";
+    this.interactAt(tx, ty);
+    return true;
+  }
+
+  private interactAt(x: number, y: number) {
+    const npc = this.findNpc(x, y);
+    if (npc) {
+      this.talkTo(npc);
+      return;
+    }
+    const event = this.findEvent("inspect", x, y);
+    if (event) this.runEvent(event);
+  }
+
+  private findNpc(x: number, y: number): NpcDef | undefined {
+    return this.map.npcs.find((n) => n.x === x && n.y === y);
+  }
+
+  private findEvent(
+    trigger: MapEvent["trigger"],
+    x: number,
+    y: number,
+  ): MapEvent | undefined {
+    const flags = getSave().flags;
+    return this.map.events.find(
+      (e) =>
+        e.trigger === trigger &&
+        e.x === x &&
+        e.y === y &&
+        !(e.onceFlag && evalCond({ flag: e.onceFlag, op: "set" }, flags)),
+    );
+  }
+
+  private talkTo(npc: NpcDef) {
+    const flags = getSave().flags;
+    const entry = npc.dialog.find((d) => evalCond(d.if, flags));
+    if (!entry) return;
+    const commands: EventCommand[] = [
+      { type: "message", pages: entry.pages },
+      ...(entry.then ?? []),
+    ];
+    this.runCommands(commands);
+  }
+
+  private runEvent(event: MapEvent) {
+    const commands: EventCommand[] = event.onceFlag
+      ? [...event.commands, { type: "setFlag", flag: event.onceFlag }]
+      : event.commands;
+    this.runCommands(commands);
+  }
+
+  /* ---------- イベントランナー駆動 ---------- */
+
+  private runCommands(commands: EventCommand[]) {
+    this.runActive = true;
+    let state: RunnerState = startRun(commands, getSave());
+
+    const advance = (input?: RunnerInput) => {
+      const result = step(state, input);
+      state = result.state;
+      updateSave(() => result.state.save);
+
+      if (result.done) {
+        this.finishRun();
+        return;
+      }
+      const effect = result.effect!;
+      switch (effect.kind) {
+        case "message":
+          this.ui.showMessage(effect.pages, () => advance());
+          break;
+        case "choice":
+          this.ui.showChoice(effect.prompt, (yes) =>
+            advance({ choice: yes ? "yes" : "no" }),
+          );
+          break;
+        case "transfer":
+          this.finishRun();
+          this.transferTo(effect.mapId, effect.spawn);
+          break;
+        case "savePoint":
+          updateSave((save) => ({
+            ...save,
+            checkpoint: {
+              mapId: this.map.id,
+              spawn: this.map.spawns.save ? "save" : "start",
+            },
+          }));
+          autosave();
+          this.ui.showMessage(["ぼうけんを きろくした!"], () => advance());
+          break;
+        case "healInn": {
+          const save = getSave();
+          if (save.inventory.gold < effect.price) {
+            this.ui.showMessage(["おかねが たりないみたい…"], () => advance());
+            break;
+          }
+          updateSave((s) => ({
+            ...s,
+            inventory: { ...s.inventory, gold: s.inventory.gold - effect.price },
+            party: s.party.map((m) => ({ ...m, hp: 9999, mp: 9999 })),
+          }));
+          /* HP/MP 上限はレベル由来 (M6 で導出関数に置換)。9999 は normalize で丸めず
+             戦闘側の min(max, hp) で吸収する */
+          autosave();
+          this.ui.showMessage(["ゆっくり やすんで…", "げんきに なった!"], () =>
+            advance(),
+          );
+          break;
+        }
+        case "battle":
+        case "openShop":
+        case "openSpellTest":
+          /* M6〜M8 で実装。いまはプレースホルダ */
+          this.ui.showMessage(["(ここは じゅんびちゅう だよ)"], () => advance());
+          break;
+      }
+    };
+
+    advance();
+  }
+
+  private finishRun() {
+    this.runActive = false;
+    this.lastRunEndAt = this.time.now;
+    this.refreshEventSprites();
+    autosave();
   }
 
   private transferTo(mapId: string, spawn: string) {
