@@ -5,9 +5,10 @@
 (function (global) {
   "use strict";
 
+  /* プロフィール (名前+アバター) の管理は shared/js/profiles.js (KidsProfiles) に共通化した。
+     このファイルにはけいさんシューター固有のゲーム進行データだけが残る。 */
   const LEGACY_STORAGE_KEY = "kidsStudy.keisanShooter.profile.v1";
-  const PROFILES_INDEX_KEY = "kidsStudy.keisanShooter.profiles.v1";
-  const AVATARS = ["🦊", "🐱", "🐶", "🐰", "🐻", "🐼", "🦁", "🐸", "🐵", "🐧"];
+  const AVATARS = KidsProfiles.AVATARS;
 
   const LEVELS = [
     { need: 0,    title: "けいさんみならい" },
@@ -78,21 +79,8 @@
     };
   }
 
-  function readJSON(key) {
-    try {
-      return JSON.parse(localStorage.getItem(key));
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function writeJSON(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      /* ストレージが使えない環境ではメモリ上の値だけで続行する */
-    }
-  }
+  const readJSON = KidsProfiles.readJSON;
+  const writeJSON = KidsProfiles.writeJSON;
 
   function normalizeProfileData(saved) {
     const base = defaultProfile();
@@ -122,62 +110,37 @@
     return "kidsStudy.keisanShooter.profileData." + id;
   }
 
-  function makeId() {
-    return "p" + Math.random().toString(36).slice(2, 9);
+  /* 一度だけ: プレイヤー切り替え機能が無かった頃の単一セーブを、
+     「プレイヤー1」として共通プロフィールに引き継ぐ */
+  function migrateLegacySingleSave() {
+    if (KidsProfiles.listProfiles().length > 0) return;
+    const legacy = readJSON(LEGACY_STORAGE_KEY);
+    if (!legacy) return;
+    const id = KidsProfiles.createProfile("プレイヤー1", AVATARS[0]);
+    writeJSON(profileDataKey(id), normalizeProfileData(legacy));
   }
-
-  function loadIndex() {
-    let idx = readJSON(PROFILES_INDEX_KEY);
-    if (!idx || !Array.isArray(idx.profiles)) idx = { activeId: null, profiles: [] };
-
-    /* 一度だけ: プレイヤー切り替え機能が無かった頃のセーブデータを、
-       「プレイヤー1」として引き継ぐ */
-    if (idx.profiles.length === 0) {
-      const legacy = readJSON(LEGACY_STORAGE_KEY);
-      if (legacy) {
-        const id = makeId();
-        idx.profiles.push({ id: id, name: "プレイヤー1", avatar: AVATARS[0] });
-        idx.activeId = id;
-        writeJSON(profileDataKey(id), normalizeProfileData(legacy));
-        writeJSON(PROFILES_INDEX_KEY, idx);
-      }
-    }
-    return idx;
-  }
-
-  function saveIndex(idx) {
-    writeJSON(PROFILES_INDEX_KEY, idx);
-  }
+  migrateLegacySingleSave();
 
   function listProfiles() {
-    return loadIndex().profiles.slice();
+    return KidsProfiles.listProfiles();
   }
 
   function getActiveId() {
-    return loadIndex().activeId;
+    return KidsProfiles.getActiveId();
   }
 
   function setActiveId(id) {
-    const idx = loadIndex();
-    idx.activeId = id;
-    saveIndex(idx);
+    KidsProfiles.setActiveId(id);
   }
 
   function createProfile(name, avatar) {
-    const idx = loadIndex();
-    const id = makeId();
-    idx.profiles.push({ id: id, name: name || "プレイヤー", avatar: avatar || AVATARS[0] });
-    idx.activeId = id;
-    saveIndex(idx);
+    const id = KidsProfiles.createProfile(name, avatar);
     writeJSON(profileDataKey(id), defaultProfile());
     return id;
   }
 
   function deleteProfile(id) {
-    const idx = loadIndex();
-    idx.profiles = idx.profiles.filter(function (p) { return p.id !== id; });
-    if (idx.activeId === id) idx.activeId = null;
-    saveIndex(idx);
+    KidsProfiles.deleteProfile(id);
     try {
       localStorage.removeItem(profileDataKey(id));
     } catch (e) {
