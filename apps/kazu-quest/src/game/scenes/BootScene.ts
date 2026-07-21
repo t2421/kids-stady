@@ -1,9 +1,9 @@
 import { Scene } from "phaser";
+import { generateAllTextures } from "../textures";
 
 /*
  * 起動シーン。画像ファイルは使わず、すべてのテクスチャをここで手続き生成する
- * (リポジトリ方針: バイナリアセット0)。
- * M4 でドット絵定義 (src/content/art/) からの一括生成に置き換わる予定。
+ * (リポジトリ方針: バイナリアセット0)。ドット絵定義は src/content/art/。
  */
 export class BootScene extends Scene {
   constructor() {
@@ -12,6 +12,7 @@ export class BootScene extends Scene {
 
   create() {
     this.createPixelTexture();
+    generateAllTextures(this);
     this.scene.start("Title");
   }
 

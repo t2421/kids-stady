@@ -1,6 +1,8 @@
 import Phaser, { Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
+import { ensureSession, getSave } from "../session";
+import { fadeOutThen } from "../transition";
 
 export class TitleScene extends Scene {
   constructor() {
@@ -62,7 +64,20 @@ export class TitleScene extends Scene {
       repeat: -1,
     });
 
+    this.input.once("pointerdown", () => this.startAdventure());
+    this.input.keyboard?.once("keydown-ENTER", () => this.startAdventure());
+    this.input.keyboard?.once("keydown-SPACE", () => this.startAdventure());
+
     EventBus.emit("current-scene-ready", this);
+  }
+
+  /* プロフィール選択UI (React) は M8 で挟まる。まずはセーブ位置から冒険再開 */
+  private startAdventure() {
+    ensureSession();
+    const save = getSave();
+    fadeOutThen(this, () => {
+      this.scene.start("Field", { mapId: save.location.mapId });
+    });
   }
 
   /* 夜空にきらめく星 (RPGのオープニング風) */

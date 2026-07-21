@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   assetPrefix: basePath,
   images: { unoptimized: true },
   trailingSlash: true,
+  /* ~/ に別のロックファイルがあると workspace root を誤検出するため明示する */
+  turbopack: { root: __dirname },
 };
 
 export default nextConfig;
