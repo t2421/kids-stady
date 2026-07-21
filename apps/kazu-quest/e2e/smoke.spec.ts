@@ -20,6 +20,7 @@ declare global {
         flags: Record<string, number | boolean>;
         inventory: { gold: number; items: Record<string, number> };
         location: { mapId: string; x: number; y: number };
+        party: { memberId: string; level: number; exp: number; hp: number }[];
       };
     };
   }
@@ -182,6 +183,49 @@ test("engine smoke: title → field → NPC dialog → treasure chest", async ({
     window.__KAZUQUEST_DEBUG__!.getSave(),
   );
   expect(afterChest.inventory.items.yakusou).toBe(2);
+});
+
+test("random encounter: fight in the bushes and win", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto("/");
+  await waitForScene(page, "Title");
+  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
+  await waitForScene(page, "Field");
+
+  /* 草原へ */
+  await walkTo(page, "x", 7);
+  await walkTo(page, "y", 11);
+  await walkUntil(page, "ArrowDown", () =>
+    page.evaluate(
+      () => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === "dev-field",
+    ),
+  );
+  await page.waitForTimeout(600);
+
+  /* しげみ (x3〜5, y2) を行き来してエンカウントを起こす */
+  await walkTo(page, "x", 4);
+  await walkTo(page, "y", 2);
+  let inBattle = false;
+  for (let i = 0; i < 100 && !inBattle; i++) {
+    await stepOnce(page, i % 2 === 0 ? "ArrowLeft" : "ArrowRight");
+    inBattle = await page.evaluate(
+      () => window.__KAZUQUEST_GAME__!.scene.isActive("Battle"),
+    );
+  }
+  expect(inBattle).toBe(true);
+
+  /* たたかう (メニュー先頭) を押し続けて勝つ */
+  for (let i = 0; i < 90; i++) {
+    await page.keyboard.press("z");
+    await page.waitForTimeout(800);
+    const backInField = await page.evaluate(
+      () => window.__KAZUQUEST_GAME__!.scene.isActive("Field"),
+    );
+    if (backInField) break;
+  }
+  const save = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave());
+  expect(save.party[0].exp).toBeGreaterThan(0);
+  expect(save.party[0].hp).toBeGreaterThan(0);
 });
 
 test("map transfer: village → field and back", async ({ page }) => {

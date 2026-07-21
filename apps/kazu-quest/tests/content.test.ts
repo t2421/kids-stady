@@ -9,9 +9,38 @@ import type { EventCommand, MapDef } from "../src/content/types";
 import { listMaps, hasMap, getMapDef } from "../src/content/maps";
 import { TILE_ART } from "../src/content/art/tiles";
 import { ACTOR_ART } from "../src/content/art/actors";
+import { MONSTER_ART } from "../src/content/art/monsters";
 import { ITEMS } from "../src/content/items";
+import { MONSTERS } from "../src/content/monsters";
+import { ENCOUNTER_TABLES } from "../src/content/encounters";
 
 const maps = listMaps();
+
+describe("monsters & encounter tables", () => {
+  it("every monster has valid art and positive stats", () => {
+    for (const monster of Object.values(MONSTERS)) {
+      expect(MONSTER_ART[monster.art], `モンスター "${monster.id}" の art`).toBeDefined();
+      expect(monster.hp).toBeGreaterThan(0);
+      expect(monster.atk).toBeGreaterThan(0);
+      expect(monster.exp).toBeGreaterThanOrEqual(0);
+      expect(monster.actions.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("encounter tables reference existing monsters with sane step ranges", () => {
+    for (const table of Object.values(ENCOUNTER_TABLES)) {
+      expect(table.stepRange[0]).toBeGreaterThan(0);
+      expect(table.stepRange[1]).toBeGreaterThanOrEqual(table.stepRange[0]);
+      expect(table.groups.length).toBeGreaterThan(0);
+      for (const group of table.groups) {
+        expect(group.monsterIds.length).toBeGreaterThan(0);
+        for (const id of group.monsterIds) {
+          expect(MONSTERS[id], `テーブル "${table.id}" のモンスター "${id}"`).toBeDefined();
+        }
+      }
+    }
+  });
+});
 
 function collectCommands(map: MapDef): EventCommand[] {
   const out: EventCommand[] = [];
@@ -111,8 +140,22 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
     }
   });
 
+  it("encounter table reference exists", () => {
+    if (map.encounterTableId !== null) {
+      expect(
+        ENCOUNTER_TABLES[map.encounterTableId],
+        `エンカウントテーブル "${map.encounterTableId}"`,
+      ).toBeDefined();
+    }
+  });
+
   it("transfer targets and item references exist", () => {
     for (const cmd of collectCommands(map)) {
+      if (cmd.type === "battle") {
+        for (const id of cmd.monsterIds) {
+          expect(MONSTERS[id], `モンスター "${id}"`).toBeDefined();
+        }
+      }
       if (cmd.type === "transfer") {
         expect(hasMap(cmd.mapId), `transfer 先マップ "${cmd.mapId}"`).toBe(true);
         const target = getMapDef(cmd.mapId);

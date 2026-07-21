@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PixelArt } from "../src/content/art/format";
 import { ACTOR_ART } from "../src/content/art/actors";
+import { MONSTER_ART } from "../src/content/art/monsters";
 import { TILE_ART, TILE_SIZE } from "../src/content/art/tiles";
 import { artSize } from "../src/content/art/format";
 
@@ -35,6 +36,14 @@ describe("tile art", () => {
 describe("actor art", () => {
   for (const [name, art] of Object.entries(ACTOR_ART)) {
     it(`actor-${name} is a valid 16x16 sprite`, () => {
+      validateArt(name, art, 16);
+    });
+  }
+});
+
+describe("monster art", () => {
+  for (const [name, art] of Object.entries(MONSTER_ART)) {
+    it(`monster-${name} is a valid 16x16 sprite`, () => {
       validateArt(name, art, 16);
     });
   }

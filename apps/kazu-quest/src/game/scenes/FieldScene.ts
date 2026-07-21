@@ -10,6 +10,10 @@ import { autosave, getSave, updateSave } from "../session";
 import { EventBus } from "../EventBus";
 import { fadeIn, fadeOutThen } from "../transition";
 import type { UiScene } from "./UiScene";
+import type { BattleLaunchData, BattleResult } from "./BattleScene";
+import { getEncounterTable } from "../../content/encounters";
+import { mulberry32, randInt } from "../../lib/curriculum/types";
+import { heroStats } from "../../lib/battle/stats";
 
 const STEP_MS = 150;
 const ZOOM = 3;
@@ -48,6 +52,12 @@ export class FieldScene extends Scene {
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private pointerHeld = false;
   private ui!: UiScene;
+  private rng = mulberry32((Math.random() * 2 ** 32) >>> 0);
+  private stepsToEncounter = Infinity;
+  private battleStarting = false;
+  /* ボス戦などイベント発の戦闘後にランナーを再開するためのコールバック */
+  private pendingBattleAdvance: ((won: boolean) => void) | null = null;
+  private pendingWinFlag: string | undefined;
 
   constructor() {
     super("Field");
@@ -78,8 +88,21 @@ export class FieldScene extends Scene {
     this.moving = false;
     this.transferring = false;
     this.runActive = false;
+    this.battleStarting = false;
+    this.pendingBattleAdvance = null;
+    this.pendingWinFlag = undefined;
     this.npcSprites.clear();
     this.eventSprites.clear();
+    this.resetEncounterCounter();
+  }
+
+  private resetEncounterCounter() {
+    const table = this.map?.encounterTableId
+      ? getEncounterTable(this.map.encounterTableId)
+      : undefined;
+    this.stepsToEncounter = table
+      ? randInt(this.rng, table.stepRange[0], table.stepRange[1])
+      : Infinity;
   }
 
   create() {
@@ -136,6 +159,15 @@ export class FieldScene extends Scene {
       this.scene.launch("Ui");
     }
     this.ui = this.scene.get("Ui") as UiScene;
+
+    /* 戦闘から戻ったとき (sleep → wake) の結果処理 */
+    this.events.on(
+      Phaser.Scenes.Events.WAKE,
+      (_sys: unknown, data?: BattleResult) => {
+        this.battleStarting = false;
+        if (data) this.onBattleResult(data);
+      },
+    );
     /* Ui の create 完了を待ってからマップ名を出す */
     this.time.delayedCall(50, () => this.ui.showMapName?.(this.map.name));
 
@@ -144,7 +176,13 @@ export class FieldScene extends Scene {
   }
 
   update() {
-    if (this.moving || this.transferring || this.runActive || this.isUiBusy()) {
+    if (
+      this.moving ||
+      this.transferring ||
+      this.runActive ||
+      this.battleStarting ||
+      this.isUiBusy()
+    ) {
       return;
     }
     const dir = this.readDirection();
@@ -288,7 +326,87 @@ export class FieldScene extends Scene {
     }));
 
     const event = this.findEvent("step", this.gridX, this.gridY);
-    if (event) this.runEvent(event);
+    if (event) {
+      this.runEvent(event);
+      return;
+    }
+
+    /* ランダムエンカウント (encounter属性のタイルのみカウント) */
+    const tile = this.map.legend[this.map.grid[this.gridY][this.gridX]];
+    if (tile?.encounter && this.map.encounterTableId) {
+      this.stepsToEncounter -= 1;
+      if (this.stepsToEncounter <= 0) {
+        const table = getEncounterTable(this.map.encounterTableId);
+        if (table) {
+          const sum = table.groups.reduce((s, g) => s + g.weight, 0);
+          let roll = this.rng() * sum;
+          let group = table.groups[table.groups.length - 1];
+          for (const g of table.groups) {
+            roll -= g.weight;
+            if (roll <= 0) {
+              group = g;
+              break;
+            }
+          }
+          this.resetEncounterCounter();
+          this.startBattle({ monsterIds: group.monsterIds, boss: false });
+        }
+      }
+    }
+  }
+
+  /* ---------- 戦闘 ---------- */
+
+  private startBattle(data: BattleLaunchData) {
+    if (this.battleStarting) return;
+    this.battleStarting = true;
+    this.cameras.main.shake(220, 0.006);
+    this.time.delayedCall(320, () => {
+      this.scene.sleep();
+      this.scene.run("Battle", data);
+    });
+  }
+
+  private onBattleResult(result: BattleResult) {
+    if (result.outcome === "won") {
+      if (result.winFlag) {
+        updateSave((save) => ({
+          ...save,
+          flags: { ...save.flags, [result.winFlag!]: true },
+        }));
+        autosave();
+      }
+      this.refreshEventSprites();
+      const advance = this.pendingBattleAdvance;
+      this.pendingBattleAdvance = null;
+      advance?.(true);
+      return;
+    }
+    if (result.outcome === "fled") {
+      const advance = this.pendingBattleAdvance;
+      this.pendingBattleAdvance = null;
+      /* ボス戦は逃走不可なので fled はランナー外のはず。安全側で中断扱い */
+      if (advance) this.finishRun();
+      return;
+    }
+    /* 全滅: ペナルティなしで ほこら (checkpoint) へ。HP/MP全回復 */
+    this.pendingBattleAdvance = null;
+    this.runActive = false;
+    const save = getSave();
+    updateSave((s) => ({
+      ...s,
+      party: s.party.map((m) => {
+        const stats = heroStats(m.level);
+        return { ...m, hp: stats.maxHp, mp: stats.maxMp };
+      }),
+    }));
+    autosave();
+    this.ui.showMessage(
+      ["めのまえが まっくらに なった…", "…だいじょうぶ。", "もういちど ちょうせんしよう!"],
+      () => {
+        this.transferTo(save.checkpoint.mapId, save.checkpoint.spawn);
+      },
+    );
   }
 
   /* ---------- 調べる / 話しかける ---------- */
@@ -427,10 +545,11 @@ export class FieldScene extends Scene {
           updateSave((s) => ({
             ...s,
             inventory: { ...s.inventory, gold: s.inventory.gold - effect.price },
-            party: s.party.map((m) => ({ ...m, hp: 9999, mp: 9999 })),
+            party: s.party.map((m) => {
+              const stats = heroStats(m.level);
+              return { ...m, hp: stats.maxHp, mp: stats.maxMp };
+            }),
           }));
-          /* HP/MP 上限はレベル由来 (M6 で導出関数に置換)。9999 は normalize で丸めず
-             戦闘側の min(max, hp) で吸収する */
           autosave();
           this.ui.showMessage(["ゆっくり やすんで…", "げんきに なった!"], () =>
             advance(),
@@ -438,9 +557,20 @@ export class FieldScene extends Scene {
           break;
         }
         case "battle":
+          /* 勝利したらランナー再開 (winFlag は onBattleResult が立てる)。
+             敗北時は onBattleResult がラン中断+ほこら復帰を行う */
+          this.pendingBattleAdvance = (won) => {
+            if (won) advance();
+          };
+          this.startBattle({
+            monsterIds: effect.monsterIds,
+            boss: effect.boss,
+            winFlag: effect.winFlag,
+          });
+          break;
         case "openShop":
         case "openSpellTest":
-          /* M6〜M8 で実装。いまはプレースホルダ */
+          /* M7〜M8 で実装。いまはプレースホルダ */
           this.ui.showMessage(["(ここは じゅんびちゅう だよ)"], () => advance());
           break;
       }

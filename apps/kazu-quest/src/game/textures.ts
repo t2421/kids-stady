@@ -8,6 +8,7 @@ import type { PixelArt } from "../content/art/format";
 import { artSize } from "../content/art/format";
 import { TILE_ART } from "../content/art/tiles";
 import { ACTOR_ART } from "../content/art/actors";
+import { MONSTER_ART } from "../content/art/monsters";
 
 function generatePixelArt(scene: Scene, key: string, art: PixelArt): void {
   if (scene.textures.exists(key)) return;
@@ -35,11 +36,18 @@ export function actorTextureKey(artName: string): string {
   return "actor-" + artName;
 }
 
+export function monsterTextureKey(artName: string): string {
+  return "monster-" + artName;
+}
+
 export function generateAllTextures(scene: Scene): void {
   for (const [name, art] of Object.entries(TILE_ART)) {
     generatePixelArt(scene, tileTextureKey(name), art);
   }
   for (const [name, art] of Object.entries(ACTOR_ART)) {
     generatePixelArt(scene, actorTextureKey(name), art);
+  }
+  for (const [name, art] of Object.entries(MONSTER_ART)) {
+    generatePixelArt(scene, monsterTextureKey(name), art);
   }
 }
