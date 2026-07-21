@@ -1,0 +1,27 @@
+{
+  "name": "kazu-quest",
+  "version": "0.1.0",
+  "private": true,
+  "description": "カズクエ 〜数の王国と伝説の勇者〜 — DQ3風・算数RPG (Phaser 4 + Next.js)",
+  "scripts": {
+    "dev": "next dev -p 3011",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "next": "^16.2.10",
+    "phaser": "^4.2.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "vitest": "^3"
+  }
+}

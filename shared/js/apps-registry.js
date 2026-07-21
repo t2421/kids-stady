@@ -17,6 +17,15 @@
       path: "apps/keisan-shooter/index.html",
     },
     {
+      id: "kazu-quest",
+      title: "カズクエ",
+      subject: "さんすう（小1〜小6）",
+      description: "じゅもんを おぼえて まおうを たおす さんすうRPG！けいさんが つよさに なる。",
+      emoji: "⚔️",
+      color: "#9b59b6",
+      path: "apps/kazu-quest/",
+    },
+    {
       id: "mathematics",
       title: "マスマティクス",
       subject: "さんすう",

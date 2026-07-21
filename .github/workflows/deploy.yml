@@ -25,7 +25,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: apps/mathematics/package-lock.json
+          cache-dependency-path: |
+            apps/mathematics/package-lock.json
+            apps/kazu-quest/package-lock.json
 
       - name: Install dependencies (mathematics)
         working-directory: apps/mathematics
@@ -43,6 +45,22 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /kids-stady/apps/mathematics
         run: npm run build
 
+      - name: Install dependencies (kazu-quest)
+        working-directory: apps/kazu-quest
+        run: npm ci
+
+      - name: Type-check & unit tests (kazu-quest)
+        working-directory: apps/kazu-quest
+        run: |
+          npm run typecheck
+          npm run test --if-present
+
+      - name: Build kazu-quest (static export)
+        working-directory: apps/kazu-quest
+        env:
+          NEXT_PUBLIC_BASE_PATH: /kids-stady/apps/kazu-quest
+        run: npm run build
+
       - name: Assemble site
         run: |
           mkdir -p _site/apps
@@ -51,6 +69,7 @@ jobs:
           cp -r docs _site/docs
           cp -r apps/keisan-shooter _site/apps/keisan-shooter
           cp -r apps/mathematics/out _site/apps/mathematics
+          cp -r apps/kazu-quest/out _site/apps/kazu-quest
 
       - uses: actions/upload-pages-artifact@v3
         with:
