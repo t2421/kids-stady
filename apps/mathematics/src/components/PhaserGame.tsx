@@ -1,7 +1,6 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { EventBus } from "@/game/EventBus";
 import { startGame } from "@/game/main";
 import { initAudio } from "@/game/sfx";
 import type Phaser from "phaser";
@@ -35,10 +34,9 @@ export function PhaserGame() {
 
     return () => {
       window.removeEventListener("pointerdown", unlock);
-      /* StrictMode の偽アンマウント直後に再マウントが来るため、
-         ここでは破棄しない。次のマウント冒頭で旧インスタンスを片付ける。
-         本物のアンマウント (ページ遷移) ではブラウザがまとめて解放する。 */
-      EventBus.removeAllListeners();
+      /* StrictMode の偽アンマウント直後に再マウントが来るため、ゲームは破棄しない。
+         EventBus.removeAllListeners() もしない — シーンが登録したリスナーまで
+         消えてしまう (問題パネルが開かなくなる)。リスナーは各自が外す設計 */
     };
   }, []);
 

@@ -3,7 +3,7 @@ import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
 import { GRADES } from "@/lib/grades";
-import { loadSave } from "@/lib/save";
+import { isOutputUnlocked, loadSave } from "@/lib/save";
 
 const CARD_W = 260;
 const CARD_H = 150;
@@ -42,7 +42,13 @@ export class GradeMapScene extends Scene {
       const x = startX + col * (CARD_W + GAP_X);
       const y = startY + row * (CARD_H + GAP_Y);
       const unlocked = g.implemented && g.grade <= unlockedGrade;
-      this.addGradeCard(x, y, g.grade, g.name, g.icon, g.color, g.teaser, unlocked);
+      /* 出撃準備 (レッスン) を一度クリア済みなら、マップから直接出撃できる */
+      const sortieReady =
+        unlocked &&
+        save !== null &&
+        g.lessons.length > 0 &&
+        isOutputUnlocked(save, g.grade, g.lessons.map((l) => l.id));
+      this.addGradeCard(x, y, g.grade, g.name, g.icon, g.color, g.teaser, unlocked, sortieReady);
     });
 
     const back = this.add
@@ -68,6 +74,7 @@ export class GradeMapScene extends Scene {
     color: string,
     teaser: string,
     unlocked: boolean,
+    sortieReady: boolean,
   ) {
     const container = this.add.container(x, y);
 
@@ -94,15 +101,17 @@ export class GradeMapScene extends Scene {
         })
         .setOrigin(0.5),
     );
-    container.add(
-      this.add
-        .text(0, 46, unlocked ? "▶ ここで あそぶ" : teaser, {
-          fontFamily: "sans-serif",
-          fontSize: "15px",
-          color: unlocked ? color : "#7a8bad",
-        })
-        .setOrigin(0.5),
-    );
+    if (!sortieReady) {
+      container.add(
+        this.add
+          .text(0, 46, unlocked ? "▶ ここで あそぶ" : teaser, {
+            fontFamily: "sans-serif",
+            fontSize: "15px",
+            color: unlocked ? color : "#7a8bad",
+          })
+          .setOrigin(0.5),
+      );
+    }
 
     if (!unlocked) return;
 
@@ -116,6 +125,30 @@ export class GradeMapScene extends Scene {
     container.on("pointerout", () => container.setScale(1));
     container.on("pointerdown", () => {
       this.scene.start("Grade", { grade });
+    });
+
+    if (!sortieReady) return;
+
+    /* レッスンクリア済み → カード内から直接出撃 (カードの他の部分はレッスン画面へ) */
+    const quick = this.add
+      .text(x, y + 46, "🚀 すぐ しゅつげき!", {
+        fontFamily: "sans-serif",
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: "#0b1e3a",
+        backgroundColor: "#ffd93d",
+        padding: { x: 12, y: 6 },
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    quick.on("pointerdown", (
+      _p: Phaser.Input.Pointer,
+      _x: number,
+      _y: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      this.scene.start("Flight", { grade });
     });
   }
 

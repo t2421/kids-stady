@@ -117,6 +117,9 @@ export class HudScene extends Scene {
     this.input.once("pointerdown", () => {
       sfx.shoot();
     });
+
+    /* 起動完了 → FlightScene に初期状態の再送を頼む */
+    flight.events.emit("hud-request-state");
   }
 
   private onState(s: HudState) {

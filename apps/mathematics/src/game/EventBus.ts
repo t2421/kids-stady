@@ -8,3 +8,7 @@ import { Events } from "phaser";
  * - "current-scene-ready" (scene) : シーン起動完了
  */
 export const EventBus = new Events.EventEmitter();
+
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  (window as unknown as { __eventBus?: unknown }).__eventBus = EventBus;
+}

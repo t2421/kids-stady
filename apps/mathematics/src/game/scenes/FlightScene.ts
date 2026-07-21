@@ -106,6 +106,9 @@ export class FlightScene extends Scene {
     this.setupCollisions();
 
     this.scene.launch("Hud", { flight: this });
+    /* Hud は非同期に起動するため、準備完了通知を受けて初期状態を再送する */
+    const onHudRequest = () => this.pushHud();
+    this.events.on("hud-request-state", onHudRequest);
     this.pushHud();
 
     const onDone = (r: { correct: boolean; timedOut: boolean; elapsedMs: number }) => {
@@ -117,6 +120,7 @@ export class FlightScene extends Scene {
     this.events.once("shutdown", () => {
       EventBus.off("problem-done", onDone);
       EventBus.off("beam-pressed", onBeam);
+      this.events.off("hud-request-state", onHudRequest);
       this.boss?.destroy();
       this.scene.stop("Hud");
     });
@@ -402,13 +406,12 @@ export class FlightScene extends Scene {
   ) {
     this.freeze(true);
     this.onProblemDone = after;
-    /* スローモの余韻を見せてからパネルを開く */
-    this.time.delayedCall(60, () => {
-      EventBus.emit("problem-open", {
-        problem,
-        timeLimitMs,
-        allowHint: problem.hint !== null,
-      });
+    /* 注意: freeze中は this.time が止まるので delayedCall は使えない (フリーズバグの元)。
+       即時にパネルを開く */
+    EventBus.emit("problem-open", {
+      problem,
+      timeLimitMs,
+      allowHint: problem.hint !== null,
     });
   }
 
