@@ -16,5 +16,14 @@
       color: "#3aa0ff",
       path: "apps/keisan-shooter/index.html",
     },
+    {
+      id: "mathematics",
+      title: "マスマティクス",
+      subject: "さんすう",
+      description: "じゅんびちゅう！ もうすこし まってね。",
+      emoji: "📐",
+      color: "#ff9f43",
+      path: "apps/mathematics/index.html",
+    },
   ];
 })(window);
