@@ -345,6 +345,57 @@ test("spell casting: learn from king, cast with math prompt, telemetry recorded"
   expect(save.totalCorrect).toBeGreaterThanOrEqual(1);
 });
 
+test("spell learn test: pass 10 questions at the scholar and learn ヒキダマン", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.goto("/");
+  await waitForScene(page, "Title");
+  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
+  await waitForScene(page, "Field");
+
+  /* 王様に会って前提フラグを立てる */
+  await teleport(page, 12, 7, "up");
+  await interactAndAdvance(page);
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().flags["dev.metKing"] === true,
+  );
+
+  /* ものしりはかせ (4,4) の右 (5,4) から話しかけ、テストを受ける */
+  await teleport(page, 5, 4, "left");
+  await page.keyboard.press("z");
+
+  /* 会話 → はい (choice は z で現在選択=はい を確定) → テスト開始 */
+  const correctButton = page.locator(
+    '[data-testid="math-choice"][data-answer="1"]',
+  );
+  for (let i = 0; i < 30; i++) {
+    const promptVisible = await correctButton.isVisible();
+    if (promptVisible) break;
+    await page.keyboard.press("z");
+    await page.waitForTimeout(500);
+  }
+
+  /* 10問すべて正解する */
+  for (let i = 0; i < 10; i++) {
+    await correctButton.waitFor({ state: "visible", timeout: 10_000 });
+    await correctButton.click();
+    await page.waitForTimeout(900);
+  }
+
+  /* 合格 → ヒキダマンを習得 */
+  await page.waitForFunction(
+    () =>
+      window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
+        "hikidaman",
+      ),
+    undefined,
+    { timeout: 15_000 },
+  );
+  const save = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave());
+  expect(save.totalCorrect).toBeGreaterThanOrEqual(10);
+});
+
 test("map transfer: village → field and back", async ({ page }) => {
   await page.goto("/");
   await waitForScene(page, "Title");

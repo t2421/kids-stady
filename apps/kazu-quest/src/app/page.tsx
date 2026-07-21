@@ -14,11 +14,17 @@ const MathPromptPanel = dynamic(
   { ssr: false },
 );
 
+const SpellTestScreen = dynamic(
+  () => import("@/components/SpellTestScreen").then((m) => m.SpellTestScreen),
+  { ssr: false },
+);
+
 export default function Home() {
   return (
     <>
       <PhaserGame />
       <MathPromptPanel />
+      <SpellTestScreen />
     </>
   );
 }

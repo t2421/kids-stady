@@ -111,6 +111,21 @@ export const DEV_VILLAGE: MapDef = {
       movement: "static",
       dialog: [
         {
+          if: { flag: "dev.metKing", op: "set" },
+          pages: [
+            "わしは ものしりはかせ。",
+            "くりさがりの じゅもん ヒキダマンの テストを うけるかね?",
+          ],
+          then: [
+            {
+              type: "choice",
+              prompt: "テストを うける?",
+              yes: [{ type: "openSpellTest", spellId: "hikidaman" }],
+              no: [{ type: "message", pages: ["いつでも おいで。"] }],
+            },
+          ],
+        },
+        {
           pages: ["ここは めがみの ほこら。"],
           then: [
             {

@@ -173,7 +173,7 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
           expect(MONSTERS[id], `モンスター "${id}"`).toBeDefined();
         }
       }
-      if (cmd.type === "learnSpell") {
+      if (cmd.type === "learnSpell" || cmd.type === "openSpellTest") {
         expect(SPELLS[cmd.spellId], `呪文 "${cmd.spellId}"`).toBeDefined();
       }
       if (cmd.type === "transfer") {

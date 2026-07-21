@@ -12,6 +12,7 @@ import { fadeIn, fadeOutThen } from "../transition";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
 import { getEncounterTable } from "../../content/encounters";
+import { getSpell } from "../../content/spells";
 import { mulberry32, randInt } from "../../lib/curriculum/types";
 import { heroStats } from "../../lib/battle/stats";
 
@@ -586,9 +587,60 @@ export class FieldScene extends Scene {
             winFlag: effect.winFlag,
           });
           break;
+        case "openSpellTest": {
+          /* React の SpellTestScreen に委譲。合格なら習得 (設計 A4) */
+          const alreadyLearned = getSave().party.some((m) =>
+            m.learnedSpells.includes(effect.spellId),
+          );
+          if (alreadyLearned) {
+            this.ui.showMessage(["その じゅもんは もう おぼえているよ!"], () =>
+              advance(),
+            );
+            break;
+          }
+          const onFinished = (result: {
+            spellId: string;
+            passed: boolean;
+            correct: number;
+            total: number;
+          }) => {
+            if (result.spellId !== effect.spellId) return;
+            EventBus.off("spell-test-finished", onFinished);
+            const spellName = getSpell(result.spellId)?.name ?? result.spellId;
+            if (result.passed) {
+              updateSave((s) => ({
+                ...s,
+                party: s.party.map((m) =>
+                  m.memberId === "hero" &&
+                  !m.learnedSpells.includes(result.spellId)
+                    ? { ...m, learnedSpells: [...m.learnedSpells, result.spellId] }
+                    : m,
+                ),
+              }));
+              autosave();
+              this.ui.showMessage(
+                [
+                  `${result.total}もん中 ${result.correct}もん せいかい!`,
+                  `ごうかく! ${spellName}を おぼえた!`,
+                ],
+                () => advance(),
+              );
+            } else {
+              this.ui.showMessage(
+                [
+                  `${result.total}もん中 ${result.correct}もん せいかい…`,
+                  "あと すこし! また ちょうせん してね。",
+                ],
+                () => advance(),
+              );
+            }
+          };
+          EventBus.on("spell-test-finished", onFinished);
+          EventBus.emit("open-spell-test", { spellId: effect.spellId });
+          break;
+        }
         case "openShop":
-        case "openSpellTest":
-          /* M7〜M8 で実装。いまはプレースホルダ */
+          /* M9 で実装。いまはプレースホルダ */
           this.ui.showMessage(["(ここは じゅんびちゅう だよ)"], () => advance());
           break;
       }
