@@ -1,6 +1,8 @@
 import Phaser, { Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
+import { getActiveProfileId } from "../session";
+import { listProfiles } from "@/lib/profiles";
 
 export class TitleScene extends Scene {
   constructor() {
@@ -51,7 +53,46 @@ export class TitleScene extends Scene {
       repeat: -1,
     });
 
+    this.addProfileChip();
+
+    this.input.on("pointerdown", () => {
+      if (getActiveProfileId()) this.scene.start("GradeMap");
+    });
+
+    /* プレイヤーを選び直したらチップを更新するため作り直す */
+    const onProfileSelected = () => this.scene.restart();
+    EventBus.on("profile-selected", onProfileSelected);
+    this.events.once("shutdown", () => {
+      EventBus.off("profile-selected", onProfileSelected);
+    });
+
     EventBus.emit("current-scene-ready", this);
+  }
+
+  /* 左上にプレイヤー表示。タップでプレイヤー選択に戻れる */
+  private addProfileChip() {
+    const id = getActiveProfileId();
+    const profile = listProfiles().find((p) => p.id === id) ?? null;
+    const label = profile ? `${profile.avatar} ${profile.name}` : "";
+    const chip = this.add
+      .text(18, 14, `${label}  🔁 こうたい`, {
+        fontFamily: "sans-serif",
+        fontSize: "17px",
+        fontStyle: "bold",
+        color: "#b8cdea",
+        backgroundColor: "#13264a",
+        padding: { x: 12, y: 7 },
+      })
+      .setInteractive({ useHandCursor: true });
+    chip.on("pointerdown", (
+      _pointer: Phaser.Input.Pointer,
+      _x: number,
+      _y: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      EventBus.emit("request-profile-select");
+    });
   }
 
   private addStarfield() {

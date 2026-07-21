@@ -1,5 +1,6 @@
 import Phaser, { AUTO, Game, Scale } from "phaser";
 import { BootScene } from "./scenes/BootScene";
+import { GradeMapScene } from "./scenes/GradeMapScene";
 import { TitleScene } from "./scenes/TitleScene";
 
 /* 論理解像度。全シーンはこの座標系で描き、Scale.FIT で画面に合わせる */
@@ -19,7 +20,7 @@ const config: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade: { debug: false },
   },
-  scene: [BootScene, TitleScene],
+  scene: [BootScene, TitleScene, GradeMapScene],
 };
 
 export function startGame(parent: string): Phaser.Game {
