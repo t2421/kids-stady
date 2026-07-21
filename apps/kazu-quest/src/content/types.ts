@@ -29,6 +29,7 @@ export type EventCommand =
   | { type: "setFlag"; flag: string; value?: FlagValue }
   | { type: "giveItem"; itemId: string; count?: number }
   | { type: "giveGold"; amount: number }
+  | { type: "learnSpell"; memberId: string; spellId: string }
   | { type: "transfer"; mapId: string; spawn: string }
   | { type: "battle"; monsterIds: string[]; boss?: boolean; winFlag?: string }
   | { type: "openShop"; shopId: string }

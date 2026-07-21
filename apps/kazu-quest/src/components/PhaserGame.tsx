@@ -25,6 +25,12 @@ export function PhaserGame() {
       (window as unknown as Record<string, unknown>).__KAZUQUEST_GAME__ = game;
       (window as unknown as Record<string, unknown>).__KAZUQUEST_DEBUG__ = {
         getSave,
+        teleport: (x: number, y: number, facing: string) => {
+          const field = game?.scene.getScene("Field") as unknown as
+            | { debugTeleport?: (x: number, y: number, facing: string) => void }
+            | null;
+          field?.debugTeleport?.(x, y, facing);
+        },
       };
     }
   }, []);

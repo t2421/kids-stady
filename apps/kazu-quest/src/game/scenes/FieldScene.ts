@@ -193,6 +193,24 @@ export class FieldScene extends Scene {
     return typeof this.ui?.isBusy === "function" && this.ui.isBusy();
   }
 
+  /* E2E・デバッグ用: 現在マップ内の任意タイルへ移動する */
+  debugTeleport(x: number, y: number, facing: string): void {
+    const dir: Dir = (["up", "down", "left", "right"] as const).includes(
+      facing as Dir,
+    )
+      ? (facing as Dir)
+      : "down";
+    this.gridX = x;
+    this.gridY = y;
+    this.facing = dir;
+    this.moving = false;
+    this.player.setPosition(...this.tileCenter(x, y));
+    updateSave((save) => ({
+      ...save,
+      location: { mapId: this.map.id, x, y, facing: dir },
+    }));
+  }
+
   /* ---------- 描画 ---------- */
 
   private buildMapLayer() {

@@ -3,7 +3,10 @@ import type { BattleEvent, BattleState, PlayerCommand } from "../../lib/battle/b
 import { applyVictory, createBattle, submitRound } from "../../lib/battle/battle";
 import { getMonster } from "../../content/monsters";
 import { getItem } from "../../content/items";
+import { getSpell } from "../../content/spells";
+import type { SpellDef } from "../../content/types";
 import { mulberry32 } from "../../lib/curriculum/types";
+import { recordAnswer } from "../../lib/save";
 import { autosave, getSave, updateSave } from "../session";
 import { monsterTextureKey } from "../textures";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
@@ -26,7 +29,15 @@ export interface BattleResult {
   winFlag?: string;
 }
 
-type MenuKind = "root" | "item";
+type MenuKind = "root" | "item" | "spell";
+
+interface MathPromptResultEvent {
+  requestId: string;
+  correct: boolean;
+  timedOut: boolean;
+  elapsedMs: number;
+  problem: { skillId: string };
+}
 
 const COMMANDS = ["たたかう", "じゅもん", "どうぐ", "ぼうぎょ", "にげる"] as const;
 
@@ -158,7 +169,12 @@ export class BattleScene extends Scene {
   }
 
   private refreshMenu() {
-    const labels = this.menuKind === "root" ? COMMANDS : this.itemLabels();
+    const labels: readonly string[] =
+      this.menuKind === "root"
+        ? COMMANDS
+        : this.menuKind === "spell"
+          ? this.learnedSpells().map((s) => `${s.name} (MP${s.mpCost})`)
+          : this.itemLabels();
     this.menuTexts.forEach((t, i) => {
       t.setText(this.menuLabel(labels[i] ?? "", i));
     });
@@ -180,7 +196,81 @@ export class BattleScene extends Scene {
 
   private cancelMenu() {
     if (this.busy) return;
-    if (this.menuKind === "item") this.showRootMenu();
+    if (this.menuKind === "item" || this.menuKind === "spell") this.showRootMenu();
+  }
+
+  private learnedSpells(): SpellDef[] {
+    const hero = getSave().party.find((m) => m.memberId === "hero");
+    return (hero?.learnedSpells ?? [])
+      .map((id) => getSpell(id))
+      .filter((s): s is SpellDef => !!s);
+  }
+
+  private showSpellMenu() {
+    this.clearMenu();
+    this.menuKind = "spell";
+    const spells = this.learnedSpells();
+    spells.forEach((spell, i) => {
+      const text = this.add
+        .text(
+          GAME_WIDTH - 420,
+          GAME_HEIGHT - 148 + i * 26,
+          this.menuLabel(`${spell.name} (MP${spell.mpCost})`, i),
+          {
+            fontFamily: "sans-serif",
+            fontSize: "22px",
+            color: "#ffffff",
+          },
+        )
+        .setInteractive();
+      text.on("pointerdown", () => {
+        this.menuIndex = i;
+        this.refreshMenu();
+        this.confirm();
+      });
+      this.menuTexts.push(text);
+    });
+    this.menuIndex = 0;
+    this.refreshMenu();
+    this.msgText.setText("どの じゅもんを つかう?");
+  }
+
+  /* 呪文選択 → 算数プロンプト (React) → 結果でラウンド解決 (設計 A3) */
+  private castWithMathPrompt(spell: SpellDef) {
+    this.busy = true;
+    this.clearMenu();
+    this.msgText.setText(`${spell.name}の じゅもんを となえる…`);
+    const requestId = `battle-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+
+    const onResult = (result: MathPromptResultEvent) => {
+      if (result.requestId !== requestId) return;
+      EventBus.off("math-result", onResult);
+
+      /* テレメトリ: 全解答箇所から recordAnswer (設計 A6) */
+      updateSave((s) =>
+        recordAnswer(s, result.problem.skillId, result.correct, result.elapsedMs),
+      );
+      autosave();
+
+      const critical =
+        result.correct && result.elapsedMs <= spell.battleTimeLimitMs / 2;
+      const target =
+        spell.kind === "attack" ? this.firstEnemyId() : "hero";
+      this.runRound({
+        kind: "spell",
+        memberId: "hero",
+        spell,
+        targetId: target,
+        outcome: { correct: result.correct, critical },
+      });
+    };
+    EventBus.on("math-result", onResult);
+    EventBus.emit("math-prompt", {
+      requestId,
+      skillIds: spell.skillIds,
+      timeLimitMs: spell.battleTimeLimitMs,
+      context: "battle",
+    });
   }
 
   private confirm() {
@@ -191,8 +281,12 @@ export class BattleScene extends Scene {
       if (command === "たたかう") {
         this.runRound({ kind: "attack", memberId: "hero", targetId: this.firstEnemyId() });
       } else if (command === "じゅもん") {
-        /* M7 で MathPromptPanel と接続する */
-        this.flashMessage("まだ じゅもんを おぼえていない!");
+        const spells = this.learnedSpells();
+        if (spells.length === 0) {
+          this.flashMessage("まだ じゅもんを おぼえていない!");
+          return;
+        }
+        this.showSpellMenu();
       } else if (command === "どうぐ") {
         const items = this.itemLabels();
         if (items.length === 0) {
@@ -205,6 +299,15 @@ export class BattleScene extends Scene {
       } else if (command === "にげる") {
         this.runRound({ kind: "flee", memberId: "hero" });
       }
+    } else if (this.menuKind === "spell") {
+      const spell = this.learnedSpells()[this.menuIndex];
+      if (!spell) return;
+      const hero = this.battle.members[0];
+      if (hero.mp < spell.mpCost) {
+        this.flashMessage("MPが たりない!");
+        return;
+      }
+      this.castWithMathPrompt(spell);
     } else if (this.menuKind === "item") {
       const save = getSave();
       const usable = Object.entries(save.inventory.items).filter(([, c]) => c > 0);

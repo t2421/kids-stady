@@ -257,6 +257,13 @@ export function submitRound(
           const healed = Math.min(target.maxHp - target.hp, amount);
           target.hp += healed;
           events.push({ type: "heal", targetId: target.id, amount: healed, onParty: true });
+        } else if (cmd.spell.kind === "buff") {
+          const target = findMember(cmd.targetId) ?? actor;
+          target.defending = true;
+          events.push({
+            type: "message",
+            text: `${target.name}は まもりの ちからに つつまれた!`,
+          });
         }
       } else if (cmd.kind === "item") {
         const healed = Math.min(actor.maxHp - actor.hp, cmd.heal);

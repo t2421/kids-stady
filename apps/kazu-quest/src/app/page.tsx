@@ -8,6 +8,17 @@ const PhaserGame = dynamic(
   { ssr: false },
 );
 
+/* 算数プロンプトは Phaser と同じ EventBus モジュールを共有する必要がある */
+const MathPromptPanel = dynamic(
+  () => import("@/components/MathPromptPanel").then((m) => m.MathPromptPanel),
+  { ssr: false },
+);
+
 export default function Home() {
-  return <PhaserGame />;
+  return (
+    <>
+      <PhaserGame />
+      <MathPromptPanel />
+    </>
+  );
 }

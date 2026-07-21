@@ -16,11 +16,21 @@ declare global {
       };
     };
     __KAZUQUEST_DEBUG__?: {
+      teleport(x: number, y: number, facing: string): void;
       getSave(): {
         flags: Record<string, number | boolean>;
         inventory: { gold: number; items: Record<string, number> };
         location: { mapId: string; x: number; y: number };
-        party: { memberId: string; level: number; exp: number; hp: number }[];
+        party: {
+          memberId: string;
+          level: number;
+          exp: number;
+          hp: number;
+          learnedSpells: string[];
+        }[];
+        totalCorrect: number;
+        totalWrong: number;
+        skillStats: Record<string, { c: number; w: number }>;
       };
     };
   }
@@ -74,16 +84,14 @@ async function face(page: Page, key: string) {
   await page.waitForTimeout(200);
 }
 
-/* 目標座標に静止していることを保証する (在飛行の tween を待ってから検証・再歩行) */
-async function ensureAt(page: Page, x: number, y: number) {
-  for (let i = 0; i < 4; i++) {
-    await page.waitForTimeout(450);
-    const pos = await fieldPos(page);
-    if (pos.x === x && pos.y === y) return;
-    await walkTo(page, "x", x);
-    await walkTo(page, "y", y);
-  }
-  throw new Error(`(${x},${y}) に静止できない`);
+/* デバッグテレポートで位置と向きを確定させる (歩行検証が目的でないテスト用) */
+async function teleport(page: Page, x: number, y: number, facing: string) {
+  await page.waitForTimeout(300);
+  await page.evaluate(
+    ({ x, y, facing }) => window.__KAZUQUEST_DEBUG__!.teleport(x, y, facing),
+    { x, y, facing },
+  );
+  await page.waitForTimeout(200);
 }
 
 /* 条件が成立するまで同方向に歩き続ける (transfer 踏み込み用・取りこぼしリトライ) */
@@ -146,13 +154,14 @@ test("engine smoke: title → field → NPC dialog → treasure chest", async ({
   const start = await fieldPos(page);
   expect(start.mapId).toBe("dev-village");
 
-  /* 王様 (12,6) の下 (12,7) まで歩く */
-  await walkTo(page, "x", 12);
-  await walkTo(page, "y", 7);
-  await ensureAt(page, 12, 7);
-
-  /* 上を向く (王様にぶつかる=移動失敗で向きだけ変わる) → はなす */
-  await face(page, "ArrowUp");
+  /* 移動できることを実地で確認 (初回入力は落ちることがあるためリトライ) */
+  let moved = start;
+  for (let i = 0; i < 6 && moved.x === start.x; i++) {
+    await stepOnce(page, "ArrowRight");
+    moved = await fieldPos(page);
+  }
+  expect(moved.x).toBeGreaterThan(start.x);
+  await teleport(page, 12, 7, "up");
   await interactAndAdvance(page);
 
   /* 王様イベントの結果: 50G + フラグ */
@@ -166,12 +175,8 @@ test("engine smoke: title → field → NPC dialog → treasure chest", async ({
   );
   expect(afterKing.inventory.gold).toBe(50);
 
-  /* 宝箱 (17,10) の左 (16,10) へ。(15,10) は木なので row 9 を迂回する */
-  await walkTo(page, "y", 9);
-  await walkTo(page, "x", 16);
-  await walkTo(page, "y", 10);
-  await ensureAt(page, 16, 10);
-  await face(page, "ArrowRight");
+  /* 宝箱 (17,10) の左へテレポートして開ける */
+  await teleport(page, 16, 10, "right");
   await interactAndAdvance(page);
 
   await page.waitForFunction(
@@ -193,8 +198,7 @@ test("random encounter: fight in the bushes and win", async ({ page }) => {
   await waitForScene(page, "Field");
 
   /* 草原へ */
-  await walkTo(page, "x", 7);
-  await walkTo(page, "y", 11);
+  await teleport(page, 7, 11, "down");
   await walkUntil(page, "ArrowDown", () =>
     page.evaluate(
       () => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === "dev-field",
@@ -203,8 +207,7 @@ test("random encounter: fight in the bushes and win", async ({ page }) => {
   await page.waitForTimeout(600);
 
   /* しげみ (x3〜5, y2) を行き来してエンカウントを起こす */
-  await walkTo(page, "x", 4);
-  await walkTo(page, "y", 2);
+  await teleport(page, 4, 2, "left");
   let inBattle = false;
   for (let i = 0; i < 100 && !inBattle; i++) {
     await stepOnce(page, i % 2 === 0 ? "ArrowLeft" : "ArrowRight");
@@ -226,6 +229,120 @@ test("random encounter: fight in the bushes and win", async ({ page }) => {
   const save = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave());
   expect(save.party[0].exp).toBeGreaterThan(0);
   expect(save.party[0].hp).toBeGreaterThan(0);
+});
+
+test("spell casting: learn from king, cast with math prompt, telemetry recorded", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  await page.goto("/");
+  await waitForScene(page, "Title");
+  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
+  await waitForScene(page, "Field");
+
+  /* 王様から呪文を授かる */
+  await teleport(page, 12, 7, "up");
+  await interactAndAdvance(page);
+  await page.waitForFunction(
+    () =>
+      window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
+        "hikidama",
+      ),
+    undefined,
+    { timeout: 10_000 },
+  );
+
+  /* 草原でエンカウント */
+  await teleport(page, 7, 11, "down");
+  await walkUntil(page, "ArrowDown", () =>
+    page.evaluate(
+      () => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === "dev-field",
+    ),
+  );
+  await page.waitForTimeout(600);
+  await teleport(page, 4, 2, "left");
+  let inBattle = false;
+  for (let i = 0; i < 100 && !inBattle; i++) {
+    await stepOnce(page, i % 2 === 0 ? "ArrowLeft" : "ArrowRight");
+    inBattle = await page.evaluate(
+      () => window.__KAZUQUEST_GAME__!.scene.isActive("Battle"),
+    );
+  }
+  expect(inBattle).toBe(true);
+
+  /* バトルシーンの内部状態をポーリングして確定的にメニュー操作する */
+  const battleState = () =>
+    page.evaluate(() => {
+      const scene = window.__KAZUQUEST_GAME__!.scene.getScene("Battle") as unknown as {
+        busy?: boolean;
+        menuKind?: string;
+        menuIndex?: number;
+      } | null;
+      return scene
+        ? { busy: scene.busy, menuKind: scene.menuKind, menuIndex: scene.menuIndex }
+        : null;
+    });
+
+  /* コマンド待ちになるまで待つ */
+  await page.waitForFunction(
+    () => {
+      const scene = window.__KAZUQUEST_GAME__!.scene.getScene("Battle") as unknown as {
+        busy?: boolean;
+        menuKind?: string;
+      } | null;
+      return !!scene && scene.busy === false && scene.menuKind === "root";
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  /* カーソルを じゅもん (index 1) に合わせて確定 */
+  for (let i = 0; i < 8; i++) {
+    const s = await battleState();
+    if (s?.menuIndex === 1) break;
+    await page.keyboard.press("ArrowDown");
+    await page.waitForTimeout(200);
+  }
+  expect((await battleState())?.menuIndex).toBe(1);
+  await page.keyboard.press("z");
+  await page.waitForFunction(
+    () => {
+      const scene = window.__KAZUQUEST_GAME__!.scene.getScene("Battle") as unknown as {
+        menuKind?: string;
+      } | null;
+      return scene?.menuKind === "spell";
+    },
+    undefined,
+    { timeout: 8_000 },
+  );
+  await page.keyboard.press("z");
+  const correctButton = page.locator(
+    '[data-testid="math-choice"][data-answer="1"]',
+  );
+  await correctButton.waitFor({ state: "visible", timeout: 10_000 });
+  await correctButton.click();
+
+  /* テレメトリが記録される (recordAnswer) */
+  await page.waitForFunction(
+    () => {
+      const save = window.__KAZUQUEST_DEBUG__!.getSave();
+      return save.totalCorrect >= 1 && (save.skillStats.g1_sub_nc?.c ?? 0) >= 1;
+    },
+    undefined,
+    { timeout: 10_000 },
+  );
+
+  /* 戦闘を離脱 (にげる or 勝つまで たたかう連打) して終了確認 */
+  for (let i = 0; i < 90; i++) {
+    await page.keyboard.press("z");
+    await page.waitForTimeout(800);
+    const backInField = await page.evaluate(
+      () => window.__KAZUQUEST_GAME__!.scene.isActive("Field"),
+    );
+    if (backInField) break;
+  }
+  const save = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave());
+  expect(save.totalCorrect).toBeGreaterThanOrEqual(1);
 });
 
 test("map transfer: village → field and back", async ({ page }) => {

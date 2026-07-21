@@ -92,12 +92,21 @@ function applyData(save: SaveData, cmd: EventCommand): SaveData {
         ...save,
         inventory: { ...save.inventory, gold: save.inventory.gold + cmd.amount },
       };
+    case "learnSpell":
+      return {
+        ...save,
+        party: save.party.map((m) =>
+          m.memberId === cmd.memberId && !m.learnedSpells.includes(cmd.spellId)
+            ? { ...m, learnedSpells: [...m.learnedSpells, cmd.spellId] }
+            : m,
+        ),
+      };
     default:
       return save;
   }
 }
 
-const DATA_COMMANDS = new Set(["setFlag", "giveItem", "giveGold"]);
+const DATA_COMMANDS = new Set(["setFlag", "giveItem", "giveGold", "learnSpell"]);
 
 export function step(state: RunnerState, input?: RunnerInput): StepResult {
   let { stack, save, pending } = state;

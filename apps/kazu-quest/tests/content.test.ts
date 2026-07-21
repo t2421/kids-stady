@@ -13,8 +13,25 @@ import { MONSTER_ART } from "../src/content/art/monsters";
 import { ITEMS } from "../src/content/items";
 import { MONSTERS } from "../src/content/monsters";
 import { ENCOUNTER_TABLES } from "../src/content/encounters";
+import { SPELLS } from "../src/content/spells";
+import { SKILLS } from "../src/lib/curriculum";
 
 const maps = listMaps();
+
+describe("spells", () => {
+  const skillIds = new Set(SKILLS.map((s) => s.id));
+  it("every spell references registered skills and has a sane learn test", () => {
+    for (const spell of Object.values(SPELLS)) {
+      expect(spell.skillIds.length).toBeGreaterThan(0);
+      for (const id of [...spell.skillIds, ...spell.learnTest.skillIds]) {
+        expect(skillIds.has(id), `呪文 "${spell.id}" の skill "${id}"`).toBe(true);
+      }
+      expect(spell.learnTest.passCount).toBeLessThanOrEqual(spell.learnTest.questions);
+      expect(spell.mpCost).toBeGreaterThan(0);
+      expect(spell.battleTimeLimitMs).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe("monsters & encounter tables", () => {
   it("every monster has valid art and positive stats", () => {
@@ -155,6 +172,9 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
         for (const id of cmd.monsterIds) {
           expect(MONSTERS[id], `モンスター "${id}"`).toBeDefined();
         }
+      }
+      if (cmd.type === "learnSpell") {
+        expect(SPELLS[cmd.spellId], `呪文 "${cmd.spellId}"`).toBeDefined();
       }
       if (cmd.type === "transfer") {
         expect(hasMap(cmd.mapId), `transfer 先マップ "${cmd.mapId}"`).toBe(true);

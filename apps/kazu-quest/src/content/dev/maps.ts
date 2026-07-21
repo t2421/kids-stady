@@ -69,9 +69,15 @@ export const DEV_VILLAGE: MapDef = {
           pages: ["うむ、たのんだぞ ゆうしゃよ。"],
         },
         {
-          pages: ["わしが カウントおう じゃ。", "そなたに 50ゴールド さずけよう!"],
+          pages: [
+            "わしが カウントおう じゃ。",
+            "そなたに 50ゴールドと じゅもんを さずけよう!",
+            "ヒキダマと タシリアを おぼえた!",
+          ],
           then: [
             { type: "giveGold", amount: 50 },
+            { type: "learnSpell", memberId: "hero", spellId: "hikidama" },
+            { type: "learnSpell", memberId: "hero", spellId: "tashiria" },
             { type: "setFlag", flag: "dev.metKing" },
           ],
         },

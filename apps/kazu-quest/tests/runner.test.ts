@@ -52,6 +52,17 @@ describe("event runner", () => {
     expect(r2.state.save.flags["c1.talked"]).toBe(2);
   });
 
+  it("learnSpell adds once and is idempotent", () => {
+    const commands: EventCommand[] = [
+      { type: "learnSpell", memberId: "hero", spellId: "hikidama" },
+      { type: "learnSpell", memberId: "hero", spellId: "hikidama" },
+      { type: "learnSpell", memberId: "ghost", spellId: "tashiria" },
+    ];
+    const r = step(startRun(commands, defaultSave()));
+    expect(r.done).toBe(true);
+    expect(r.state.save.party[0].learnedSpells).toEqual(["hikidama"]);
+  });
+
   it("giveItem accumulates", () => {
     const commands: EventCommand[] = [
       { type: "giveItem", itemId: "yakusou" },
