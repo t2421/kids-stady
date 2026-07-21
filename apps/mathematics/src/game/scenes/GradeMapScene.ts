@@ -106,38 +106,17 @@ export class GradeMapScene extends Scene {
 
     if (!unlocked) return;
 
-    container.setSize(CARD_W, CARD_H);
-    container.setInteractive({ useHandCursor: true });
+    /* Container のヒット領域は原点基準で右下に伸びるため、中心合わせで明示する */
+    container.setInteractive(
+      new Phaser.Geom.Rectangle(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H),
+      Phaser.Geom.Rectangle.Contains,
+    );
+    if (container.input) container.input.cursor = "pointer";
     container.on("pointerover", () => container.setScale(1.04));
     container.on("pointerout", () => container.setScale(1));
     container.on("pointerdown", () => {
-      /* 格納庫 (インプットステージ) は後続マイルストーンで実装 */
-      this.showComingSoon(grade);
+      this.scene.start("Grade", { grade });
     });
   }
 
-  private showComingSoon(grade: number) {
-    const toast = this.add
-      .text(
-        GAME_WIDTH / 2,
-        GAME_HEIGHT - 76,
-        `${grade}ねんせいの ステージは じゅんびちゅう!`,
-        {
-          fontFamily: "sans-serif",
-          fontSize: "20px",
-          fontStyle: "bold",
-          color: "#ffd93d",
-          backgroundColor: "#1a2a55",
-          padding: { x: 16, y: 8 },
-        },
-      )
-      .setOrigin(0.5);
-    this.tweens.add({
-      targets: toast,
-      alpha: 0,
-      delay: 1200,
-      duration: 400,
-      onComplete: () => toast.destroy(),
-    });
-  }
 }

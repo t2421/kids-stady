@@ -11,11 +11,16 @@ const ProfileGate = dynamic(
   () => import("@/components/ProfileGate").then((m) => m.ProfileGate),
   { ssr: false },
 );
+const ProblemPanel = dynamic(
+  () => import("@/components/ProblemPanel").then((m) => m.ProblemPanel),
+  { ssr: false },
+);
 
 export default function Home() {
   return (
     <>
       <PhaserGame />
+      <ProblemPanel />
       <ProfileGate />
     </>
   );

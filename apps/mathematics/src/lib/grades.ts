@@ -24,6 +24,8 @@ export interface OutputDef {
   capsuleSkills: string[];
   bossSkills: string[];
   answerTimeMs: number;
+  /* ボス登場までの飛行パート秒数 */
+  durationSec: number;
   boss: BossDef;
 }
 
@@ -76,6 +78,7 @@ export const GRADES: GradeDef[] = [
       capsuleSkills: ["g1_add_nc", "g1_add_carry", "g1_sub_nc", "g1_sub_borrow", "g1_compare"],
       bossSkills: ["g1_add_carry", "g1_sub_borrow"],
       answerTimeMs: 12000,
+      durationSec: 100,
       boss: { name: "けいさんキング・イチ", hp: 100, chipCap: 0.15 },
     },
   },

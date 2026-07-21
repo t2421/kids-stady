@@ -1,25 +1,43 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect } from "react";
 import { EventBus } from "@/game/EventBus";
 import { startGame } from "@/game/main";
+import { initAudio } from "@/game/sfx";
 import type Phaser from "phaser";
 
 /*
  * React と Phaser の橋渡し (公式 phaserjs/template-nextjs のパターン)。
  * ゲーム本体は #game-container 内の canvas に描画され、
  * React 側のオーバーレイ UI とは EventBus 経由でのみやり取りする。
+ *
+ * 注意: React StrictMode (dev) は mount→unmount→mount を行うため、
+ * 素朴に作ると Phaser ゲームが2個生成される。さらに、ブート完了前の
+ * game.destroy() は処理されず宙に浮く。そこで
+ * - インスタンスは window 上のシングルトンとして管理し (HMR越しにも生き残る)
+ * - 破棄は必ずブート完了を待ってから行う
  */
-export function PhaserGame() {
-  const gameRef = useRef<Phaser.Game | null>(null);
 
+type GameWindow = Window & { __mathGame?: Phaser.Game | null };
+
+export function PhaserGame() {
   useLayoutEffect(() => {
-    if (gameRef.current === null) {
-      gameRef.current = startGame("game-container");
+    const w = window as GameWindow;
+    /* シングルトン: StrictMode の2回目マウントでは既存インスタンスを再利用する。
+       ゲームコードの変更はフルリロードで反映する運用 (HMRの部分適用はしない) */
+    if (!w.__mathGame) {
+      w.__mathGame = startGame("game-container");
     }
+
+    /* 最初のユーザー操作で効果音を有効化 (autoplay 制限対策) */
+    const unlock = () => initAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+
     return () => {
-      gameRef.current?.destroy(true);
-      gameRef.current = null;
+      window.removeEventListener("pointerdown", unlock);
+      /* StrictMode の偽アンマウント直後に再マウントが来るため、
+         ここでは破棄しない。次のマウント冒頭で旧インスタンスを片付ける。
+         本物のアンマウント (ページ遷移) ではブラウザがまとめて解放する。 */
       EventBus.removeAllListeners();
     };
   }, []);

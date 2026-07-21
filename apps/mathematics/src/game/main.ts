@@ -1,6 +1,10 @@
 import Phaser, { AUTO, Game, Scale } from "phaser";
 import { BootScene } from "./scenes/BootScene";
+import { FlightScene } from "./scenes/FlightScene";
 import { GradeMapScene } from "./scenes/GradeMapScene";
+import { GradeScene } from "./scenes/GradeScene";
+import { HangarScene } from "./scenes/HangarScene";
+import { HudScene } from "./scenes/HudScene";
 import { TitleScene } from "./scenes/TitleScene";
 
 /* 論理解像度。全シーンはこの座標系で描き、Scale.FIT で画面に合わせる */
@@ -20,9 +24,13 @@ const config: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade: { debug: false },
   },
-  scene: [BootScene, TitleScene, GradeMapScene],
+  scene: [BootScene, TitleScene, GradeMapScene, GradeScene, HangarScene, FlightScene, HudScene],
 };
 
 export function startGame(parent: string): Phaser.Game {
-  return new Game({ ...config, parent });
+  const game = new Game({ ...config, parent });
+  if (process.env.NODE_ENV !== "production") {
+    (window as unknown as { __game?: Phaser.Game }).__game = game;
+  }
+  return game;
 }
