@@ -72,7 +72,8 @@ export class HangarScene extends Scene {
 
     /* 組み立て中の機体 (正解のたびに明るくなり、パーツが付く) */
     this.shipImage = this.add
-      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, "ship")
+      .image(GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30, "player-base")
+      .setAngle(90)
       .setScale(3.4)
       .setAlpha(0.18);
 
@@ -188,17 +189,21 @@ export class HangarScene extends Scene {
 
     sfx.fanfare();
     this.shipImage.setAlpha(1);
-    const medalIcon = medal === 3 ? "🥇" : medal === 2 ? "🥈" : "🥉";
+    const medalTex = medal === 3 ? "ui-medal-gold" : medal === 2 ? "ui-medal-silver" : "ui-medal-bronze";
     const veil = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x060e1e, 0.78);
     veil.setDepth(40);
-    this.add
-      .text(GAME_WIDTH / 2, 170, `${medalIcon} ${this.lesson.partName} かんせい!`, {
+    const doneTitle = this.add
+      .text(GAME_WIDTH / 2 + 26, 170, `${this.lesson.partName} かんせい!`, {
         fontFamily: "sans-serif",
         fontSize: "38px",
         fontStyle: "bold",
         color: "#ffd93d",
       })
       .setOrigin(0.5)
+      .setDepth(41);
+    this.add
+      .image(doneTitle.x - doneTitle.width / 2 - 34, 170, medalTex)
+      .setScale(2)
       .setDepth(41);
     this.add
       .text(

@@ -7,8 +7,6 @@ import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
 
-const MEDALS = ["", "🥉", "🥈", "🥇"];
-
 /* 学年画面: インプットレッスン一覧と出撃ボタン */
 export class GradeScene extends Scene {
   private gradeDef!: GradeDef;
@@ -46,8 +44,8 @@ export class GradeScene extends Scene {
         .setOrigin(1, 0);
     }
 
-    this.add
-      .text(GAME_WIDTH / 2, 48, `${this.gradeDef.icon} ${this.gradeDef.name}`, {
+    const title = this.add
+      .text(GAME_WIDTH / 2 + 24, 48, this.gradeDef.name, {
         fontFamily: "sans-serif",
         fontSize: "34px",
         fontStyle: "bold",
@@ -56,6 +54,7 @@ export class GradeScene extends Scene {
         strokeThickness: 6,
       })
       .setOrigin(0.5);
+    this.add.image(title.x - title.width / 2 - 36, 48, `ui-planet-${this.gradeDef.grade}`).setScale(1.3);
 
     this.add
       .text(GAME_WIDTH / 2, 92, "🔧 せいびドックで きたえて、じゅんびが できたら しゅつげき!", {
@@ -84,15 +83,16 @@ export class GradeScene extends Scene {
           color: "#ffffff",
         }),
       );
-      card.add(
-        this.add
-          .text(206, 0, medal > 0 ? MEDALS[medal] : "▶", {
-            fontFamily: "sans-serif",
-            fontSize: "26px",
-            color: "#ffd93d",
-          })
-          .setOrigin(1, 0.5),
-      );
+      if (medal > 0) {
+        const medalTex = medal === 3 ? "ui-medal-gold" : medal === 2 ? "ui-medal-silver" : "ui-medal-bronze";
+        card.add(this.add.image(192, 0, medalTex).setScale(1.4));
+      } else {
+        card.add(
+          this.add
+            .text(206, 0, "▶", { fontFamily: "sans-serif", fontSize: "26px", color: "#ffd93d" })
+            .setOrigin(1, 0.5),
+        );
+      }
       card.setInteractive(
         new Phaser.Geom.Rectangle(-230, -36, 460, 72),
         Phaser.Geom.Rectangle.Contains,
@@ -134,8 +134,9 @@ export class GradeScene extends Scene {
       });
 
       /* ボス戦だけをやり直したいとき用のショートカット */
+      this.add.image(GAME_WIDTH / 2 + 96, launchY + 16, "ui-crown").setScale(1.1);
       const bossBtn = this.add
-        .text(GAME_WIDTH / 2 + 210, launchY + 16, "👑 ボスせんに ちょうせん!", {
+        .text(GAME_WIDTH / 2 + 222, launchY + 16, "ボスせんに ちょうせん!", {
           fontFamily: "sans-serif",
           fontSize: "17px",
           fontStyle: "bold",

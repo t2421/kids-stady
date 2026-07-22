@@ -36,7 +36,8 @@ export class FlightScene extends Scene {
   private save!: MathSave;
 
   private ship!: Phaser.Physics.Arcade.Image;
-  private flame!: Phaser.GameObjects.Image;
+  private engineFx!: Phaser.GameObjects.Sprite;
+  private engineMount!: Phaser.GameObjects.Image;
   private optionOrb: Phaser.GameObjects.Image | null = null;
   private shieldSprite: Phaser.GameObjects.Image | null = null;
   private layers: Phaser.GameObjects.TileSprite[] = [];
@@ -64,6 +65,7 @@ export class FlightScene extends Scene {
   private formationAlive = new Map<number, number>();
 
   private boss: BossController | null = null;
+  private bossCrown: Phaser.GameObjects.Image | null = null;
   private bossPhase = false;
 
   private frozenGraceMs = 0; // フリーズ中にパネルが見当たらない時間 (ウォッチドッグ)
@@ -92,21 +94,29 @@ export class FlightScene extends Scene {
     this.profileId = getActiveProfileId() ?? "";
     this.save = loadSave(this.profileId);
 
-    this.layers = [
-      this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "stars-far"),
-      this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "stars-mid"),
-      this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "stars-near"),
-    ];
+    /* Void背景: 3層パララックス (5760x360のストリップを縦1.5倍で敷く) + 回る惑星。
+       生成順 = 描画順: 奥(void) → 惑星 → 星2層 */
+    const bgVoid = this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "bg-void");
+    const planet = this.add.sprite(GAME_WIDTH * 0.78, 130, "planet-earth").setScale(1.6);
+    planet.play("planet-spin");
+    const bgStars1 = this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "bg-stars1");
+    const bgStars2 = this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "bg-stars2");
+    this.layers = [bgVoid, bgStars1, bgStars2];
+    for (const layer of this.layers) layer.setTileScale(1.5);
 
     this.pBullets = this.physics.add.group();
     this.eBullets = this.physics.add.group();
     this.enemies = this.physics.add.group();
     this.capsules = this.physics.add.group();
 
-    this.ship = this.physics.add.image(120, GAME_HEIGHT / 2, "ship");
-    this.ship.setCircle(13, 26, 9); // 当たり判定は見た目より小さく (機体中心のみ)
+    /* 自機: Void Main Ship (上向きスプライトを +90° 回転して右向きに) */
+    this.engineFx = this.add.sprite(120, GAME_HEIGHT / 2, "player-engine-fx").setAngle(90).setScale(1.4);
+    this.engineFx.play("engine-fx");
+    this.engineMount = this.add.image(120, GAME_HEIGHT / 2, "player-engine").setAngle(90).setScale(1.4);
+    this.ship = this.physics.add.image(120, GAME_HEIGHT / 2, "player-base");
+    this.ship.setAngle(90).setScale(1.4);
+    this.ship.setCircle(12, 12, 12); // 当たり判定は見た目より小さく (機体中心のみ)
     this.ship.setCollideWorldBounds(true);
-    this.flame = this.add.image(this.ship.x - 37, this.ship.y, "ship-flame").setOrigin(1, 0.5);
 
     this.setupInput();
     this.setupCollisions();
@@ -177,31 +187,31 @@ export class FlightScene extends Scene {
     return this.powerLevel >= 1 ? 210 : 330;
   }
 
+  /* 弾を生成してアニメ再生 (Voidの弾スプライトは上向きなので +90°) */
+  private spawnProjectile(x: number, y: number, tex: string, anim: string, dmg: number): Phaser.Physics.Arcade.Sprite {
+    const p = this.pBullets.create(x, y, tex) as Phaser.Physics.Arcade.Sprite;
+    p.setAngle(90);
+    p.play(anim);
+    p.setData("dmg", dmg);
+    return p;
+  }
+
   private autofire() {
     if (this.powerLevel >= 4) {
-      const laser = this.pBullets.create(this.ship.x + 40, this.ship.y, "laser") as Phaser.Physics.Arcade.Image;
-      laser.setVelocityX(620);
-      laser.setData("dmg", 2);
+      const laser = this.spawnProjectile(this.ship.x + 42, this.ship.y, "proj-zapper", "proj-zapper-anim", 2);
+      laser.setVelocityX(640);
       laser.setData("pierce", true);
     } else {
-      const b = this.pBullets.create(this.ship.x + 32, this.ship.y, "bullet") as Phaser.Physics.Arcade.Image;
-      b.setVelocityX(540);
-      b.setData("dmg", 1);
+      this.spawnProjectile(this.ship.x + 34, this.ship.y, "proj-bullet", "proj-bullet-anim", 1).setVelocityX(560);
     }
     if (this.powerLevel >= 2) {
-      const d = this.pBullets.create(this.ship.x + 24, this.ship.y - 10, "bullet") as Phaser.Physics.Arcade.Image;
-      d.setVelocity(500, -170);
-      d.setData("dmg", 1);
+      this.spawnProjectile(this.ship.x + 26, this.ship.y - 12, "proj-bullet", "proj-bullet-anim", 1).setVelocity(520, -170);
     }
     if (this.powerLevel >= 3) {
-      const m = this.pBullets.create(this.ship.x + 16, this.ship.y + 14, "missile") as Phaser.Physics.Arcade.Image;
-      m.setVelocity(430, 120);
-      m.setData("dmg", 2);
+      this.spawnProjectile(this.ship.x + 18, this.ship.y + 16, "proj-rocket", "proj-rocket-anim", 2).setVelocity(440, 120);
     }
     if (this.optionOrb) {
-      const o = this.pBullets.create(this.optionOrb.x + 16, this.optionOrb.y, "bullet") as Phaser.Physics.Arcade.Image;
-      o.setVelocityX(540);
-      o.setData("dmg", 1);
+      this.spawnProjectile(this.optionOrb.x + 16, this.optionOrb.y, "proj-bullet", "proj-bullet-anim", 1).setVelocityX(560);
     }
     sfx.shoot();
   }
@@ -247,8 +257,8 @@ export class FlightScene extends Scene {
     this.time.delayedCall(60, () => enemy.setAlpha?.(1));
     if (hp > 0) return;
 
-    this.explode(enemy.x, enemy.y);
     const kind = enemy.getData("kind") as EnemyKind;
+    this.explode(enemy.x, enemy.y, kind);
     const formationId = enemy.getData("formationId") as number | undefined;
     enemy.destroy();
     sfx.boom();
@@ -268,8 +278,21 @@ export class FlightScene extends Scene {
     this.pushHud();
   }
 
-  private explode(x: number, y: number) {
-    for (let i = 0; i < 10; i++) {
+  /* 撃破演出: Voidの破壊アニメーション + 火花 */
+  private explode(x: number, y: number, kind?: EnemyKind | "cruiser") {
+    const boomKey =
+      kind === "ufo" ? "boom-scout" :
+      kind === "rock" ? "boom-bomber" :
+      kind === "bird" ? "boom-fighter" :
+      kind === "red" ? "boom-torpedo" :
+      kind === "cruiser" ? "boom-cruiser" : null;
+    if (boomKey) {
+      const boom = this.add.sprite(x, y, boomKey.replace("boom-", "enemy-") + "-boom").setAngle(90);
+      if (kind === "cruiser") boom.setScale(1.6);
+      boom.play(boomKey);
+      boom.once("animationcomplete", () => boom.destroy());
+    }
+    for (let i = 0; i < 6; i++) {
       const p = this.add.image(x, y, "star").setTint(0xffb45e);
       const a = Math.random() * Math.PI * 2;
       const d = 20 + Math.random() * 46;
@@ -322,8 +345,12 @@ export class FlightScene extends Scene {
 
   private spawnEnemy(kind: EnemyKind, y?: number, formationId?: number) {
     const spawnY = y ?? Phaser.Math.Between(50, GAME_HEIGHT - 50);
-    const tex = kind === "ufo" ? "enemy-ufo" : kind === "rock" ? "enemy-rock" : kind === "bird" ? "enemy-bird" : "enemy-red";
+    /* Void Kla'ed 艦隊: ufo→スカウト / rock→ボマー / bird→ファイター / red→トーピード */
+    const tex = kind === "ufo" ? "enemy-scout" : kind === "rock" ? "enemy-bomber" : kind === "bird" ? "enemy-fighter" : "enemy-torpedo";
     const e = this.enemies.create(GAME_WIDTH + 40, spawnY, tex) as Phaser.Physics.Arcade.Image;
+    e.setAngle(90); // 下向きスプライト → 左向き
+    if (kind === "red") e.setTint(0xffb1b1); // 編隊は赤みがからせて見分けやすく
+    e.setCircle(18, 14, 14);
     e.setData("kind", kind);
     e.setData("baseY", spawnY);
     e.setData("hp", kind === "rock" ? 2 : 1);
@@ -553,14 +580,14 @@ export class FlightScene extends Scene {
     this.boss = new BossController(this, this.output.boss, {
       fireBullet: (x, y, vx, vy) => {
         if (this.ended) return;
-        const b = this.eBullets.create(x, y, "ebullet") as Phaser.Physics.Arcade.Image;
+        const b = this.eBullets.create(x, y, "enemy-bullet") as Phaser.Physics.Arcade.Image;
         b.setVelocity(vx, vy);
       },
       onHpChanged: (hp, maxHp) => this.events.emit("hud-boss", { hp, maxHp, name: this.output.boss.name }),
       onDefeated: () => this.stageClear(),
     });
     /* ボス本体を敵グループにも登録して被弾判定を通す */
-    const bossBody = this.enemies.create(this.boss.sprite.x, this.boss.sprite.y, "boss") as Phaser.Physics.Arcade.Image;
+    const bossBody = this.enemies.create(this.boss.sprite.x, this.boss.sprite.y, "enemy-cruiser") as Phaser.Physics.Arcade.Image;
     bossBody.setVisible(false);
     bossBody.setData("isBoss", true);
     bossBody.setData("hp", 999999);
@@ -568,6 +595,8 @@ export class FlightScene extends Scene {
     (bossBody.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
     bossBody.setVelocity(0, 0);
     this.boss.sprite.setData("bodyRef", bossBody);
+    /* 「けいさんキング」の王冠 (ボスの頭上に追従) */
+    this.bossCrown = this.add.image(this.boss.sprite.x, this.boss.sprite.y - 118, "ui-crown").setScale(2);
     this.boss.enter(() => {
       this.events.emit("hud-boss", { hp: this.boss!.hp, maxHp: this.output.boss.hp, name: this.output.boss.name });
     });
@@ -606,8 +635,19 @@ export class FlightScene extends Scene {
     const bossBody = this.boss?.sprite.getData("bodyRef") as Phaser.Physics.Arcade.Image | undefined;
     bossBody?.destroy();
     if (this.boss) {
-      this.explode(this.boss.sprite.x, this.boss.sprite.y);
-      this.tweens.add({ targets: this.boss.sprite, alpha: 0, scale: 1.4, duration: 900 });
+      this.explode(this.boss.sprite.x, this.boss.sprite.y, "cruiser");
+      this.tweens.add({ targets: this.boss.sprite, alpha: 0, duration: 900 });
+      if (this.bossCrown) {
+        /* 王冠が舞い落ちる */
+        this.tweens.add({
+          targets: this.bossCrown,
+          y: this.bossCrown.y + 160,
+          angle: 220,
+          alpha: 0,
+          duration: 1300,
+          ease: "Sine.easeIn",
+        });
+      }
     }
 
     const avg = this.run.answerMs.length
@@ -752,10 +792,9 @@ export class FlightScene extends Scene {
 
     this.data.set("playerPos", { x: this.ship.x, y: this.ship.y });
 
-    /* 噴射炎の追従とフリッカー */
-    this.flame.setPosition(this.ship.x - 37, this.ship.y);
-    this.flame.setScale(0.7 + Math.random() * 0.5, 0.8 + Math.random() * 0.4);
-    this.flame.setAlpha(this.ship.alpha);
+    /* エンジン (本体+噴射アニメ) の追従 */
+    this.engineMount.setPosition(this.ship.x, this.ship.y).setAlpha(this.ship.alpha);
+    this.engineFx.setPosition(this.ship.x, this.ship.y).setAlpha(this.ship.alpha);
 
     /* オプション/バリアの追従 */
     if (this.optionOrb) {
@@ -810,6 +849,7 @@ export class FlightScene extends Scene {
       }
       const bossBody = this.boss.sprite.getData("bodyRef") as Phaser.Physics.Arcade.Image | undefined;
       bossBody?.setPosition(this.boss.sprite.x, this.boss.sprite.y);
+      this.bossCrown?.setPosition(this.boss.sprite.x, this.boss.sprite.y - 118);
     }
 
     this.updateEnemies(dt);
@@ -825,14 +865,14 @@ export class FlightScene extends Scene {
         const baseY = e.getData("baseY") as number;
         e.y = baseY + Math.sin(e.x / 60) * 46;
       } else if (kind === "rock") {
-        e.rotation += 2.4 * dt;
+        e.y = (e.getData("baseY") as number) + Math.sin(e.x / 40) * 14;
       } else if (kind === "bird") {
         const dy = this.ship.y - e.y;
         e.setVelocityY(Phaser.Math.Clamp(dy * 2.2, -140, 140));
       }
       /* UFOはときどき狙い弾を撃つ */
       if (kind === "ufo" && Math.random() < 0.35 * dt && e.x > GAME_WIDTH * 0.4) {
-        const b = this.eBullets.create(e.x - 16, e.y + 8, "ebullet") as Phaser.Physics.Arcade.Image;
+        const b = this.eBullets.create(e.x - 16, e.y + 8, "enemy-bullet") as Phaser.Physics.Arcade.Image;
         const angle = Math.atan2(this.ship.y - e.y, this.ship.x - e.x);
         b.setVelocity(Math.cos(angle) * 170, Math.sin(angle) * 170);
       }

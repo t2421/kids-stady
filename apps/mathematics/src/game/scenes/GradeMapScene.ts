@@ -86,10 +86,11 @@ export class GradeMapScene extends Scene {
     bg.strokeRoundedRect(-CARD_W / 2, -CARD_H / 2, CARD_W, CARD_H, 20);
     container.add(bg);
 
+    /* 惑星/ロックはドット絵アイコン (絵文字非依存) */
     container.add(
-      this.add
-        .text(0, -34, unlocked ? icon : "🔒", { fontSize: "40px" })
-        .setOrigin(0.5),
+      unlocked
+        ? this.add.image(0, -34, `ui-planet-${grade}`).setScale(1.5)
+        : this.add.image(0, -34, "ui-lock").setScale(1.6),
     );
     container.add(
       this.add
@@ -130,8 +131,9 @@ export class GradeMapScene extends Scene {
     if (!sortieReady) return;
 
     /* レッスンクリア済み → カード内から直接出撃 (カードの他の部分はレッスン画面へ) */
+    this.add.image(x - 78, y + 46, "ui-rocket").setScale(1.1);
     const quick = this.add
-      .text(x, y + 46, "🚀 すぐ しゅつげき!", {
+      .text(x + 8, y + 46, "すぐ しゅつげき!", {
         fontFamily: "sans-serif",
         fontSize: "16px",
         fontStyle: "bold",

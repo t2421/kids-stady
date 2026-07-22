@@ -36,7 +36,7 @@ export class BossController {
     this.def = def;
     this.hooks = hooks;
     this.hp = def.hp;
-    this.sprite = scene.add.image(GAME_WIDTH + 120, GAME_HEIGHT / 2, "boss");
+    this.sprite = scene.add.image(GAME_WIDTH + 160, GAME_HEIGHT / 2, "enemy-cruiser").setAngle(90).setScale(1.6);
   }
 
   /* 画面右へスライドイン → 攻撃開始 */

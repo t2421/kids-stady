@@ -16,7 +16,8 @@ interface HudState {
  * ボスHPバー・必殺技ボタンを表示する。
  */
 export class HudScene extends Scene {
-  private heartsText!: Phaser.GameObjects.Text;
+  private heartIcons: Phaser.GameObjects.Image[] = [];
+  private shieldIcon!: Phaser.GameObjects.Image;
   private scoreText!: Phaser.GameObjects.Text;
   private timeBar!: Phaser.GameObjects.Rectangle;
   private ladderTexts: Phaser.GameObjects.Text[] = [];
@@ -35,7 +36,12 @@ export class HudScene extends Scene {
     const flight = data.flight;
     this.ladderTexts = [];
 
-    this.heartsText = this.add.text(14, 10, "", { fontFamily: "sans-serif", fontSize: "22px" });
+    /* ハート (ドット絵アイコン) */
+    this.heartIcons = [];
+    for (let i = 0; i < 3; i++) {
+      this.heartIcons.push(this.add.image(28 + i * 34, 24, "ui-heart").setScale(1.1));
+    }
+    this.shieldIcon = this.add.image(28 + 3 * 34 + 6, 24, "ui-shield").setScale(1.1).setVisible(false);
     this.scoreText = this.add
       .text(GAME_WIDTH - 14, 10, "", {
         fontFamily: "sans-serif",
@@ -125,7 +131,8 @@ export class HudScene extends Scene {
   }
 
   private onState(s: HudState) {
-    this.heartsText.setText("❤️".repeat(s.hearts) + "🤍".repeat(Math.max(0, 3 - s.hearts)) + (s.shieldCharges > 0 ? " 🛡️" : ""));
+    this.heartIcons.forEach((h, i) => h.setTexture(i < s.hearts ? "ui-heart" : "ui-heart-empty"));
+    this.shieldIcon.setVisible(s.shieldCharges > 0);
     this.scoreText.setText(`スコア ${s.score}`);
     this.ladderTexts.forEach((t, i) => {
       if (i < s.powerLevel) {
