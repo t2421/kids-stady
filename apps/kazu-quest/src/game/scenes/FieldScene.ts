@@ -15,7 +15,7 @@ import { getEncounterTable } from "../../content/encounters";
 import { getSpell } from "../../content/spells";
 import { getItem, SHOPS } from "../../content/items";
 import { mulberry32, randInt } from "../../lib/curriculum/types";
-import { heroStats } from "../../lib/battle/stats";
+import { expForLevel, heroStats } from "../../lib/battle/stats";
 
 const STEP_MS = 150;
 const ZOOM = 3;
@@ -108,6 +108,12 @@ export class FieldScene extends Scene {
   }
 
   create() {
+    /* デバッグトレース (E2E調査用 — M10で除去) */
+    (
+      (window as unknown as Record<string, unknown[]>).__KAZUQUEST_TRACE__ ??=
+        []
+    ).push({ t: Math.round(performance.now()), ev: "create", map: this.map.id });
+
     /* 入場時点で現在地をセーブに確定させる (以後 save.location が常に真) */
     updateSave((save) => ({
       ...save,
@@ -148,6 +154,9 @@ export class FieldScene extends Scene {
     keyboard.on("keydown-Z", () => this.interact());
     keyboard.on("keydown-ENTER", () => this.interact());
     keyboard.on("keydown-SPACE", () => this.interact());
+    keyboard.on("keydown-X", () => this.openStatusMenu());
+    keyboard.on("keydown-M", () => this.openStatusMenu());
+    keyboard.on("keydown-ESC", () => this.openStatusMenu());
 
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (this.isUiBusy()) return;
@@ -481,6 +490,11 @@ export class FieldScene extends Scene {
     ) as Phaser.Math.Vector2;
     const tx = Math.floor(world.x / TILE_SIZE);
     const ty = Math.floor(world.y / TILE_SIZE);
+    /* 自分をタップ → ステータスメニュー (タブレット向けの導線) */
+    if (tx === this.gridX && ty === this.gridY) {
+      this.openStatusMenu();
+      return true;
+    }
     const adjacent =
       Math.abs(tx - this.gridX) + Math.abs(ty - this.gridY) === 1;
     if (!adjacent) return false;
@@ -545,6 +559,55 @@ export class FieldScene extends Scene {
     this.runCommands(commands);
   }
 
+  /* ---------- ステータスメニュー (つよさ・じゅもん・どうぐ) ---------- */
+
+  private openStatusMenu() {
+    if (
+      this.moving ||
+      this.transferring ||
+      this.runActive ||
+      this.battleStarting ||
+      this.isUiBusy() ||
+      this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS
+    ) {
+      return;
+    }
+    const save = getSave();
+    const hero = save.party.find((m) => m.memberId === "hero");
+    if (!hero) return;
+    const stats = heroStats(hero.level);
+    const nextNeed = Math.max(0, expForLevel(hero.level + 1) - hero.exp);
+
+    const statusPage = [
+      `ゆうしゃ  レベル ${hero.level}`,
+      `HP ${Math.min(hero.hp, stats.maxHp)}/${stats.maxHp}  MP ${Math.min(hero.mp, stats.maxMp)}/${stats.maxMp}`,
+      `こうげき ${stats.atk}  しゅび ${stats.def}  すばやさ ${stats.agi}`,
+      `つぎのレベルまで あと ${nextNeed}`,
+      `ゴールド ${save.inventory.gold}G`,
+    ].join("\n");
+
+    const spellNames = hero.learnedSpells
+      .map((id) => getSpell(id)?.name)
+      .filter((n): n is string => !!n);
+    const spellPage =
+      spellNames.length > 0
+        ? `おぼえた じゅもん・とくぎ:\n${spellNames.join("、")}`
+        : "じゅもんは まだ おぼえていない。\nまなびやで テストに ちょうせん しよう!";
+
+    const itemLines = Object.entries(save.inventory.items)
+      .filter(([, count]) => count > 0)
+      .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
+    const itemPage =
+      itemLines.length > 0
+        ? `もちもの:\n${itemLines.join("、")}`
+        : "もちものは なにも ない。";
+
+    this.runActive = true;
+    this.ui.showMessage([statusPage, spellPage, itemPage], () =>
+      this.finishRun(),
+    );
+  }
+
   /* ---------- イベントランナー駆動 ---------- */
 
   private runCommands(commands: EventCommand[]) {
@@ -552,6 +615,13 @@ export class FieldScene extends Scene {
     let state: RunnerState = startRun(commands, getSave());
 
     const advance = (input?: RunnerInput) => {
+      /*
+       * ステップ前にセッションのセーブを再同期する。
+       * effect の処理中 (習得テスト合格・戦闘報酬・宿・店など) に行われた
+       * updateSave が、ランナーが持つ古いスナップショットで上書きされて
+       * 消えるのを防ぐ (実バグ: テスト合格で覚えた呪文が消えていた)。
+       */
+      state = { ...state, save: getSave() };
       const result = step(state, input);
       state = result.state;
       updateSave(() => result.state.save);
@@ -672,34 +742,32 @@ export class FieldScene extends Scene {
           break;
         }
         case "openShop": {
-          /* シンプルな1品ずつの購入ループ (章1の道具屋はやくそう中心) */
+          /* 品物リストから選んで買う (設計変更 2026-07-22: 一覧選択式) */
           const shop = SHOPS[effect.shopId];
-          if (!shop || shop.itemIds.length === 0) {
+          const items = (shop?.itemIds ?? [])
+            .map((id) => getItem(id))
+            .filter((it): it is NonNullable<typeof it> => !!it);
+          if (items.length === 0) {
             this.ui.showMessage(["いまは しなぎれ みたい。"], () => advance());
             break;
           }
-          const offerItem = (index: number) => {
-            if (index >= shop.itemIds.length) {
-              this.ui.showMessage(["まいど ありがとう!"], () => advance());
-              return;
-            }
-            const item = getItem(shop.itemIds[index]);
-            if (!item) {
-              offerItem(index + 1);
-              return;
-            }
-            this.ui.showChoice(
-              `${item.name} (${item.price}ゴールド) を かう?`,
-              (yes) => {
-                if (!yes) {
-                  offerItem(index + 1);
+          const openList = () => {
+            const save = getSave();
+            const options = [
+              ...items.map((it) => `${it.name}  ${it.price}G`),
+              "やめる",
+            ];
+            this.ui.showList(
+              `なにを かう? (もちがね ${save.inventory.gold}G)`,
+              options,
+              (index) => {
+                if (index === null || index >= items.length) {
+                  this.ui.showMessage(["まいど ありがとう!"], () => advance());
                   return;
                 }
-                const save = getSave();
-                if (save.inventory.gold < item.price) {
-                  this.ui.showMessage(["おかねが たりないよ…"], () =>
-                    offerItem(index + 1),
-                  );
+                const item = items[index];
+                if (getSave().inventory.gold < item.price) {
+                  this.ui.showMessage(["おかねが たりないよ…"], () => openList());
                   return;
                 }
                 updateSave((s) => ({
@@ -714,12 +782,12 @@ export class FieldScene extends Scene {
                 }));
                 autosave();
                 this.ui.showMessage([`${item.name}を てにいれた!`], () =>
-                  offerItem(index),
+                  openList(),
                 );
               },
             );
           };
-          offerItem(0);
+          openList();
           break;
         }
       }
@@ -737,6 +805,17 @@ export class FieldScene extends Scene {
   }
 
   private transferTo(mapId: string, spawn: string) {
+    (
+      (window as unknown as Record<string, unknown[]>).__KAZUQUEST_TRACE__ ??=
+        []
+    ).push({
+      t: Math.round(performance.now()),
+      ev: "transferTo",
+      from: this.map.id,
+      to: mapId,
+      spawn,
+      blocked: this.transferring,
+    });
     if (this.transferring) return;
     this.transferring = true;
     const target = getMapDef(mapId);

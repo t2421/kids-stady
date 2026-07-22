@@ -4,7 +4,7 @@
  * autosave() 経由 (transfer時・戦闘終了時・メニュー閉時に呼ぶ)。
  */
 
-import { getActiveId } from "../lib/profiles";
+import { AVATARS, createProfile, getActiveId } from "../lib/profiles";
 import type { SaveData } from "../lib/save";
 import { defaultSave, loadSave, persistSave } from "../lib/save";
 
@@ -24,10 +24,18 @@ export function startSession(profileId: string | null): void {
   state.save = profileId ? loadSave(profileId) : defaultSave();
 }
 
-/* プロフィール未選択でも遊べるようにする (進行はメモリ上のみ) */
+/*
+ * アクティブプロフィールでセッションを開始する。
+ * プロフィールが1つもなければデフォルトを自動作成する —
+ * これが無いと進行がメモリ上だけになり、リロードで習得呪文まで消えてしまう。
+ * (プロフィール選択・切替UIは M10 で追加予定)
+ */
 export function ensureSession(): void {
   if (state.profileId === null) {
-    const active = getActiveId();
+    let active = getActiveId();
+    if (!active) {
+      active = createProfile("ゆうしゃ", AVATARS[0]);
+    }
     startSession(active);
   }
 }

@@ -4,6 +4,7 @@ import { applyVictory, createBattle, submitRound } from "../../lib/battle/battle
 import { getMonster } from "../../content/monsters";
 import { getItem } from "../../content/items";
 import { getSpell } from "../../content/spells";
+import { getChapter } from "../../content/chapters";
 import type { SpellDef } from "../../content/types";
 import { mulberry32 } from "../../lib/curriculum/types";
 import { recordAnswer } from "../../lib/save";
@@ -40,6 +41,9 @@ interface MathPromptResultEvent {
 }
 
 const COMMANDS = ["たたかう", "じゅもん", "どうぐ", "ぼうぎょ", "にげる"] as const;
+
+/* 通常攻撃の出題は易しめ・短めの制限時間でテンポを保つ */
+const ATTACK_TIME_LIMIT_MS = 10000;
 
 export class BattleScene extends Scene {
   private battle!: BattleState;
@@ -241,6 +245,41 @@ export class BattleScene extends Scene {
     this.msgText.setText("どの じゅもんを つかう?");
   }
 
+  /* 通常攻撃も基礎問題を出題 (設計変更 2026-07-22)。正解=命中、
+     素早い正解=かいしん1.5倍、不正解/タイムアウト=攻撃を外す */
+  private attackWithMathPrompt() {
+    this.busy = true;
+    this.clearMenu();
+    this.msgText.setText("こうげき!");
+    const chapter = getChapter(getSave().chapter.current);
+    const skillIds = chapter?.attackSkillIds ?? ["g1_add_nc", "g1_sub_nc"];
+    const requestId = `attack-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+
+    const onResult = (result: MathPromptResultEvent) => {
+      if (result.requestId !== requestId) return;
+      EventBus.off("math-result", onResult);
+      updateSave((s) =>
+        recordAnswer(s, result.problem.skillId, result.correct, result.elapsedMs),
+      );
+      autosave();
+      const critical =
+        result.correct && result.elapsedMs <= ATTACK_TIME_LIMIT_MS / 2;
+      this.runRound({
+        kind: "attack",
+        memberId: "hero",
+        targetId: this.firstEnemyId(),
+        outcome: { correct: result.correct, critical },
+      });
+    };
+    EventBus.on("math-result", onResult);
+    EventBus.emit("math-prompt", {
+      requestId,
+      skillIds,
+      timeLimitMs: ATTACK_TIME_LIMIT_MS,
+      context: "battle",
+    });
+  }
+
   /* 呪文選択 → 算数プロンプト (React) → 結果でラウンド解決 (設計 A3) */
   private castWithMathPrompt(spell: SpellDef) {
     this.busy = true;
@@ -285,7 +324,7 @@ export class BattleScene extends Scene {
     if (this.menuKind === "root") {
       const command = COMMANDS[this.menuIndex];
       if (command === "たたかう") {
-        this.runRound({ kind: "attack", memberId: "hero", targetId: this.firstEnemyId() });
+        this.attackWithMathPrompt();
       } else if (command === "じゅもん") {
         const spells = this.learnedSpells();
         if (spells.length === 0) {

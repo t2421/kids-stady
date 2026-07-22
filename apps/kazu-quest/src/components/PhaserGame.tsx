@@ -32,6 +32,17 @@ export function PhaserGame() {
             | null;
           field?.debugTeleport?.(x, y, facing);
         },
+        learnSpell: (spellId: string) => {
+          updateSave((s) => ({
+            ...s,
+            flags: { ...s.flags, [`learned.${spellId}`]: true },
+            party: s.party.map((m) =>
+              m.memberId === "hero" && !m.learnedSpells.includes(spellId)
+                ? { ...m, learnedSpells: [...m.learnedSpells, spellId] }
+                : m,
+            ),
+          }));
+        },
         grantLevel: (level: number) => {
           const stats = heroStats(level);
           updateSave((s) => ({

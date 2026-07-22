@@ -28,6 +28,10 @@ export class UiScene extends Scene {
   private choiceBox?: Phaser.GameObjects.Container;
   private choiceResolve: ((yes: boolean) => void) | null = null;
   private choiceSelected = true; /* true = はい */
+  private listBox?: Phaser.GameObjects.Container;
+  private listResolve: ((index: number | null) => void) | null = null;
+  private listOptions: string[] = [];
+  private listIndex = 0;
   private mapLabel?: Phaser.GameObjects.Text;
 
   constructor() {
@@ -39,12 +43,21 @@ export class UiScene extends Scene {
     this.input.keyboard?.on("keydown-ENTER", () => this.onAdvance());
     this.input.keyboard?.on("keydown-SPACE", () => this.onAdvance());
     this.input.on("pointerdown", () => this.onAdvance());
-    this.input.keyboard?.on("keydown-UP", () => this.moveChoice());
-    this.input.keyboard?.on("keydown-DOWN", () => this.moveChoice());
+    this.input.keyboard?.on("keydown-UP", () => {
+      this.moveChoice();
+      this.moveList(-1);
+    });
+    this.input.keyboard?.on("keydown-DOWN", () => {
+      this.moveChoice();
+      this.moveList(1);
+    });
+    this.input.keyboard?.on("keydown-X", () => this.cancelList());
   }
 
   isBusy(): boolean {
-    return this.job !== null || this.choiceResolve !== null;
+    return (
+      this.job !== null || this.choiceResolve !== null || this.listResolve !== null
+    );
   }
 
   /* ---------- メッセージウィンドウ ---------- */
@@ -114,6 +127,10 @@ export class UiScene extends Scene {
   }
 
   private onAdvance() {
+    if (this.listResolve) {
+      this.resolveList(this.listIndex);
+      return;
+    }
     if (this.choiceResolve) {
       this.resolveChoice();
       return;
@@ -207,6 +224,86 @@ export class UiScene extends Scene {
     const yes = this.choiceSelected;
     this.closeWindow();
     resolve(yes);
+  }
+
+  /* ---------- 選択リスト (道具屋・メニューなど) ---------- */
+
+  /**
+   * 選択肢のリストを表示する。決定で index、X キーで null を返す。
+   * 呼び出し側が「やめる」相当の項目を入れておくのが親切。
+   */
+  showList(
+    prompt: string,
+    options: string[],
+    onResult: (index: number | null) => void,
+  ): void {
+    this.ensureWindow();
+    this.textObj?.setText(prompt);
+    this.typing = false;
+    this.charTimer?.remove();
+    this.nextArrow?.setVisible(false);
+    this.listOptions = options;
+    this.listIndex = 0;
+    this.listResolve = onResult;
+    this.renderList();
+  }
+
+  private renderList() {
+    this.listBox?.destroy();
+    const lineH = 34;
+    const w = 320;
+    const h = this.listOptions.length * lineH + 28;
+    const x = GAME_WIDTH - w / 2 - 60;
+    const y = GAME_HEIGHT - 190 - h / 2;
+    const frame = this.add.rectangle(0, 0, w + 8, h + 8, 0xffffff, 1);
+    const box = this.add.rectangle(0, 0, w, h, 0x000000, 0.94);
+    const children: Phaser.GameObjects.GameObject[] = [frame, box];
+    this.listOptions.forEach((label, i) => {
+      const text = this.add
+        .text(
+          -w / 2 + 18,
+          -h / 2 + 14 + i * lineH,
+          `${i === this.listIndex ? "▶" : "　"} ${label}`,
+          { fontFamily: "sans-serif", fontSize: "24px", color: "#ffffff" },
+        )
+        .setInteractive();
+      text.on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation();
+          this.resolveList(i);
+        },
+      );
+      children.push(text);
+    });
+    this.listBox = this.add.container(x, y, children).setDepth(13);
+  }
+
+  private moveList(delta: number) {
+    if (!this.listResolve || this.listOptions.length === 0) return;
+    const len = this.listOptions.length;
+    this.listIndex = (this.listIndex + delta + len) % len;
+    this.renderList();
+  }
+
+  private cancelList() {
+    if (!this.listResolve) return;
+    this.resolveList(null);
+  }
+
+  private resolveList(index: number | null) {
+    const resolve = this.listResolve;
+    if (!resolve) return;
+    this.listResolve = null;
+    this.listBox?.destroy();
+    this.listBox = undefined;
+    this.closeWindow();
+    resolve(index);
   }
 
   /* ---------- マップ名トースト ---------- */

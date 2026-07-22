@@ -98,6 +98,41 @@ describe("battle rounds", () => {
     expect(victory).toEqual({ type: "victory", exp: 2, gold: 1 });
   });
 
+  it("missed attack (wrong answer) does no damage", () => {
+    const state = createBattle([HERO], [{ ...KESHIGOMUN, hp: 50 }], false);
+    const { state: s2, events } = submitRound(
+      state,
+      [
+        {
+          kind: "attack",
+          memberId: "hero",
+          targetId: state.enemies[0].id,
+          outcome: { correct: false, critical: false },
+        },
+      ],
+      mulberry32(1),
+    );
+    expect(s2.enemies[0].hp).toBe(50);
+    expect(events.some((e) => e.type === "message" && e.text.includes("はずれて"))).toBe(true);
+  });
+
+  it("critical attack (fast answer) deals more than normal (same rng)", () => {
+    const base = createBattle([HERO], [{ ...KESHIGOMUN, hp: 500, def: 0 }], false);
+    const normal = submitRound(
+      base,
+      [{ kind: "attack", memberId: "hero", targetId: base.enemies[0].id, outcome: { correct: true, critical: false } }],
+      mulberry32(9),
+    );
+    const crit = submitRound(
+      base,
+      [{ kind: "attack", memberId: "hero", targetId: base.enemies[0].id, outcome: { correct: true, critical: true } }],
+      mulberry32(9),
+    );
+    const dmg = (r: typeof normal) =>
+      500 - r.state.enemies[0].hp;
+    expect(dmg(crit)).toBeGreaterThan(dmg(normal));
+  });
+
   it("fizzled spell consumes no MP and does no damage", () => {
     const state = createBattle([HERO], [{ ...KESHIGOMUN, hp: 50 }], false);
     const mpBefore = state.members[0].mp;

@@ -41,7 +41,13 @@ export interface BattleState {
 }
 
 export type PlayerCommand =
-  | { kind: "attack"; memberId: string; targetId: string }
+  | {
+      kind: "attack";
+      memberId: string;
+      targetId: string;
+      /* 算数プロンプトの結果。不正解/タイムアウト = 攻撃を外す。省略 = 命中 */
+      outcome?: { correct: boolean; critical: boolean };
+    }
   | {
       kind: "spell";
       memberId: string;
@@ -223,13 +229,23 @@ export function submitRound(
       const cmd = turn.command!;
 
       if (cmd.kind === "attack") {
+        const outcome = cmd.outcome ?? { correct: true, critical: false };
+        events.push({ type: "message", text: `${actor.name}の こうげき!` });
+        if (!outcome.correct) {
+          /* 不正解/タイムアウト → 攻撃を外す (設計変更 2026-07-22: 通常攻撃も出題) */
+          events.push({ type: "message", text: "しかし はずれて しまった!" });
+          continue;
+        }
         let target = findEnemy(cmd.targetId);
         if (!target || target.hp <= 0) target = livingEnemies(next)[0];
         if (!target) continue;
-        const damage = physicalDamage(actor.atk, target.def, rng, false);
+        let damage = physicalDamage(actor.atk, target.def, rng, false);
+        if (outcome.critical) {
+          damage = Math.max(1, Math.round(damage * 1.5));
+          events.push({ type: "message", text: "かいしんの いちげき!" });
+        }
         target.hp = Math.max(0, target.hp - damage);
         const killed = target.hp === 0;
-        events.push({ type: "message", text: `${actor.name}の こうげき!` });
         events.push({ type: "attack", actorName: actor.name, targetId: target.id, damage, killed, onParty: false });
         if (killed) {
           events.push({ type: "message", text: `${target.name}を やっつけた!` });

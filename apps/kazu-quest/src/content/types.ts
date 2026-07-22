@@ -162,6 +162,8 @@ export interface ChapterDef {
   maps: MapDef[];
   encounterTables: EncounterTable[];
   spellIds: string[];
+  /* 通常攻撃の発動時に出題する基礎スキル (易しめ・短い制限時間) */
+  attackSkillIds: string[];
   /* フラグレジストリ: flagId → 説明 (参照整合性テストとドキュメントを兼ねる) */
   flags: Record<string, string>;
   clearFlag: string;
