@@ -88,7 +88,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g1_add_carry", "g1_sub_borrow"],
       answerTimeMs: 8000,
       durationSec: 100,
-      boss: { name: "けいさんキング・イチ", hp: 100, chipScale: 0.3, beamDamage: 25 },
+      boss: { name: "けいさんキング・イチ", hp: 100, chipScale: 0.05, beamDamage: 25 },
     },
   },
   {
@@ -129,7 +129,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g2_kuku_hole", "g2_sub2"],
       answerTimeMs: 9000,
       durationSec: 100,
-      boss: { name: "くくキング・ニ", hp: 110, chipScale: 0.3, beamDamage: 25 },
+      boss: { name: "くくキング・ニ", hp: 110, chipScale: 0.05, beamDamage: 25 },
     },
   },
   {
@@ -170,7 +170,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g3_div_amari", "g3_mult2x1"],
       answerTimeMs: 10000,
       durationSec: 100,
-      boss: { name: "わりざんキング・サン", hp: 120, chipScale: 0.3, beamDamage: 25 },
+      boss: { name: "わりざんキング・サン", hp: 120, chipScale: 0.05, beamDamage: 25 },
     },
   },
   {
@@ -211,7 +211,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g4_div2", "g4_bunsu"],
       answerTimeMs: 12000,
       durationSec: 100,
-      boss: { name: "しょうすうキング・ヨン", hp: 130, chipScale: 0.3, beamDamage: 25 },
+      boss: { name: "しょうすうキング・ヨン", hp: 130, chipScale: 0.05, beamDamage: 25 },
     },
   },
   {
@@ -252,7 +252,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g5_bunsu_add", "g5_shosu_div"],
       answerTimeMs: 14000,
       durationSec: 100,
-      boss: { name: "ぶんすうキング・ゴ", hp: 140, chipScale: 0.3, beamDamage: 25 },
+      boss: { name: "ぶんすうキング・ゴ", hp: 140, chipScale: 0.05, beamDamage: 25 },
     },
   },
   {
@@ -293,7 +293,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g6_bunsu_div", "g6_en"],
       answerTimeMs: 15000,
       durationSec: 100,
-      boss: { name: "けいさんだいまおう", hp: 150, chipScale: 0.3, beamDamage: 25 },
+      boss: { name: "けいさんだいまおう", hp: 150, chipScale: 0.05, beamDamage: 25 },
     },
   },
 ];
