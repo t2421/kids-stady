@@ -2,32 +2,36 @@
 import type { PixelArt } from "./format";
 
 export const ACTOR_ART: Record<string, PixelArt> = {
+  /*
+   * 勇者: 金の縁どりの兜 + 左手に剣 + 右手に白いカイトシールド。
+   * m/M=鋼 y=金 w=盾の白地
+   */
   hero: {
-    palette: { k: "#171820", h: "#39281c", H: "#69452a", s: "#e7ad7d", S: "#ffd0a0", b: "#2865aa", B: "#173f75", l: "#5795d2", y: "#f1c644", w: "#f7f1de" },
+    palette: { k: "#171820", h: "#39281c", m: "#8a94a4", M: "#c4cdd8", s: "#e7ad7d", S: "#ffd0a0", b: "#2865aa", B: "#173f75", l: "#5795d2", y: "#f1c644", w: "#f7f1de" },
     rows: [
-      ".....kkkkkk.....", "....khHHHHhk....", "...khhHHHHhhk...", "...khkHHHHkhk...",
-      "...kSSSSSSSSk...", "...kSksSSskSk...", "...kSSsSSsSSk...", "....kssssssk....",
-      "...kkkbbbbkkk...", "..ksklbbbblksk..", "..kskbbbbbbksk..", "...kBbyyyyBbkk..",
-      "...kBBbbbbBBk...", "...kkBkkkkBkk...", "....kBk..kBk....", "....kkk..kkk....",
+      ".....kkkkkk.....", "....kmMMMMmk....", "...kmMMMMMMmk...", "..MkmyyMMyymk...",
+      "..MkSSSSSSSSk...", "..MkSksSSskSk...", "..MkSSssssSSk...", "..M.kssssssk....",
+      "..Mkkkbbbbkkwwk.", ".yysklbbbblkwywk", ".hhskbbbbbbkwywk", "...kBbyyyyBkwwk.",
+      "...kBBbbbbBBkk..", "...kkBkkkkBkk...", "....kBk..kBk....", "....kkk..kkk....",
     ],
   },
-  /* 勇者の後ろ姿 (上向き移動時)。hero と同パレット */
+  /* 勇者の後ろ姿 (上向き移動時)。背中にカイトシールドを背負う */
   heroUp: {
-    palette: { k: "#171820", h: "#39281c", H: "#69452a", s: "#e7ad7d", S: "#ffd0a0", b: "#2865aa", B: "#173f75", l: "#5795d2", y: "#f1c644", w: "#f7f1de" },
+    palette: { k: "#171820", h: "#39281c", m: "#8a94a4", M: "#c4cdd8", s: "#e7ad7d", S: "#ffd0a0", b: "#2865aa", B: "#173f75", l: "#5795d2", y: "#f1c644", w: "#f7f1de" },
     rows: [
-      ".....kkkkkk.....", "....khHHHHhk....", "...khhHHHHhhk...", "...khHHHHHHhk...",
-      "...kHHHHHHHHk...", "...kHHhhhhHHk...", "...kHHHHHHHHk...", "....khhhhhhk....",
-      "...kkkbbbbkkk...", "..ksklbbbblksk..", "..kskbbbbbbksk..", "...kBbbbbbbBkk..",
-      "...kBBbbbbBBk...", "...kkBkkkkBkk...", "....kBk..kBk....", "....kkk..kkk....",
+      ".....kkkkkk.....", "....kmMMMMmk....", "...kmMMMMMMmk...", "...kmyyMMyymk...",
+      "...kmMMMMMMmk...", "...kmmMMMMmmk...", "....kmmmmmmk....", "....kssssssk....",
+      "...kkkwwwwkkk...", "..kskwwwwwwksk..", "..kskwwyywwksk..", "...kBkwyywkBk...",
+      "...kBBkwwkBBk...", "...kkBkkkkBkk...", "....kBk..kBk....", "....kkk..kkk....",
     ],
   },
-  /* 勇者の横向き (右向き。左は flipX で表示) */
+  /* 勇者の横向き (右向き。左は flipX で表示)。剣を前にかまえる */
   heroSide: {
-    palette: { k: "#171820", h: "#39281c", H: "#69452a", s: "#e7ad7d", S: "#ffd0a0", b: "#2865aa", B: "#173f75", l: "#5795d2", y: "#f1c644", w: "#f7f1de" },
+    palette: { k: "#171820", h: "#39281c", m: "#8a94a4", M: "#c4cdd8", s: "#e7ad7d", S: "#ffd0a0", b: "#2865aa", B: "#173f75", l: "#5795d2", y: "#f1c644", w: "#f7f1de" },
     rows: [
-      ".....kkkkkk.....", "....khhHHHhk....", "...khHHHHHHhk...", "...khHHHSSSSk...",
-      "...khHHSSSSSk...", "...khHSSkSSSk...", "...khHSSSssSk...", "....khSssssk....",
-      "...kkkbbbbkk....", "...kskbbbblsk...", "...kskbbbbbsk...", "...kBbbyybbBk...",
+      ".....kkkkkk.....", "....kmMMMMmk....", "...kmMMMMMMmk...", "...kmyMMSSSSkM..",
+      "...kmMMSSSSSkM..", "...kmMSSkSSSkM..", "...kmMSSSssSkM..", "....kmSssssk.M..",
+      "...kkkbbbbkk.M..", "...kskbbbblsyMy.", "...kskbbbbbskh..", "...kBbbyybbBk...",
       "...kBBbbbbBBk...", "...kkBkkkBkk....", "....kBk.kBk.....", "....kkk.kkk.....",
     ],
   },
