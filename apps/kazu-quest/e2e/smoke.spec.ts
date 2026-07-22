@@ -166,8 +166,10 @@ const correctChoice = (page: Page) =>
 async function grindBattleUntilField(page: Page, maxSteps = 120) {
   const btn = correctChoice(page);
   for (let i = 0; i < maxSteps; i++) {
-    if (await btn.isVisible()) {
-      await btn.click();
+    /* フィードバック表示中は disabled になるので、押せるときだけ短命クリック */
+    const clickable = (await btn.isVisible()) && (await btn.isEnabled());
+    if (clickable) {
+      await btn.click({ timeout: 2_000 }).catch(() => {});
       await page.waitForTimeout(700);
     } else {
       await page.keyboard.press("z");
@@ -213,8 +215,9 @@ test("dialog & treasure: mother's send-off and the forest chest", async ({
   }
   expect(moved.y).toBeGreaterThan(start.y);
 
-  /* 母に話す → 物語開始フラグ */
-  await teleport(page, 4, 5, "up");
+  /* 母に話す → 物語開始フラグ (家の中へ) */
+  await warp(page, "ch1-hajimari-home", "start");
+  await teleport(page, 6, 3, "up");
   await interactAndAdvance(page);
   await page.waitForFunction(
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.started"] === true,
@@ -276,8 +279,8 @@ test("spell casting: learn ヒキダマ at the scholar, then cast it in battle",
   await startGame(page);
 
   /* ユーザー報告の再現経路: まなびやで習得 → 戦闘で使用 */
-  await warp(page, "ch1-capital", "west");
-  await teleport(page, 6, 5, "up");
+  await warp(page, "ch1-capital-castle", "start");
+  await teleport(page, 3, 3, "left");
   await takeSpellTestAllCorrect(page);
   await page.waitForFunction(
     () =>
@@ -359,15 +362,16 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
 
   const start = await fieldPos(page);
   expect(start.mapId).toBe("ch1-hajimari");
-  await teleport(page, 4, 5, "up");
+  await warp(page, "ch1-hajimari-home", "start");
+  await teleport(page, 6, 3, "up");
   await interactAndAdvance(page);
   await page.waitForFunction(
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.started"] === true,
   );
 
   /* 王都: 謁見 (クエスト + 50G) */
-  await warp(page, "ch1-capital", "west");
-  await teleport(page, 8, 5, "up");
+  await warp(page, "ch1-capital-castle", "start");
+  await teleport(page, 6, 2, "up");
   await interactAndAdvance(page);
   const afterKing = await page.evaluate(() =>
     window.__KAZUQUEST_DEBUG__!.getSave(),
@@ -376,7 +380,7 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
   expect(afterKing.inventory.gold).toBe(50);
 
   /* まなびや: ヒキダマ習得テスト */
-  await teleport(page, 6, 5, "up");
+  await teleport(page, 3, 3, "left");
   await takeSpellTestAllCorrect(page);
   await page.waitForFunction(
     () =>
@@ -407,9 +411,9 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.midboss"] === true,
   );
 
-  /* モリカゲ村: ヒキダマン習得テスト (橋の番人ゲート解除) */
-  await warp(page, "ch1-morikage", "north");
-  await teleport(page, 4, 5, "up");
+  /* モリカゲ村のまなびや: ヒキダマン習得テスト (橋の番人ゲート解除) */
+  await warp(page, "ch1-morikage-manabiya", "start");
+  await teleport(page, 4, 3, "up");
   await takeSpellTestAllCorrect(page);
   await page.waitForFunction(
     () =>
@@ -440,8 +444,8 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
   );
 
   /* 王様に報告して第1章クリア */
-  await warp(page, "ch1-capital", "west");
-  await teleport(page, 8, 5, "up");
+  await warp(page, "ch1-capital-castle", "start");
+  await teleport(page, 6, 2, "up");
   await interactAndAdvance(page);
   await page.waitForFunction(
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.clear"] === true,

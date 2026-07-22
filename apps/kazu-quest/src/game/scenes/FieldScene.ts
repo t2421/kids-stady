@@ -136,11 +136,18 @@ export class FieldScene extends Scene {
   private setupCamera() {
     const cam = this.cameras.main;
     cam.setZoom(ZOOM);
+    const widthPx = this.map.grid[0].length * TILE_SIZE;
+    const heightPx = this.map.grid.length * TILE_SIZE;
+    /* ビューポートより小さいマップ (家の中など) は中央に寄せる */
+    const viewW = this.scale.width / ZOOM;
+    const viewH = this.scale.height / ZOOM;
+    const boundX = widthPx < viewW ? -(viewW - widthPx) / 2 : 0;
+    const boundY = heightPx < viewH ? -(viewH - heightPx) / 2 : 0;
     cam.setBounds(
-      0,
-      0,
-      this.map.grid[0].length * TILE_SIZE,
-      this.map.grid.length * TILE_SIZE,
+      boundX,
+      boundY,
+      Math.max(widthPx, viewW),
+      Math.max(heightPx, viewH),
     );
     cam.startFollow(this.player, true);
     /* startFollow 直後にカメラ位置を確定させてからフェードインを重ねる */

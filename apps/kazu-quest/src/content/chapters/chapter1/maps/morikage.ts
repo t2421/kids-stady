@@ -1,4 +1,4 @@
-/* モリカゲ村 — くりさがり呪文のストーリーゲート (設計 A7 ビート6) */
+/* モリカゲ村 — くりさがり呪文のストーリーゲート。まなびや・宿は扉から中へ */
 
 import type { MapDef } from "../../../types";
 import { VILLAGE_LEGEND } from "../legends";
@@ -12,8 +12,8 @@ export const CH1_MORIKAGE: MapDef = {
     "TTTTTTTTT=TTTTTTTTTT",
     "T........=.........T",
     "T..RRRR..=..RRRR...T",
-    "T..WWWW..=..WWWW...T",
-    "T..WFDW..=..WFDW...T",
+    "T..RRRR..=..RRRR...T",
+    "T..WDWW..=..WWDW...T",
     "T...=....=....=....T",
     "T...======....=....T",
     "T........==========T",
@@ -25,63 +25,6 @@ export const CH1_MORIKAGE: MapDef = {
   ],
   encounterTableId: null,
   npcs: [
-    {
-      id: "scholar2",
-      x: 4,
-      y: 4,
-      art: "scholar",
-      movement: "static",
-      dialog: [
-        {
-          pages: [
-            "ここは モリカゲの まなびや。",
-            "くりあがり・くりさがりは 「10のまとまり」で かんがえるのじゃ。",
-          ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ヒキダマン (くりさがり) の テスト?",
-              yes: [{ type: "openSpellTest", spellId: "hikidaman" }],
-              no: [
-                {
-                  type: "choice",
-                  prompt: "タシリアン (くりあがり) の テスト?",
-                  yes: [{ type: "openSpellTest", spellId: "tashirian" }],
-                  no: [
-                    {
-                      type: "choice",
-                      prompt: "くらべシールド (くらべる) の テスト?",
-                      yes: [{ type: "openSpellTest", spellId: "kurabeShield" }],
-                      no: [{ type: "message", pages: ["また おいで!"] }],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: "inn2",
-      x: 14,
-      y: 4,
-      art: "villager",
-      movement: "static",
-      dialog: [
-        {
-          pages: ["やどやだよ。ひとばん 10ゴールド。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "とまって いく?",
-              yes: [{ type: "healInn", price: 10 }],
-              no: [],
-            },
-          ],
-        },
-      ],
-    },
     {
       id: "bridge-guard",
       x: 19,
@@ -118,6 +61,24 @@ export const CH1_MORIKAGE: MapDef = {
   ],
   events: [
     {
+      id: "to-manabiya",
+      x: 4,
+      y: 4,
+      trigger: "step",
+      commands: [
+        { type: "transfer", mapId: "ch1-morikage-manabiya", spawn: "start" },
+      ],
+    },
+    {
+      id: "to-inn",
+      x: 14,
+      y: 4,
+      trigger: "step",
+      commands: [
+        { type: "transfer", mapId: "ch1-morikage-inn", spawn: "start" },
+      ],
+    },
+    {
       id: "to-forest",
       x: 9,
       y: 0,
@@ -135,5 +96,7 @@ export const CH1_MORIKAGE: MapDef = {
   spawns: {
     north: { x: 9, y: 1, facing: "down" },
     "from-cave": { x: 18, y: 8, facing: "left" },
+    "from-manabiya": { x: 4, y: 5, facing: "down" },
+    "from-inn": { x: 14, y: 5, facing: "down" },
   },
 };

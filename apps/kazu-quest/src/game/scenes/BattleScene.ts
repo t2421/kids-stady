@@ -121,6 +121,9 @@ export class BattleScene extends Scene {
 
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 84, GAME_WIDTH - 60, 152, 0xffffff, 1);
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 84, GAME_WIDTH - 68, 144, 0x000000, 0.94);
+    this.add
+      .rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 84, GAME_WIDTH - 78, 134)
+      .setStrokeStyle(2, 0x8aa5d5, 0.9);
     this.msgText = this.add.text(70, GAME_HEIGHT - 148, "", {
       fontFamily: "sans-serif",
       fontSize: "24px",

@@ -7,6 +7,16 @@ import { CH1_CAPITAL } from "./maps/capital";
 import { CH1_FOREST } from "./maps/forest";
 import { CH1_MORIKAGE } from "./maps/morikage";
 import { CH1_CAVE, CH1_CAVE_BOSS } from "./maps/cave";
+import {
+  CH1_CAPITAL_CASTLE,
+  CH1_CAPITAL_INN,
+  CH1_CAPITAL_SHOP,
+  CH1_CAPITAL_SHRINE,
+  CH1_HAJIMARI_HOME,
+  CH1_HAJIMARI_NEIGHBOR,
+  CH1_MORIKAGE_INN,
+  CH1_MORIKAGE_MANABIYA,
+} from "./maps/interiors";
 
 export const CHAPTER1: ChapterDef = {
   id: 1,
@@ -17,10 +27,18 @@ export const CHAPTER1: ChapterDef = {
   startSpawn: "start",
   maps: [
     CH1_HAJIMARI,
+    CH1_HAJIMARI_HOME,
+    CH1_HAJIMARI_NEIGHBOR,
     CH1_KAIDO,
     CH1_CAPITAL,
+    CH1_CAPITAL_CASTLE,
+    CH1_CAPITAL_INN,
+    CH1_CAPITAL_SHOP,
+    CH1_CAPITAL_SHRINE,
     CH1_FOREST,
     CH1_MORIKAGE,
+    CH1_MORIKAGE_MANABIYA,
+    CH1_MORIKAGE_INN,
     CH1_CAVE,
     CH1_CAVE_BOSS,
   ],

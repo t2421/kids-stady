@@ -4,18 +4,25 @@
  * g1_add_carry / g1_sub_nc / g1_sub_borrow)。
  */
 
-import type { Problem, Rng } from "./types";
+import type { CountIcon, Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoices } from "./choices";
 
-const COUNT_EMOJI = ["🍎", "🌰", "⭐", "🐟", "🌸", "🍬"];
+const COUNT_ICONS: { icon: CountIcon; label: string }[] = [
+  { icon: "apple", label: "りんご" },
+  { icon: "acorn", label: "どんぐり" },
+  { icon: "star", label: "ほし" },
+  { icon: "fish", label: "さかな" },
+  { icon: "flower", label: "はな" },
+  { icon: "candy", label: "あめ" },
+];
 
 function genCount(rng: Rng): Problem {
   const n = randInt(rng, 3, 9);
-  const emoji = COUNT_EMOJI[randInt(rng, 0, COUNT_EMOJI.length - 1)];
+  const { icon, label } = COUNT_ICONS[randInt(rng, 0, COUNT_ICONS.length - 1)];
   return {
     skillId: "g1_count",
-    text: `${emoji.repeat(n)}\nいくつ あるかな?`,
+    text: `${label}は いくつ あるかな?`,
     a: null,
     b: null,
     op: null,
@@ -24,8 +31,9 @@ function genCount(rng: Rng): Problem {
     hint: null,
     explain: [
       `ひとつずつ ゆびで かぞえてみよう`,
-      `${emoji} は ぜんぶで ${n}こ だね`,
+      `${label}は ぜんぶで ${n}こ だね`,
     ],
+    visual: { icon, count: n },
   };
 }
 

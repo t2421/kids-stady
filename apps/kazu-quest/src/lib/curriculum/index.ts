@@ -91,5 +91,13 @@ export function pickSkill(
   return usable[usable.length - 1];
 }
 
-export type { Problem, Rng, SkillInfo, Hint, CherryHint } from "./types";
+export type {
+  Problem,
+  Rng,
+  SkillInfo,
+  Hint,
+  CherryHint,
+  CountIcon,
+  CountVisual,
+} from "./types";
 export { mulberry32 } from "./types";

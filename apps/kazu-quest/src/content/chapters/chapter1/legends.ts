@@ -25,6 +25,17 @@ export const FIELD_LEGEND: MapDef["legend"] = {
   "~": { art: "water", walkable: false },
 };
 
+/* 建物内部: W=壁 F=床 D=扉 B=ベッド T=机 C=じゅうたん P=つぼ */
+export const INTERIOR_LEGEND: MapDef["legend"] = {
+  W: { art: "wall", walkable: false },
+  F: { art: "floor", walkable: true },
+  D: { art: "door", walkable: true },
+  B: { art: "bed", walkable: false },
+  T: { art: "table", walkable: false },
+  C: { art: "carpet", walkable: true },
+  P: { art: "pot", walkable: false },
+};
+
 export const CAVE_LEGEND: MapDef["legend"] = {
   K: { art: "caveWall", walkable: false },
   C: { art: "caveFloor", walkable: true },

@@ -103,6 +103,43 @@ export const TILE_ART: Record<string, PixelArt> = {
       "kTttttttttttttTk", "kddddddddddddddk", ".kkkkkkkkkkkkkk.", "................",
     ],
   },
+  /* ---- 屋内 (建物内部マップ用) ---- */
+  bed: {
+    palette: { k: "#291b14", t: "#8b5429", r: "#b84529", R: "#d75b38", w: "#f2eee1", W: "#cfc9b8" },
+    rows: [
+      "kkkkkkkkkkkkkkkk", "kwwwwwwwwwwwwwwk", "kwWWWWWWWWWWWWwk", "kwwwwwwwwwwwwwwk",
+      "kkkkkkkkkkkkkkkk", "kRRRRRRRRRRRRRRk", "kRrrRRrrRRrrRRrk", "kRRRRRRRRRRRRRRk",
+      "kRrrRRrrRRrrRRrk", "kRRRRRRRRRRRRRRk", "kRRRRRRRRRRRRRRk", "kkkkkkkkkkkkkkkk",
+      "ktkkkkkkkkkkkktk", "ktkkkkkkkkkkkktk", "ktkkkkkkkkkkkktk", "kkkkkkkkkkkkkkkk",
+    ],
+  },
+  table: {
+    palette: { k: "#291b14", t: "#8b5429", T: "#b57736", l: "#dc9b4d" },
+    rows: [
+      "................", ".kkkkkkkkkkkkkk.", "kTTTTTTTTTTTTTTk", "kTllTTTTTTTTllTk",
+      "kTTTTTTTTTTTTTTk", "kttttttttttttttk", ".kkkkkkkkkkkkkk.", "..ktk......ktk..",
+      "..ktk......ktk..", "..ktk......ktk..", "..ktk......ktk..", "..ktk......ktk..",
+      "..ktk......ktk..", ".kttk......kttk.", ".kkkk......kkkk.", "................",
+    ],
+  },
+  carpet: {
+    palette: { r: "#8a3535", R: "#a54545", y: "#d9b45a", d: "#6b2828" },
+    rows: [
+      "yyyyyyyyyyyyyyyy", "yRRRRRRRRRRRRRRy", "yRrrrrrrrrrrrrRy", "yRryyyyyyyyyyrRy",
+      "yRryrrrrrrrryrRy", "yRryrRRRRRRryrRy", "yRryrRddddRryrRy", "yRryrRdyydRryrRy",
+      "yRryrRdyydRryrRy", "yRryrRddddRryrRy", "yRryrRRRRRRryrRy", "yRryrrrrrrrryrRy",
+      "yRryyyyyyyyyyrRy", "yRrrrrrrrrrrrrRy", "yRRRRRRRRRRRRRRy", "yyyyyyyyyyyyyyyy",
+    ],
+  },
+  pot: {
+    palette: { k: "#241a14", t: "#7a4a26", T: "#a16a38", l: "#c98f4f", f: "#b27d4b", F: "#c9955f", d: "#95683f" },
+    rows: [
+      "ffffFfffFfffffff", "fFffffdfffffFfff", "ffffkkkkkkffffff", "fffkTTTTTTkfffff",
+      "ffkTlTTTTTlkffff", "ffkTTTTTTTTkffff", "fkTTTTTTTTTTkfff", "fkTtTTTTTTtTkfff",
+      "fkTtTTTTTTtTkfff", "fkTTTTTTTTTTkfff", "ffkTtTTTTtTkffff", "ffkTTttttTTkffff",
+      "fffkkkkkkkkfffff", "fFffffffffffdfff", "ffffFfffffffffff", "ffdfffffFfffffff",
+    ],
+  },
   caveWall: {
     palette: { k: "#17131d", d: "#282230", c: "#393241", C: "#4b4353", l: "#62596b" },
     rows: [

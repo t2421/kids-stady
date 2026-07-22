@@ -1,4 +1,4 @@
-/* 王都カズール — 謁見・まなびや・宿・道具屋・ほこら (設計 A7 ビート3-4) */
+/* 王都カズール — 城・宿・道具屋・ほこらは扉から中に入る (設計変更 2026-07-22) */
 
 import type { MapDef } from "../../../types";
 import { VILLAGE_LEGEND } from "../legends";
@@ -11,144 +11,36 @@ export const CH1_CAPITAL: MapDef = {
   grid: [
     "TTTTTTTTTTTTTTTTTTTT",
     "T....RRRRRRRR......T",
-    "T....WWWWWWWW......T",
-    "T....WFFFFFFW.RRRR.T",
-    "T....WFFFFFFW.WWWW.T",
-    "T....WFFFDFFW.WFDW.T",
+    "T....RRRRRRRR......T",
+    "T....RRRRRRRR.RRRR.T",
+    "T....WWWWDWWW.WWDW.T",
     "T........=......=..T",
     "T..RRRR..=..RRRR...T",
-    "T..WWWW..=..WWWW...T",
-    "=..WFDW..=..WFDW...T",
-    "=...=....=....=....T",
+    "T..RRRR..=..RRRR...T",
+    "T..WWDW..=..WWDW...T",
+    "=....=...=....=....T",
     "T...============...T",
+    "T........=.........T",
     "T........=.........T",
     "TTTTTTTTT=TTTTTTTTTT",
   ],
   encounterTableId: null,
   npcs: [
     {
-      id: "king",
-      x: 8,
-      y: 4,
-      art: "king",
-      movement: "static",
-      dialog: [
-        {
-          if: { flag: "c1.orb1", op: "set" },
-          pages: [
-            "おお ゆうしゃよ! すうしょうを とりもどしたか!",
-            "みごとじゃ! これで まちの かずが もとに もどる。",
-            "つぎは みなとまち ミナトスへ… それは また こんどの おはなし。",
-          ],
-          then: [{ type: "setFlag", flag: "c1.clear" }],
-        },
-        {
-          if: { flag: "c1.metKing", op: "set" },
-          pages: [
-            "かぞえの どうくつは モリカゲむらの さきじゃ。",
-            "まずは まなびやで じゅもんを おぼえるのじゃぞ。",
-          ],
-        },
-        {
-          pages: [
-            "よくきた ゆうしゃの こよ。わしが カウントおうじゃ。",
-            "ケシケシぐんだんに 「すうしょう・壱」を うばわれてしもうた…",
-            "とりもどして くれぬか。したくきんに 50ゴールド さずけよう!",
-            "みなみの もりの さきに かぞえの どうくつが ある。",
-          ],
-          then: [
-            { type: "giveGold", amount: 50 },
-            { type: "setFlag", flag: "c1.metKing" },
-          ],
-        },
-      ],
-    },
-    {
-      id: "scholar",
-      x: 6,
-      y: 4,
-      art: "scholar",
-      movement: "static",
-      dialog: [
-        {
-          pages: [
-            "ここは まなびや。じゅもんの テストが うけられるぞ。",
-            "10もん中 8もん せいかいで ごうかくじゃ!",
-          ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ヒキダマ (ひきざん) の テスト?",
-              yes: [{ type: "openSpellTest", spellId: "hikidama" }],
-              no: [
-                {
-                  type: "choice",
-                  prompt: "タシリア (たしざん) の テスト?",
-                  yes: [{ type: "openSpellTest", spellId: "tashiria" }],
-                  no: [
-                    {
-                      type: "choice",
-                      prompt: "かぞえスラッシュ (かぞえる) の テスト?",
-                      yes: [{ type: "openSpellTest", spellId: "kazoeSlash" }],
-                      no: [{ type: "message", pages: ["また おいで!"] }],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    },
-    {
-      id: "inn",
-      x: 15,
+      id: "guard",
+      x: 11,
       y: 5,
       art: "villager",
       movement: "static",
       dialog: [
         {
-          pages: ["やどやへ ようこそ。ひとばん 10ゴールドだよ。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "とまって いく?",
-              yes: [{ type: "healInn", price: 10 }],
-              no: [{ type: "message", pages: ["また きてね!"] }],
-            },
-          ],
+          if: { flag: "c1.metKing", op: "set" },
+          pages: ["みなみの もんの さきが どんぐりの もりだ。きをつけてな!"],
         },
-      ],
-    },
-    {
-      id: "shop",
-      x: 4,
-      y: 9,
-      art: "villager",
-      movement: "static",
-      dialog: [
         {
-          pages: ["いらっしゃい! どうぐやだよ。"],
-          then: [{ type: "openShop", shopId: "ch1-capital-shop" }],
-        },
-      ],
-    },
-    {
-      id: "priest",
-      x: 13,
-      y: 9,
-      art: "scholar",
-      movement: "static",
-      dialog: [
-        {
-          pages: ["ここは めがみスーリアの ほこら。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
+          pages: [
+            "ここは おうと カズール。",
+            "おしろで おうさまが まっているぞ。きたの とびらだ。",
           ],
         },
       ],
@@ -156,7 +48,39 @@ export const CH1_CAPITAL: MapDef = {
   ],
   events: [
     {
-      id: "to-kaido-1",
+      id: "to-castle",
+      x: 9,
+      y: 4,
+      trigger: "step",
+      commands: [
+        { type: "transfer", mapId: "ch1-capital-castle", spawn: "start" },
+      ],
+    },
+    {
+      id: "to-inn",
+      x: 16,
+      y: 4,
+      trigger: "step",
+      commands: [{ type: "transfer", mapId: "ch1-capital-inn", spawn: "start" }],
+    },
+    {
+      id: "to-shop",
+      x: 5,
+      y: 8,
+      trigger: "step",
+      commands: [{ type: "transfer", mapId: "ch1-capital-shop", spawn: "start" }],
+    },
+    {
+      id: "to-shrine",
+      x: 14,
+      y: 8,
+      trigger: "step",
+      commands: [
+        { type: "transfer", mapId: "ch1-capital-shrine", spawn: "start" },
+      ],
+    },
+    {
+      id: "to-kaido",
       x: 0,
       y: 9,
       trigger: "step",
@@ -173,6 +97,9 @@ export const CH1_CAPITAL: MapDef = {
   spawns: {
     west: { x: 1, y: 9, facing: "right" },
     "from-forest": { x: 9, y: 12, facing: "up" },
-    save: { x: 14, y: 9, facing: "left" },
+    "from-castle": { x: 9, y: 5, facing: "down" },
+    "from-inn": { x: 16, y: 5, facing: "down" },
+    "from-shop": { x: 5, y: 9, facing: "down" },
+    "from-shrine": { x: 14, y: 9, facing: "down" },
   },
 };

@@ -41,6 +41,17 @@ describe("curriculum property tests (grade 1)", () => {
     });
   }
 
+  it("g1_count: visual matches the answer (no emoji in text)", () => {
+    const rng = mulberry32(11);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g1_count", rng);
+      expect(p.visual).toBeDefined();
+      expect(p.visual!.count).toBe(Number(p.answer));
+      /* 絵文字を含まない (自前アイコンで描画するため) */
+      expect(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(p.text)).toBe(false);
+    }
+  });
+
   it("g1_add_nc: sums stay <= 9", () => {
     const rng = mulberry32(7);
     for (let i = 0; i < RUNS; i++) {

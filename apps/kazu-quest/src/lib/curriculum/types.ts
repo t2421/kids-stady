@@ -12,6 +12,14 @@ export interface CherryHint {
 
 export type Hint = CherryHint;
 
+/* かぞえ問題の視覚表現。絵文字は使わず、UI側が自前アイコンで描画する */
+export type CountIcon = "apple" | "acorn" | "star" | "fish" | "flower" | "candy";
+
+export interface CountVisual {
+  icon: CountIcon;
+  count: number;
+}
+
 export interface Problem {
   skillId: string;
   text: string;
@@ -24,6 +32,8 @@ export interface Problem {
   choices: [string, string, string];
   hint: Hint | null;
   explain: string[];
+  /* かぞえ問題のみ: 描画するアイコンと個数 */
+  visual?: CountVisual;
 }
 
 /* 疑似乱数 (seed 注入でテスト再現可能) */

@@ -1,4 +1,4 @@
-/* ハジマリ村 — 物語の始まり (設計 A7 ビート0-1) */
+/* ハジマリ村 — 物語の始まり (設計 A7 ビート0-1)。建物は扉から中に入る */
 
 import type { MapDef } from "../../../types";
 import { VILLAGE_LEGEND } from "../legends";
@@ -12,10 +12,10 @@ export const CH1_HAJIMARI: MapDef = {
     "TTTTTTTTTTTTTTTTTTTT",
     "T..................T",
     "T..RRRR....RRRR....T",
-    "T..WWWW....WWWW....T",
-    "T..WFFW....WFFW....T",
-    "T..WFDW....WFDW....T",
-    "T...=.......=......T",
+    "T..RRRR....RRRR....T",
+    "T..WWDW....WWDW....T",
+    "T...==......==.....T",
+    "T...==......=......T",
     "T...=========......T",
     "T.......=..........=",
     "T.......=..........=",
@@ -26,30 +26,9 @@ export const CH1_HAJIMARI: MapDef = {
   encounterTableId: null,
   npcs: [
     {
-      id: "mother",
-      x: 4,
-      y: 4,
-      art: "mother",
-      movement: "static",
-      dialog: [
-        {
-          if: { flag: "c1.metKing", op: "set" },
-          pages: ["きをつけて いくのよ。", "おうえん してるからね!"],
-        },
-        {
-          pages: [
-            "おはよう! 10さいの たんじょうび おめでとう!",
-            "たいへん! カズールの おうさまが あなたを よんでいるの。",
-            "むらの ひがしの みちから おうとに いけるわ。",
-          ],
-          then: [{ type: "setFlag", flag: "c1.started" }],
-        },
-      ],
-    },
-    {
       id: "chief",
-      x: 12,
-      y: 6,
+      x: 11,
+      y: 8,
       art: "villager",
       movement: "static",
       dialog: [
@@ -63,6 +42,22 @@ export const CH1_HAJIMARI: MapDef = {
     },
   ],
   events: [
+    {
+      id: "to-home",
+      x: 5,
+      y: 4,
+      trigger: "step",
+      commands: [{ type: "transfer", mapId: "ch1-hajimari-home", spawn: "start" }],
+    },
+    {
+      id: "to-neighbor",
+      x: 13,
+      y: 4,
+      trigger: "step",
+      commands: [
+        { type: "transfer", mapId: "ch1-hajimari-neighbor", spawn: "start" },
+      ],
+    },
     {
       id: "to-kaido-1",
       x: 19,
@@ -80,6 +75,8 @@ export const CH1_HAJIMARI: MapDef = {
   ],
   spawns: {
     start: { x: 5, y: 5, facing: "down" },
+    "from-home": { x: 5, y: 5, facing: "down" },
+    "from-neighbor": { x: 13, y: 5, facing: "down" },
     "from-kaido": { x: 18, y: 8, facing: "left" },
   },
 };

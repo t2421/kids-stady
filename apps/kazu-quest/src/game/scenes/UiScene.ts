@@ -19,6 +19,7 @@ interface MessageJob {
 export class UiScene extends Scene {
   private windowBox?: Phaser.GameObjects.Rectangle;
   private windowFrame?: Phaser.GameObjects.Rectangle;
+  private windowInner?: Phaser.GameObjects.Rectangle;
   private textObj?: Phaser.GameObjects.Text;
   private nextArrow?: Phaser.GameObjects.Text;
   private job: MessageJob | null = null;
@@ -123,7 +124,10 @@ export class UiScene extends Scene {
     const h = GAME_HEIGHT - 120;
     const frame = this.add.rectangle(0, 0, w + 8, h + 8, 0xffffff, 1);
     const box = this.add.rectangle(0, 0, w, h, 0x000000, 0.94);
-    const children: Phaser.GameObjects.GameObject[] = [frame, box];
+    const inner = this.add
+      .rectangle(0, 0, w - 10, h - 10)
+      .setStrokeStyle(2, 0x8aa5d5, 0.9);
+    const children: Phaser.GameObjects.GameObject[] = [frame, box, inner];
 
     let cursorY = -h / 2 + 24;
     for (const section of sections) {
@@ -206,6 +210,11 @@ export class UiScene extends Scene {
       .rectangle(x, y, w + 8, h + 8, 0xffffff, 1)
       .setDepth(10);
     this.windowBox = this.add.rectangle(x, y, w, h, 0x000000, 0.92).setDepth(11);
+    /* DQ風の二重枠 (内側の細いアクセント線) */
+    this.windowInner = this.add
+      .rectangle(x, y, w - 10, h - 10)
+      .setStrokeStyle(2, 0x8aa5d5, 0.9)
+      .setDepth(11);
     this.textObj = this.add
       .text(x - w / 2 + 24, y - h / 2 + 20, "", {
         fontFamily: "sans-serif",
@@ -292,10 +301,12 @@ export class UiScene extends Scene {
     this.charTimer?.remove();
     this.windowFrame?.destroy();
     this.windowBox?.destroy();
+    this.windowInner?.destroy();
     this.textObj?.destroy();
     this.nextArrow?.destroy();
     this.windowFrame = undefined;
     this.windowBox = undefined;
+    this.windowInner = undefined;
     this.textObj = undefined;
     this.nextArrow = undefined;
   }

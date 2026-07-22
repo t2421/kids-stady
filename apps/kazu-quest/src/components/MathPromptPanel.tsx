@@ -5,6 +5,7 @@ import { EventBus } from "@/game/EventBus";
 import type { Problem } from "@/lib/curriculum";
 import { generate, pickSkill } from "@/lib/curriculum";
 import { getSave } from "@/game/session";
+import { CountRow } from "@/components/CountIcons";
 
 /*
  * 算数プロンプト (戦闘の呪文詠唱・習得テスト共用)。
@@ -151,17 +152,20 @@ export function MathPromptPanel() {
         )}
         <div
           style={{
-            fontSize: problem.text.length > 14 ? 28 : 40,
+            fontSize: problem.visual ? 26 : problem.text.length > 14 ? 28 : 40,
             fontWeight: 700,
             textAlign: "center",
             whiteSpace: "pre-wrap",
             lineHeight: 1.4,
-            marginBottom: 20,
+            marginBottom: problem.visual ? 8 : 20,
             color: "#ffffff",
           }}
         >
           {problem.text}
         </div>
+        {problem.visual && (
+          <CountRow icon={problem.visual.icon} count={problem.visual.count} />
+        )}
         <div style={{ display: "grid", gap: 12 }}>
           {problem.choices.map((choice) => {
             const isAnswer = choice === problem.answer;
