@@ -1,6 +1,7 @@
 import Phaser, { Scene } from "phaser";
 import { getGrade } from "@/lib/grades";
 import type { GradeDef } from "@/lib/grades";
+import { isDebugMode } from "@/lib/debug";
 import { isOutputUnlocked, loadSave } from "@/lib/save";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
@@ -29,7 +30,21 @@ export class GradeScene extends Scene {
     const lessonIds = this.gradeDef.lessons.map((l) => l.id);
     const outputReady =
       isOutputUnlocked(save, this.gradeDef.grade, lessonIds) ||
-      progress?.outputCleared === true;
+      progress?.outputCleared === true ||
+      isDebugMode(); // ?debug=1 ならレッスンのゲートを飛ばす
+
+    if (isDebugMode()) {
+      this.add
+        .text(GAME_WIDTH - 12, 12, "🐞 debug", {
+          fontFamily: "sans-serif",
+          fontSize: "14px",
+          fontStyle: "bold",
+          color: "#ffd93d",
+          backgroundColor: "#4a2f0e",
+          padding: { x: 8, y: 4 },
+        })
+        .setOrigin(1, 0);
+    }
 
     this.add
       .text(GAME_WIDTH / 2, 48, `${this.gradeDef.icon} ${this.gradeDef.name}`, {

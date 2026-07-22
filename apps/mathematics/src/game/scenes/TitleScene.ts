@@ -2,6 +2,7 @@ import Phaser, { Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
+import { isDebugMode } from "@/lib/debug";
 import { listProfiles } from "@/lib/profiles";
 
 export class TitleScene extends Scene {
@@ -54,6 +55,7 @@ export class TitleScene extends Scene {
     });
 
     this.addProfileChip();
+    this.addDebugShortcut();
 
     this.input.on("pointerdown", () => {
       if (getActiveProfileId()) this.scene.start("GradeMap");
@@ -67,6 +69,32 @@ export class TitleScene extends Scene {
     });
 
     EventBus.emit("current-scene-ready", this);
+  }
+
+  /* ?debug=1: タイトルから1タップでボス戦へ (調整用) */
+  private addDebugShortcut() {
+    if (!isDebugMode()) return;
+    const btn = this.add
+      .text(GAME_WIDTH - 14, 14, "🐞 ボスから", {
+        fontFamily: "sans-serif",
+        fontSize: "16px",
+        fontStyle: "bold",
+        color: "#ffd93d",
+        backgroundColor: "#4a2f0e",
+        padding: { x: 10, y: 6 },
+      })
+      .setOrigin(1, 0)
+      .setInteractive({ useHandCursor: true });
+    btn.on("pointerdown", (
+      _p: Phaser.Input.Pointer,
+      _x: number,
+      _y: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      if (!getActiveProfileId()) return;
+      this.scene.start("Flight", { grade: 1, bossOnly: true });
+    });
   }
 
   /* 左上にプレイヤー表示。タップでプレイヤー選択に戻れる */
