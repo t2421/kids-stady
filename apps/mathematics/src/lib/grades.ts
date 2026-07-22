@@ -77,7 +77,7 @@ export const GRADES: GradeDef[] = [
     output: {
       capsuleSkills: ["g1_add_nc", "g1_add_carry", "g1_sub_nc", "g1_sub_borrow", "g1_compare"],
       bossSkills: ["g1_add_carry", "g1_sub_borrow"],
-      answerTimeMs: 12000,
+      answerTimeMs: 8000,
       durationSec: 100,
       boss: { name: "けいさんキング・イチ", hp: 100, chipCap: 0.15 },
     },

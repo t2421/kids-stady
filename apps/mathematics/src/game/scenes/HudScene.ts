@@ -26,6 +26,8 @@ export class HudScene extends Scene {
   private bossBarBg!: Phaser.GameObjects.Rectangle;
   private bossBar!: Phaser.GameObjects.Rectangle;
   private bossName!: Phaser.GameObjects.Text;
+  private powerBarBg!: Phaser.GameObjects.Rectangle;
+  private powerBar!: Phaser.GameObjects.Rectangle;
   private gaugeText!: Phaser.GameObjects.Text;
   private beamBtn!: Phaser.GameObjects.Text;
   private gaugeFull = false;
@@ -69,6 +71,15 @@ export class HudScene extends Scene {
       this.ladderTexts.push(t);
     });
 
+    /* 武器の持続時間ゲージ (ラダーの上) */
+    this.powerBarBg = this.add
+      .rectangle(GAME_WIDTH / 2, 496, 240, 7, 0x22314f)
+      .setVisible(false);
+    this.powerBar = this.add
+      .rectangle(GAME_WIDTH / 2 - 120, 496, 240, 7, 0xffd93d)
+      .setOrigin(0, 0.5)
+      .setVisible(false);
+
     /* ボスHPバー */
     this.bossName = this.add
       .text(GAME_WIDTH / 2, 34, "", {
@@ -107,10 +118,12 @@ export class HudScene extends Scene {
     flight.events.on("hud-state", this.onState, this);
     flight.events.on("hud-time", this.onTime, this);
     flight.events.on("hud-boss", this.onBoss, this);
+    flight.events.on("hud-power-timer", this.onPowerTimer, this);
     this.events.once("shutdown", () => {
       flight.events.off("hud-state", this.onState, this);
       flight.events.off("hud-time", this.onTime, this);
       flight.events.off("hud-boss", this.onBoss, this);
+      flight.events.off("hud-power-timer", this.onPowerTimer, this);
     });
 
     /* 最初のポインタ操作で音を有効化 */
@@ -150,6 +163,17 @@ export class HudScene extends Scene {
 
   private onTime(t: { left: number; total: number }) {
     this.timeBar.width = 260 * (1 - t.left / t.total);
+  }
+
+  /* 武器の持続時間: 残りわずかで赤点滅 */
+  private onPowerTimer(p: { ratio: number; active: boolean }) {
+    this.powerBarBg.setVisible(p.active);
+    this.powerBar.setVisible(p.active);
+    if (!p.active) return;
+    this.powerBar.width = 240 * Math.max(0, Math.min(1, p.ratio));
+    const low = p.ratio < 0.25;
+    this.powerBar.fillColor = low ? 0xff5e5e : 0xffd93d;
+    this.powerBar.setAlpha(low && Math.floor(this.time.now / 200) % 2 === 0 ? 0.35 : 1);
   }
 
   private onBoss(b: { hp: number; maxHp: number; name: string }) {

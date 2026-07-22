@@ -23,6 +23,8 @@ type ProblemContext = "capsule" | "boss";
 const POWER_LADDER = ["れんしゃ", "ダブル", "ミサイル", "レーザー", "オプション", "バリア"] as const;
 const GAUGE_MAX = 3;
 const BEAM_DAMAGE = 30;
+/* 武器の持続時間: 問題を解き続けないとパワーが1段ずつ落ちていく */
+const POWER_DECAY_SEC = 15;
 
 /*
  * アウトプットステージ本体: 横スクロールシューティング。
@@ -48,6 +50,7 @@ export class FlightScene extends Scene {
 
   private hearts = 3;
   private powerLevel = 0;
+  private powerTimer = 0; // 現在のパワー段が落ちるまでの残り秒
   private score = 0;
   private gauge = 0;
   private shieldCharges = 0;
@@ -133,6 +136,7 @@ export class FlightScene extends Scene {
   private resetState() {
     this.hearts = 3;
     this.powerLevel = 0;
+    this.powerTimer = 0;
     this.score = 0;
     this.gauge = 0;
     this.shieldCharges = 0;
@@ -296,6 +300,7 @@ export class FlightScene extends Scene {
 
     this.hearts--;
     this.powerLevel = Math.max(0, this.powerLevel - 1);
+    this.powerTimer = POWER_DECAY_SEC;
     this.syncPowerVisuals();
     sfx.hurt();
     this.cameras.main.shake(220, 0.012);
@@ -457,6 +462,7 @@ export class FlightScene extends Scene {
   /* ---------- パワーアップ ---------- */
 
   private powerUp() {
+    this.powerTimer = POWER_DECAY_SEC; // 正解するたびに持続時間はフル回復
     if (this.powerLevel >= POWER_LADDER.length) {
       this.score += 100; // 満タン時は得点ボーナス
       return;
@@ -465,6 +471,42 @@ export class FlightScene extends Scene {
     sfx.powerup();
     this.syncPowerVisuals();
     this.pushHud();
+  }
+
+  /* 武器の持続時間: 時間切れでパワーが1段落ちる (ボス戦中は停止) */
+  private decayPower(dt: number) {
+    if (this.powerLevel <= 0 || this.bossPhase) return;
+    this.powerTimer -= dt;
+    if (this.powerTimer <= 0) {
+      this.powerLevel--;
+      this.powerTimer = POWER_DECAY_SEC;
+      sfx.bad();
+      this.showPowerDownPop();
+      this.syncPowerVisuals();
+      this.pushHud();
+    }
+    this.events.emit("hud-power-timer", {
+      ratio: this.powerLevel > 0 ? this.powerTimer / POWER_DECAY_SEC : 0,
+      active: this.powerLevel > 0,
+    });
+  }
+
+  private showPowerDownPop() {
+    const pop = this.add
+      .text(this.ship.x + 10, this.ship.y - 40, "パワーダウン…", {
+        fontFamily: "sans-serif",
+        fontSize: "18px",
+        fontStyle: "bold",
+        color: "#ff7b7b",
+      })
+      .setOrigin(0.5);
+    this.tweens.add({
+      targets: pop,
+      y: pop.y - 26,
+      alpha: 0,
+      duration: 900,
+      onComplete: () => pop.destroy(),
+    });
   }
 
   private syncPowerVisuals() {
@@ -704,6 +746,8 @@ export class FlightScene extends Scene {
       this.fireAccum = 0;
       this.autofire();
     }
+
+    this.decayPower(dt);
 
     if (!this.bossPhase) {
       this.elapsedSec += dt;
