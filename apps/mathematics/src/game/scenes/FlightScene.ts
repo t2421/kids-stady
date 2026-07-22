@@ -24,7 +24,7 @@ const POWER_LADDER = ["れんしゃ", "ダブル", "ミサイル", "レーザー
 const GAUGE_MAX = 3;
 const BEAM_DAMAGE = 30;
 /* 武器の持続時間: 問題を解き続けないとパワーが1段ずつ落ちていく */
-const POWER_DECAY_SEC = 15;
+const POWER_DECAY_SEC = 8;
 
 /*
  * アウトプットステージ本体: 横スクロールシューティング。
@@ -146,7 +146,7 @@ export class FlightScene extends Scene {
     this.elapsedSec = 0;
     this.fireAccum = 0;
     this.spawnAccum = 0;
-    this.formationAccum = 12;
+    this.formationAccum = 8; // 最初の編隊を早めに出す
     this.droneAccum = 6;
     this.formationSeq = 0;
     this.formationAlive.clear();
@@ -756,15 +756,20 @@ export class FlightScene extends Scene {
         total: this.output.durationSec,
       });
 
-      /* ウェーブスポーン */
+      /* ウェーブスポーン: テンポよく湧かせてピンチを作る */
       this.spawnAccum += dt;
-      if (this.spawnAccum >= 1.5) {
+      if (this.spawnAccum >= 0.9) {
         this.spawnAccum = 0;
         const roll = Math.random();
         this.spawnEnemy(roll < 0.4 ? "ufo" : roll < 0.75 ? "rock" : "bird");
+        /* ときどき2体同時 (上下バラけて) */
+        if (Math.random() < 0.35) {
+          const roll2 = Math.random();
+          this.spawnEnemy(roll2 < 0.5 ? "ufo" : roll2 < 0.8 ? "rock" : "bird");
+        }
       }
       this.formationAccum += dt;
-      if (this.formationAccum >= 17) {
+      if (this.formationAccum >= 12) {
         this.formationAccum = 0;
         this.spawnFormation();
       }
@@ -799,11 +804,11 @@ export class FlightScene extends Scene {
         const dy = this.ship.y - e.y;
         e.setVelocityY(Phaser.Math.Clamp(dy * 2.2, -140, 140));
       }
-      /* UFOはたまに弾を撃つ (まばら) */
-      if (kind === "ufo" && Math.random() < 0.15 * dt && e.x > GAME_WIDTH * 0.45) {
+      /* UFOはときどき狙い弾を撃つ */
+      if (kind === "ufo" && Math.random() < 0.35 * dt && e.x > GAME_WIDTH * 0.4) {
         const b = this.eBullets.create(e.x - 16, e.y + 8, "ebullet") as Phaser.Physics.Arcade.Image;
         const angle = Math.atan2(this.ship.y - e.y, this.ship.x - e.x);
-        b.setVelocity(Math.cos(angle) * 150, Math.sin(angle) * 150);
+        b.setVelocity(Math.cos(angle) * 170, Math.sin(angle) * 170);
       }
     }
 
