@@ -57,7 +57,14 @@ export type PlayerCommand =
 export type BattleEvent =
   | { type: "message"; text: string }
   | { type: "attack"; actorName: string; targetId: string; damage: number; killed: boolean; onParty: boolean }
-  | { type: "spellSuccess"; actorName: string; spellName: string; critical: boolean }
+  | {
+      type: "spellSuccess";
+      actorName: string;
+      spellName: string;
+      critical: boolean;
+      /* 演出時にMP表示を増分更新するための消費後MP */
+      mpLeft: number;
+    }
   | { type: "spellFizzle"; actorName: string; spellName: string }
   | { type: "heal"; targetId: string; amount: number; onParty: boolean }
   | { type: "fled" }
@@ -240,7 +247,13 @@ export function submitRound(
           continue;
         }
         actor.mp -= cmd.spell.mpCost;
-        events.push({ type: "spellSuccess", actorName: actor.name, spellName: cmd.spell.name, critical: outcome.critical });
+        events.push({
+          type: "spellSuccess",
+          actorName: actor.name,
+          spellName: cmd.spell.name,
+          critical: outcome.critical,
+          mpLeft: actor.mp,
+        });
         const amount = spellAmount(cmd.spell.power, outcome.critical, rng);
         if (cmd.spell.kind === "attack") {
           let target = findEnemy(cmd.targetId);

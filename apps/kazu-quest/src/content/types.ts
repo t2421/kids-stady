@@ -52,6 +52,8 @@ export interface NpcDef {
   /* ドット絵テクスチャ名 (art/actors.ts のキー) */
   art: string;
   movement: "static" | "wander";
+  /* 条件が成立したら消える (橋の番人など)。省略 = 常に表示 */
+  hideIf?: FlagCond;
   dialog: DialogEntry[];
 }
 

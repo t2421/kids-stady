@@ -6,6 +6,26 @@
 
 import type { PixelArt } from "./format";
 
+/* インクぐもの色違い (でかインクぐも用の濃い紫) */
+const INK_ROWS = [
+  "......ii........",
+  ".....iii........",
+  "....iiiii.......",
+  "...iiiiiii......",
+  "..iiIiiiIii.....",
+  ".iiiIiiiIiii....",
+  ".iiiiiiiiiii....",
+  "iiwkiiiiiwki....",
+  "iiwwiiiiiwwi....",
+  "iiiiiiiiiiiii...",
+  ".iiiikkiiiii....",
+  ".iiiiiiiiiii....",
+  "..iiiiiiiii.....",
+  "...iLiiiLi......",
+  "..iL..iL..i.....",
+  "................",
+];
+
 export const MONSTER_ART: Record<string, PixelArt> = {
   /* 消しゴム型マスコット。白いボディに青ケース */
   keshigomun: {
@@ -45,22 +65,102 @@ export const MONSTER_ART: Record<string, PixelArt> = {
       w: "#ffffff",
       k: "#0a0a2a",
     },
+    rows: INK_ROWS,
+  },
+  /* でかインクぐも (色違い・戦闘ではさらに拡大表示) */
+  dekaInkugumo: {
+    palette: {
+      i: "#4a1a6b",
+      I: "#6b2a9b",
+      L: "#a56bd5",
+      w: "#ffffff",
+      k: "#1a0a2a",
+    },
+    rows: INK_ROWS,
+  },
+  /* もじばけバット (「?」を抱えたコウモリ) */
+  mojibakeBat: {
+    palette: {
+      b: "#4a3a6b",
+      B: "#6b559b",
+      w: "#ffffff",
+      k: "#1a1a2a",
+      y: "#ffd93d",
+    },
     rows: [
-      "......ii........",
-      ".....iii........",
-      "....iiiii.......",
-      "...iiiiiii......",
-      "..iiIiiiIii.....",
-      ".iiiIiiiIiii....",
-      ".iiiiiiiiiii....",
-      "iiwkiiiiiwki....",
-      "iiwwiiiiiwwi....",
-      "iiiiiiiiiiiii...",
-      ".iiiikkiiiii....",
-      ".iiiiiiiiiii....",
-      "..iiiiiiiii.....",
-      "...iLiiiLi......",
-      "..iL..iL..i.....",
+      "................",
+      ".b...........b..",
+      ".bb.........bb..",
+      ".bbb..bbb..bbb..",
+      ".bbbbbBBBbbbbb..",
+      "..bbBBBBBBBbb...",
+      "...BBBBBBBBB....",
+      "...BwkBBBwkB....",
+      "...BBBBBBBBB....",
+      "...BBByyBBBB....",
+      "....BBByBBB.....",
+      ".....BByBB......",
+      "......ByB.......",
+      ".......y........",
+      "................",
+      "................",
+    ],
+  },
+  /* とげとげイモムシ */
+  togeImomushi: {
+    palette: {
+      g: "#5aa53a",
+      G: "#3a7a2a",
+      t: "#d9bc82", /* とげ */
+      k: "#1a1a1a",
+      w: "#ffffff",
+      p: "#ff9db5",
+    },
+    rows: [
+      "................",
+      "..t..t..t..t....",
+      "..GggGggGggG....",
+      ".gggggggggggg...",
+      ".gGggGggGggGg...",
+      ".gggggggggggg...",
+      "..GggGggGggGgg..",
+      "..ggggggggggggg.",
+      "......ggGGggggg.",
+      ".....gggggwkggg.",
+      ".....gggggwkggg.",
+      ".....ggpggggggg.",
+      "......ggggggkk..",
+      ".......gggg.....",
+      "................",
+      "................",
+    ],
+  },
+  /* 幹部イレイサー (大きな板消しの魔人) */
+  eraser: {
+    palette: {
+      w: "#f2f0e8",
+      W: "#c9c5b5",
+      r: "#b5432a", /* 赤いカバー */
+      R: "#8a2f1c",
+      k: "#1a1a1a",
+      y: "#ffd93d",
+    },
+    rows: [
+      "................",
+      "..rrrrrrrrrrrr..",
+      ".rrrrrrrrrrrrrr.",
+      ".rRrrRrrRrrRrrr.",
+      ".rrrrrrrrrrrrrr.",
+      ".RRRRRRRRRRRRRR.",
+      ".wwwwwwwwwwwwww.",
+      ".wkkwwwwwwwkkww.",
+      ".wkkwwwwwwwkkww.",
+      ".wwwwwwwwwwwwww.",
+      ".wwwkkkkkkkwwww.",
+      ".wwkkWWWWWkkwww.",
+      ".wwwwwwwwwwwwww.",
+      ".WwWwWwWwWwWwWw.",
+      "..wwwwwwwwwwww..",
       "................",
     ],
   },

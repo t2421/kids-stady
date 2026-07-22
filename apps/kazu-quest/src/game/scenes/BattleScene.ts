@@ -52,6 +52,10 @@ export class BattleScene extends Scene {
   private menuIndex = 0;
   private menuKind: MenuKind = "root";
   private busy = false;
+  /* 演出用の表示HP/MP。ラウンドは一括計算されるため、実際の値 (battle.members)
+     を直接出すと「自分の攻撃で自分のHPが減って見える」— イベントごとに増分更新する */
+  private displayHp = 0;
+  private displayMp = 0;
 
   constructor() {
     super("Battle");
@@ -66,6 +70,8 @@ export class BattleScene extends Scene {
     this.menuIndex = 0;
     this.menuKind = "root";
     this.busy = false;
+    this.displayHp = this.battle.members[0]?.hp ?? 0;
+    this.displayMp = this.battle.members[0]?.mp ?? 0;
     this.enemySprites.clear();
   }
 
@@ -378,6 +384,10 @@ export class BattleScene extends Scene {
 
   private playEvents(events: BattleEvent[], index: number) {
     if (index >= events.length) {
+      /* 演出終了: 表示を実際の値に同期してからコマンドへ戻す */
+      const hero = this.battle.members[0];
+      this.displayHp = hero.hp;
+      this.displayMp = hero.mp;
       this.updateStatus();
       if (this.battle.phase === "command") {
         this.busy = false;
@@ -404,6 +414,10 @@ export class BattleScene extends Scene {
           }
         } else {
           this.cameras.main.shake(180, 0.008);
+          /* 味方が受けたダメージだけ表示HPを減らす (このイベントの分のみ) */
+          if (event.targetId === "hero") {
+            this.displayHp = Math.max(0, this.displayHp - event.damage);
+          }
         }
         this.msgText.setText(`${event.damage} の ダメージ!`);
         this.updateStatus();
@@ -416,6 +430,8 @@ export class BattleScene extends Scene {
             ? `${event.actorName}は ${event.spellName}を となえた! かいしん!`
             : `${event.actorName}は ${event.spellName}を となえた!`,
         );
+        this.displayMp = event.mpLeft;
+        this.updateStatus();
         this.cameras.main.flash(200, 255, 255, 180);
         this.time.delayedCall(800, next);
         break;
@@ -424,6 +440,10 @@ export class BattleScene extends Scene {
         this.time.delayedCall(700, next);
         break;
       case "heal":
+        if (event.onParty && event.targetId === "hero") {
+          const hero = this.battle.members[0];
+          this.displayHp = Math.min(hero.maxHp, this.displayHp + event.amount);
+        }
         this.msgText.setText(`HPが ${event.amount} かいふくした!`);
         this.updateStatus();
         this.time.delayedCall(700, next);
@@ -446,6 +466,12 @@ export class BattleScene extends Scene {
         const lines = [`けいけんち ${event.exp} と ${event.gold}ゴールドを てにいれた!`];
         for (const up of result.levelUps) {
           lines.push(`レベルが ${up.to} に あがった! げんきも かいふくした!`);
+        }
+        /* レベルアップの全回復を表示にも反映する */
+        const heroAfter = result.party.find((m) => m.memberId === "hero");
+        if (heroAfter) {
+          this.displayHp = heroAfter.hp;
+          this.displayMp = heroAfter.mp;
         }
         this.showLinesThen(lines, () =>
           this.endBattle({ outcome: "won", winFlag: this.launch.winFlag }),
@@ -470,7 +496,9 @@ export class BattleScene extends Scene {
 
   private updateStatus() {
     const hero = this.battle.members[0];
-    this.statusText.setText(`ゆうしゃ\nHP ${hero.hp}/${hero.maxHp}\nMP ${hero.mp}/${hero.maxMp}`);
+    this.statusText.setText(
+      `ゆうしゃ\nHP ${this.displayHp}/${hero.maxHp}\nMP ${this.displayMp}/${hero.maxMp}`,
+    );
   }
 
   private endBattle(result: BattleResult) {

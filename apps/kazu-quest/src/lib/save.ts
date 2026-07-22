@@ -51,14 +51,14 @@ export interface SaveData {
 export const HISTORY_CAP = 50;
 export const RECENT_MS_CAP = 20;
 
-/* 章1の開始位置。コンテンツ実装 (M9) でハジマリ村の値に更新する */
+/* 章1の開始位置 (ハジマリ村) */
 export const START_LOCATION = {
-  mapId: "ch1-home",
+  mapId: "ch1-hajimari",
   x: 5,
   y: 5,
   facing: "down" as Dir,
 };
-export const START_CHECKPOINT = { mapId: "ch1-home", spawn: "start" };
+export const START_CHECKPOINT = { mapId: "ch1-hajimari", spawn: "start" };
 
 export function defaultSave(): SaveData {
   return {

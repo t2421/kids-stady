@@ -23,7 +23,18 @@ export const ITEMS: Record<string, ItemDef> = {
   },
 };
 
-export const SHOPS: Record<string, ShopDef> = {};
+export const SHOPS: Record<string, ShopDef> = {
+  "ch1-capital-shop": {
+    id: "ch1-capital-shop",
+    name: "カズールの どうぐや",
+    itemIds: ["yakusou", "anshinNoSuzu"],
+  },
+  "ch1-morikage-shop": {
+    id: "ch1-morikage-shop",
+    name: "モリカゲの どうぐや",
+    itemIds: ["yakusou"],
+  },
+};
 
 export function getItem(id: string): ItemDef | undefined {
   return ITEMS[id];

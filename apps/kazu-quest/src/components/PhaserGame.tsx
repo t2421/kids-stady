@@ -2,7 +2,8 @@
 
 import { useLayoutEffect } from "react";
 import { startGame } from "@/game/main";
-import { getSave } from "@/game/session";
+import { getSave, updateSave } from "@/game/session";
+import { expForLevel, heroStats } from "@/lib/battle/stats";
 import type Phaser from "phaser";
 
 /*
@@ -30,6 +31,29 @@ export function PhaserGame() {
             | { debugTeleport?: (x: number, y: number, facing: string) => void }
             | null;
           field?.debugTeleport?.(x, y, facing);
+        },
+        grantLevel: (level: number) => {
+          const stats = heroStats(level);
+          updateSave((s) => ({
+            ...s,
+            party: s.party.map((m) =>
+              m.memberId === "hero"
+                ? {
+                    ...m,
+                    level,
+                    exp: expForLevel(level),
+                    hp: stats.maxHp,
+                    mp: stats.maxMp,
+                  }
+                : m,
+            ),
+          }));
+        },
+        warp: (mapId: string, spawn: string) => {
+          const field = game?.scene.getScene("Field") as unknown as
+            | { debugWarp?: (mapId: string, spawn: string) => void }
+            | null;
+          field?.debugWarp?.(mapId, spawn);
         },
       };
     }

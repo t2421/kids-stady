@@ -18,6 +18,39 @@ export const ENCOUNTER_TABLES: Record<string, EncounterTable> = {
   },
 };
 
+ENCOUNTER_TABLES["ch1-kaido"] = {
+  id: "ch1-kaido",
+  stepRange: [12, 24],
+  groups: [
+    { monsterIds: ["keshigomun"], weight: 3 },
+    { monsterIds: ["keshigomun", "keshigomun"], weight: 2 },
+    { monsterIds: ["inkugumo"], weight: 2 },
+    { monsterIds: ["kazunezumi"], weight: 2 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch1-forest"] = {
+  id: "ch1-forest",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["inkugumo"], weight: 3 },
+    { monsterIds: ["mojibakeBat"], weight: 3 },
+    { monsterIds: ["keshigomun", "inkugumo"], weight: 2 },
+    { monsterIds: ["togeImomushi"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch1-cave"] = {
+  id: "ch1-cave",
+  stepRange: [9, 18],
+  groups: [
+    { monsterIds: ["mojibakeBat"], weight: 3 },
+    { monsterIds: ["togeImomushi"], weight: 2 },
+    { monsterIds: ["mojibakeBat", "keshigomun"], weight: 2 },
+    { monsterIds: ["togeImomushi", "mojibakeBat"], weight: 1 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }

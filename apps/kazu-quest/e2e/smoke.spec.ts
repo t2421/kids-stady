@@ -17,6 +17,8 @@ declare global {
     };
     __KAZUQUEST_DEBUG__?: {
       teleport(x: number, y: number, facing: string): void;
+      warp(mapId: string, spawn: string): void;
+      grantLevel(level: number): void;
       getSave(): {
         flags: Record<string, number | boolean>;
         inventory: { gold: number; items: Record<string, number> };
@@ -92,6 +94,52 @@ async function teleport(page: Page, x: number, y: number, facing: string) {
     { x, y, facing },
   );
   await page.waitForTimeout(200);
+}
+
+/* 別マップへワープして着地を検証する (稀にシーン再起動と競合するためリトライ) */
+async function warp(page: Page, mapId: string, spawn: string) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await page.waitForTimeout(400);
+    await page.evaluate(
+      ({ mapId, spawn }) => window.__KAZUQUEST_DEBUG__!.warp(mapId, spawn),
+      { mapId, spawn },
+    );
+    try {
+      await page.waitForFunction(
+        (id) => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === id,
+        mapId,
+        { timeout: 5_000 },
+      );
+    } catch {
+      continue;
+    }
+    /* 落ち着いてから再検証 (逆戻りを検出したら再ワープ) */
+    await page.waitForTimeout(700);
+    const pos = await page.evaluate(
+      () => window.__KAZUQUEST_DEBUG__!.getSave().location,
+    );
+    if (pos.mapId === mapId) return;
+  }
+  throw new Error(`warp ${mapId}/${spawn} に失敗`);
+}
+
+/* タイトル→フィールド→devマップへ (エンジン検証テスト用) */
+async function startInDevVillage(page: Page) {
+  await startInDevVillage(page);
+  await warp(page, "dev-village", "start");
+}
+
+/* 戦闘を たたかう連打で終わらせる */
+async function grindBattleUntilField(page: Page, maxRounds = 90) {
+  for (let i = 0; i < maxRounds; i++) {
+    await page.keyboard.press("z");
+    await page.waitForTimeout(800);
+    const backInField = await page.evaluate(
+      () => window.__KAZUQUEST_GAME__!.scene.isActive("Field"),
+    );
+    if (backInField) return;
+  }
+  throw new Error("戦闘が終わらない");
 }
 
 /* 条件が成立するまで同方向に歩き続ける (transfer 踏み込み用・取りこぼしリトライ) */
@@ -192,10 +240,7 @@ test("engine smoke: title → field → NPC dialog → treasure chest", async ({
 
 test("random encounter: fight in the bushes and win", async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto("/");
-  await waitForScene(page, "Title");
-  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
-  await waitForScene(page, "Field");
+  await startInDevVillage(page);
 
   /* 草原へ */
   await teleport(page, 7, 11, "down");
@@ -235,10 +280,7 @@ test("spell casting: learn from king, cast with math prompt, telemetry recorded"
   page,
 }) => {
   test.setTimeout(180_000);
-  await page.goto("/");
-  await waitForScene(page, "Title");
-  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
-  await waitForScene(page, "Field");
+  await startInDevVillage(page);
 
   /* 王様から呪文を授かる */
   await teleport(page, 12, 7, "up");
@@ -349,10 +391,7 @@ test("spell learn test: pass 10 questions at the scholar and learn ヒキダマ�
   page,
 }) => {
   test.setTimeout(180_000);
-  await page.goto("/");
-  await waitForScene(page, "Title");
-  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
-  await waitForScene(page, "Field");
+  await startInDevVillage(page);
 
   /* 王様に会って前提フラグを立てる */
   await teleport(page, 12, 7, "up");
@@ -396,11 +435,133 @@ test("spell learn test: pass 10 questions at the scholar and learn ヒキダマ�
   expect(save.totalCorrect).toBeGreaterThanOrEqual(10);
 });
 
-test("map transfer: village → field and back", async ({ page }) => {
+test("chapter 1 golden path: mother → king → learn → gates → boss → clear", async ({
+  page,
+}) => {
+  test.setTimeout(420_000);
   await page.goto("/");
   await waitForScene(page, "Title");
   await page.locator("canvas").click({ position: { x: 640, y: 360 } });
   await waitForScene(page, "Field");
+
+  /* 開始はハジマリ村。母に話して物語開始 */
+  const start = await fieldPos(page);
+  expect(start.mapId).toBe("ch1-hajimari");
+  await teleport(page, 4, 5, "up");
+  await interactAndAdvance(page);
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.started"] === true,
+  );
+
+  /* 王都へ。王様に謁見 (クエスト + 50G) */
+  await warp(page, "ch1-capital", "west");
+  await teleport(page, 8, 5, "up");
+  await interactAndAdvance(page);
+  const afterKing = await page.evaluate(() =>
+    window.__KAZUQUEST_DEBUG__!.getSave(),
+  );
+  expect(afterKing.flags["c1.metKing"]).toBe(true);
+  expect(afterKing.inventory.gold).toBe(50);
+
+  /* まなびやで ヒキダマ 習得テスト (最初の choice で はい) */
+  await teleport(page, 6, 5, "up");
+  await page.keyboard.press("z");
+  const correctButton = page.locator(
+    '[data-testid="math-choice"][data-answer="1"]',
+  );
+  for (let i = 0; i < 30; i++) {
+    if (await correctButton.isVisible()) break;
+    await page.keyboard.press("z");
+    await page.waitForTimeout(500);
+  }
+  for (let i = 0; i < 10; i++) {
+    await correctButton.waitFor({ state: "visible", timeout: 10_000 });
+    await correctButton.click();
+    await page.waitForTimeout(900);
+  }
+  await page.waitForFunction(
+    () =>
+      window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
+        "hikidama",
+      ),
+    undefined,
+    { timeout: 15_000 },
+  );
+  /* 合格メッセージを閉じる */
+  await advanceDialog(page);
+
+  /* E2E用にレベルを上げてボス戦の所要時間を短縮 (テストフック) */
+  await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.grantLevel(12));
+
+  /* 森の中ボス (道をふさぐ でかインクぐも) */
+  await warp(page, "ch1-forest", "north");
+  await teleport(page, 9, 5, "down");
+  await stepOnce(page, "ArrowDown");
+  await advanceDialog(page); /* 出現メッセージ */
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_GAME__!.scene.isActive("Battle"),
+    undefined,
+    { timeout: 10_000 },
+  );
+  await grindBattleUntilField(page);
+  await advanceDialog(page); /* 撃破後メッセージ */
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.midboss"] === true,
+  );
+
+  /* モリカゲ村: ヒキダマンを覚えていないと番人が橋をふさぐ */
+  await warp(page, "ch1-morikage", "north");
+  await teleport(page, 4, 5, "up");
+  await page.keyboard.press("z");
+  for (let i = 0; i < 30; i++) {
+    if (await correctButton.isVisible()) break;
+    await page.keyboard.press("z");
+    await page.waitForTimeout(500);
+  }
+  for (let i = 0; i < 10; i++) {
+    await correctButton.waitFor({ state: "visible", timeout: 10_000 });
+    await correctButton.click();
+    await page.waitForTimeout(900);
+  }
+  await page.waitForFunction(
+    () =>
+      window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
+        "hikidaman",
+      ),
+    undefined,
+    { timeout: 15_000 },
+  );
+  await advanceDialog(page);
+
+  /* 洞くつ最奥のボス イレイサー */
+  await warp(page, "ch1-cave-boss", "entry");
+  await teleport(page, 5, 4, "right");
+  await stepOnce(page, "ArrowRight");
+  await advanceDialog(page); /* ボス登場メッセージ */
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_GAME__!.scene.isActive("Battle"),
+    undefined,
+    { timeout: 10_000 },
+  );
+  await grindBattleUntilField(page, 120);
+  await advanceDialog(page); /* 数晶入手メッセージ */
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.orb1"] === true,
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  /* 王様に報告して第1章クリア */
+  await warp(page, "ch1-capital", "west");
+  await teleport(page, 8, 5, "up");
+  await interactAndAdvance(page);
+  await page.waitForFunction(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.clear"] === true,
+  );
+});
+
+test("map transfer: village → field and back", async ({ page }) => {
+  await startInDevVillage(page);
 
   /* 南出口 (7,12) へ */
   await walkTo(page, "x", 7);

@@ -13,6 +13,7 @@ import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
 import { getEncounterTable } from "../../content/encounters";
 import { getSpell } from "../../content/spells";
+import { getItem, SHOPS } from "../../content/items";
 import { mulberry32, randInt } from "../../lib/curriculum/types";
 import { heroStats } from "../../lib/battle/stats";
 
@@ -194,6 +195,11 @@ export class FieldScene extends Scene {
     return typeof this.ui?.isBusy === "function" && this.ui.isBusy();
   }
 
+  /* E2E・デバッグ用: 別マップの spawn へ移動する */
+  debugWarp(mapId: string, spawn: string): void {
+    this.transferTo(mapId, spawn);
+  }
+
   /* E2E・デバッグ用: 現在マップ内の任意タイルへ移動する */
   debugTeleport(x: number, y: number, facing: string): void {
     const dir: Dir = (["up", "down", "left", "right"] as const).includes(
@@ -233,11 +239,26 @@ export class FieldScene extends Scene {
   }
 
   private buildNpcs() {
+    const flags = getSave().flags;
     for (const npc of this.map.npcs) {
+      if (npc.hideIf && evalCond(npc.hideIf, flags)) continue;
       const sprite = this.add
         .image(...this.tileCenter(npc.x, npc.y), actorTextureKey(npc.art))
         .setDepth(5);
       this.npcSprites.set(npc.id, sprite);
+    }
+  }
+
+  /* hideIf つき NPC がフラグ変化で消えるのを反映する */
+  private refreshNpcs() {
+    const flags = getSave().flags;
+    for (const npc of this.map.npcs) {
+      if (!npc.hideIf) continue;
+      const sprite = this.npcSprites.get(npc.id);
+      if (sprite && evalCond(npc.hideIf, flags)) {
+        sprite.destroy();
+        this.npcSprites.delete(npc.id);
+      }
     }
   }
 
@@ -301,7 +322,14 @@ export class FieldScene extends Scene {
     if (x < 0 || x >= row.length) return false;
     const spec = this.map.legend[row[x]];
     if (!spec || !spec.walkable) return false;
-    if (this.map.npcs.some((n) => n.x === x && n.y === y)) return false;
+    /* 表示中の NPC がふさぐ (hideIf で消えた NPC は通れる) */
+    if (
+      this.map.npcs.some(
+        (n) => n.x === x && n.y === y && this.npcSprites.has(n.id),
+      )
+    ) {
+      return false;
+    }
     /* 見えている宝箱などのイベントもふさぐ */
     for (const ev of this.map.events) {
       if (ev.x === x && ev.y === y && this.eventSprites.has(ev.id)) return false;
@@ -479,7 +507,9 @@ export class FieldScene extends Scene {
   }
 
   private findNpc(x: number, y: number): NpcDef | undefined {
-    return this.map.npcs.find((n) => n.x === x && n.y === y);
+    return this.map.npcs.find(
+      (n) => n.x === x && n.y === y && this.npcSprites.has(n.id),
+    );
   }
 
   private findEvent(
@@ -610,6 +640,8 @@ export class FieldScene extends Scene {
             if (result.passed) {
               updateSave((s) => ({
                 ...s,
+                /* ストーリーゲート用に learned.<spellId> フラグも立てる */
+                flags: { ...s.flags, [`learned.${result.spellId}`]: true },
                 party: s.party.map((m) =>
                   m.memberId === "hero" &&
                   !m.learnedSpells.includes(result.spellId)
@@ -639,10 +671,57 @@ export class FieldScene extends Scene {
           EventBus.emit("open-spell-test", { spellId: effect.spellId });
           break;
         }
-        case "openShop":
-          /* M9 で実装。いまはプレースホルダ */
-          this.ui.showMessage(["(ここは じゅんびちゅう だよ)"], () => advance());
+        case "openShop": {
+          /* シンプルな1品ずつの購入ループ (章1の道具屋はやくそう中心) */
+          const shop = SHOPS[effect.shopId];
+          if (!shop || shop.itemIds.length === 0) {
+            this.ui.showMessage(["いまは しなぎれ みたい。"], () => advance());
+            break;
+          }
+          const offerItem = (index: number) => {
+            if (index >= shop.itemIds.length) {
+              this.ui.showMessage(["まいど ありがとう!"], () => advance());
+              return;
+            }
+            const item = getItem(shop.itemIds[index]);
+            if (!item) {
+              offerItem(index + 1);
+              return;
+            }
+            this.ui.showChoice(
+              `${item.name} (${item.price}ゴールド) を かう?`,
+              (yes) => {
+                if (!yes) {
+                  offerItem(index + 1);
+                  return;
+                }
+                const save = getSave();
+                if (save.inventory.gold < item.price) {
+                  this.ui.showMessage(["おかねが たりないよ…"], () =>
+                    offerItem(index + 1),
+                  );
+                  return;
+                }
+                updateSave((s) => ({
+                  ...s,
+                  inventory: {
+                    gold: s.inventory.gold - item.price,
+                    items: {
+                      ...s.inventory.items,
+                      [item.id]: (s.inventory.items[item.id] ?? 0) + 1,
+                    },
+                  },
+                }));
+                autosave();
+                this.ui.showMessage([`${item.name}を てにいれた!`], () =>
+                  offerItem(index),
+                );
+              },
+            );
+          };
+          offerItem(0);
           break;
+        }
       }
     };
 
@@ -653,6 +732,7 @@ export class FieldScene extends Scene {
     this.runActive = false;
     this.lastRunEndAt = this.time.now;
     this.refreshEventSprites();
+    this.refreshNpcs();
     autosave();
   }
 
