@@ -7,202 +7,101 @@
 <title>きっずスタディ - まなびのしま</title>
 <link rel="stylesheet" href="shared/css/tokens.css">
 <style>
-  /* マスマティクスと同じ Void の宇宙 (CC0, shared/img/CREDITS.md) をハブの世界観にする */
+  /* シンプルなハブ: 静かな星空 + アプリカード。派手な演出は各アプリ側に任せる */
   html.kids-app, body.kids-app { overflow-y: auto; touch-action: pan-y; }
 
   body {
     min-height: 100%;
-    background-color: #171225;
+    background:
+      url("shared/img/bg-stars1.png") repeat-x top / auto 100vh,
+      linear-gradient(180deg, #131024 0%, #1a1530 100%);
+    image-rendering: pixelated;
     color: #fff;
     padding: max(28px, env(safe-area-inset-top)) 20px 48px;
-    position: relative;
-    overflow-x: hidden;
-  }
-
-  /* 3層パララックス星空 (ドット絵ストリップをCSSアニメでスクロール) */
-  .sky, .sky::before, .sky::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    image-rendering: pixelated;
-    background-repeat: repeat-x;
-    background-size: auto 100vh;
-    pointer-events: none;
-  }
-  .sky { background-image: url("shared/img/bg-void.png"); animation: drift 240s linear infinite; }
-  .sky::before { background-image: url("shared/img/bg-stars1.png"); animation: drift 120s linear infinite; }
-  .sky::after { background-image: url("shared/img/bg-stars2.png"); animation: drift 60s linear infinite; }
-  @keyframes drift {
-    from { background-position-x: 0; }
-    to { background-position-x: -1920px; }
-  }
-
-  /* 回る地球 (スプライトシートを steps() でコマ送り) */
-  .planet {
-    position: fixed;
-    top: 48px;
-    right: 6vw;
-    width: 96px;
-    height: 96px;
-    z-index: 0;
-    background: url("shared/img/planet-earth.png") 0 0 no-repeat;
-    image-rendering: pixelated;
-    transform: scale(1.5);
-    transform-origin: top right;
-    animation: spin 9s steps(76) infinite;
-    pointer-events: none;
-  }
-  @keyframes spin {
-    from { background-position-x: 0; }
-    to { background-position-x: -7296px; }
-  }
-
-  /* 飛んでいく自機 (機体 + 4コマ噴射) */
-  .ship {
-    position: fixed;
-    top: 22vh;
-    left: -80px;
-    width: 48px;
-    height: 48px;
-    z-index: 0;
-    transform: rotate(90deg) scale(1.5);
-    animation: fly 16s linear infinite;
-    pointer-events: none;
-  }
-  .ship .fx, .ship .base {
-    position: absolute;
-    inset: 0;
-    image-rendering: pixelated;
-  }
-  .ship .base { background: url("shared/img/player-base.png") 0 0 no-repeat; }
-  .ship .fx {
-    background: url("shared/img/player-engine-fx.png") 0 0 no-repeat;
-    animation: burn 0.4s steps(4) infinite;
-  }
-  @keyframes burn {
-    from { background-position-x: 0; }
-    to { background-position-x: -192px; }
-  }
-  @keyframes fly {
-    0% { left: -80px; top: 24vh; }
-    50% { top: 18vh; }
-    100% { left: 110vw; top: 26vh; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .sky, .sky::before, .sky::after, .planet, .ship .fx { animation: none; }
-    .ship { display: none; }
   }
 
   .hub {
     max-width: 1080px;
     margin: 0 auto;
-    position: relative;
-    z-index: 1;
   }
 
   .hub-header {
     text-align: center;
-    margin-bottom: 40px;
+    margin-bottom: 36px;
   }
   .hub-header h1 {
-    font-size: clamp(32px, 6vw, 56px);
+    font-size: clamp(30px, 5.5vw, 48px);
     font-weight: 900;
-    letter-spacing: 3px;
-    color: #fff;
-    text-shadow: 0 4px 0 #2a1a4a, 0 0 34px rgba(155, 231, 255, 0.55);
+    letter-spacing: 2px;
+    text-shadow: 0 3px 0 #0a0618;
   }
   .hub-header h1 .em { color: var(--kids-accent); }
   .hub-header p {
-    margin-top: 12px;
-    color: #c8bfe8;
-    font-size: clamp(14px, 2.4vw, 19px);
+    margin-top: 10px;
+    color: #b9b0d6;
+    font-size: clamp(14px, 2.2vw, 17px);
     font-weight: 700;
-    text-shadow: 0 2px 0 rgba(10, 6, 24, 0.8);
   }
 
   .app-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 26px;
+    gap: 22px;
   }
 
-  /* ドット絵風パネル: 角ばった二重ボーダー + ハードシャドウ */
   .app-card {
-    position: relative;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: rgba(16, 12, 34, 0.92);
-    border: 3px solid #4a5e85;
-    outline: 3px solid #171225;
-    border-radius: 6px;
+    background: rgba(16, 12, 34, 0.9);
+    border: 2px solid #3c3560;
+    border-radius: 14px;
     padding: 22px;
     text-decoration: none;
     color: #fff;
-    box-shadow: 0 6px 0 #0a0618, 0 12px 24px rgba(0, 0, 0, 0.55);
-    transition: transform 0.12s ease-out, border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+    box-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+    transition: transform 0.12s ease-out, border-color 0.12s ease-out;
   }
   .app-card:hover,
   .app-card:focus-visible {
-    transform: translateY(-4px);
+    transform: translateY(-3px);
     border-color: var(--card-color, #9be7ff);
-    box-shadow: 0 10px 0 #0a0618, 0 18px 30px rgba(0, 0, 0, 0.6), 0 0 22px var(--card-color, #9be7ff);
     outline: none;
   }
   .app-card:active { transform: translateY(0); }
 
-  .app-icon {
-    height: 72px;
-    display: flex;
-    align-items: center;
-  }
+  .app-icon { height: 68px; display: flex; align-items: center; }
   .app-icon img {
     image-rendering: pixelated;
-    height: 64px;
+    height: 60px;
     width: auto;
-    filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.4));
   }
-  .app-icon .emoji {
-    font-size: 52px;
-    line-height: 1;
-    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35));
-  }
+  .app-icon .emoji { font-size: 48px; line-height: 1; }
 
   .app-subject {
     align-self: flex-start;
     font-size: 12px;
     font-weight: 800;
-    letter-spacing: 0.5px;
     color: #171225;
     background: var(--card-color, #ffd93d);
-    border-radius: 3px;
+    border-radius: 999px;
     padding: 4px 12px;
   }
   .app-title {
-    font-size: clamp(18px, 3vw, 22px);
+    font-size: clamp(18px, 3vw, 21px);
     font-weight: 900;
-    text-shadow: 0 2px 0 rgba(10, 6, 24, 0.9);
   }
   .app-desc {
     font-size: 14px;
     line-height: 1.6;
-    color: #c8bfe8;
+    color: #b9b0d6;
     flex: 1;
   }
   .app-play {
     align-self: flex-start;
-    display: flex;
-    align-items: center;
-    gap: 8px;
     font-weight: 900;
     font-size: 14px;
     color: var(--card-color, #ffd93d);
-  }
-  .app-play img {
-    image-rendering: pixelated;
-    height: 22px;
   }
   .app-card:hover .app-play,
   .app-card:focus-visible .app-play {
@@ -211,17 +110,13 @@
 
   .empty-note {
     text-align: center;
-    color: #c8bfe8;
+    color: #b9b0d6;
     font-size: 15px;
     margin-top: 20px;
   }
 </style>
 </head>
 <body class="kids-app kids-reset">
-  <div class="sky"></div>
-  <div class="planet"></div>
-  <div class="ship"><div class="fx"></div><div class="base"></div></div>
-
   <div class="hub">
     <header class="hub-header">
       <h1>きっずスタディ <span class="em">まなびのしま</span></h1>
@@ -260,7 +155,7 @@
         '<div class="app-subject">' + app.subject + "</div>" +
         '<div class="app-title">' + app.title + "</div>" +
         '<div class="app-desc">' + app.description + "</div>" +
-        '<div class="app-play"><img src="shared/img/ui-rocket.png" alt=""> あそぶ</div>';
+        '<div class="app-play">▶ あそぶ</div>';
 
       grid.appendChild(card);
     });

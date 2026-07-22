@@ -1,4 +1,5 @@
 import Phaser, { Scene } from "phaser";
+import { addVoidBackdrop } from "../backdrop";
 import { getGrade } from "@/lib/grades";
 import type { GradeDef } from "@/lib/grades";
 import { isDebugMode } from "@/lib/debug";
@@ -22,6 +23,9 @@ export class GradeScene extends Scene {
   }
 
   create() {
+    addVoidBackdrop(this, { planet: false });
+    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x171225, 0.5);
+
     const profileId = getActiveProfileId() ?? "";
     const save = loadSave(profileId);
     const progress = save.grades[this.gradeDef.grade];
