@@ -107,6 +107,9 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
   it("legend art references exist", () => {
     for (const [ch, spec] of Object.entries(map.legend)) {
       expect(TILE_ART[spec.art], `文字 "${ch}" の art "${spec.art}"`).toBeDefined();
+      for (const v of spec.variants ?? []) {
+        expect(TILE_ART[v], `文字 "${ch}" の variant "${v}"`).toBeDefined();
+      }
     }
   });
 

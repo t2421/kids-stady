@@ -4,7 +4,7 @@
  */
 
 import type { MapDef } from "../../../types";
-import { INTERIOR_LEGEND } from "../legends";
+import { CASTLE_LEGEND, INTERIOR_LEGEND } from "../legends";
 
 function exitEvents(
   mapId: string,
@@ -31,8 +31,8 @@ export const CH1_HAJIMARI_HOME: MapDef = {
   theme: "interior",
   legend: INTERIOR_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WBFFTTFFPW",
+    "WwWWhWWwWW",
+    "WBFFTTFkPW",
     "WBFFTTFFFW",
     "WFFCCCCFFW",
     "WFFCCCCFFW",
@@ -74,11 +74,11 @@ export const CH1_HAJIMARI_NEIGHBOR: MapDef = {
   theme: "interior",
   legend: INTERIOR_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WPFFFFFTBW",
+    "WwWWWhWWwW",
+    "WkFFFFFTBW",
     "WFFFFFFTBW",
     "WFFFFFFFFW",
-    "WFFFFFFFFW",
+    "WFFFFFFFbW",
     "WWWWDWWWWW",
   ],
   encounterTableId: null,
@@ -108,15 +108,15 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
   id: "ch1-capital-castle",
   name: "カズールじょう",
   theme: "interior",
-  legend: INTERIOR_LEGEND,
+  legend: CASTLE_LEGEND,
   grid: [
-    "WWWWWWWWWWWWWW",
-    "WFFFFFCCFFFFFW",
-    "WFTFFFCCFFFTFW",
-    "WFFFFFCCFFFFFW",
-    "WFFFFFCCFFFFFW",
-    "WFFFFFCCFFFFFW",
-    "WPFFFFCCFFFFPW",
+    "WBWgWWggWWgWBW",
+    "WScSSStSSSScSW",
+    "WSSSSSrSSSSSSW",
+    "WScSSSrSSSScSW",
+    "WSSSSSrSSSSSSW",
+    "WScSSSrSSSScSW",
+    "WSSSSSrSSSSSSW",
     "WWWWWWDWWWWWWW",
   ],
   encounterTableId: null,
@@ -124,7 +124,7 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
     {
       id: "king",
       x: 6,
-      y: 1,
+      y: 2,
       art: "king",
       movement: "static",
       dialog: [
@@ -161,7 +161,7 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
     {
       id: "scholar",
       x: 2,
-      y: 3,
+      y: 4,
       art: "scholar",
       movement: "static",
       dialog: [
@@ -207,9 +207,9 @@ export const CH1_CAPITAL_INN: MapDef = {
   theme: "interior",
   legend: INTERIOR_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WBFFFFFTPW",
-    "WBFFFFFTFW",
+    "WwWWhWWwWW",
+    "WBFFFFFFbW",
+    "WBFnFnFFPW",
     "WBFFFFFFFW",
     "WFFFFFFFFW",
     "WWWWDWWWWW",
@@ -218,8 +218,8 @@ export const CH1_CAPITAL_INN: MapDef = {
   npcs: [
     {
       id: "inn",
-      x: 7,
-      y: 3,
+      x: 4,
+      y: 2,
       art: "villager",
       movement: "static",
       dialog: [
@@ -248,10 +248,10 @@ export const CH1_CAPITAL_SHOP: MapDef = {
   theme: "interior",
   legend: INTERIOR_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WPFTTTTFPW",
+    "WwWWWWWwWW",
+    "WkkkFFbbPW",
     "WFFFFFFFFW",
-    "WFFFFFFFFW",
+    "WFnFnFFbFW",
     "WFFFFFFFPW",
     "WWWWDWWWWW",
   ],
@@ -259,8 +259,8 @@ export const CH1_CAPITAL_SHOP: MapDef = {
   npcs: [
     {
       id: "shop",
-      x: 4,
-      y: 2,
+      x: 3,
+      y: 3,
       art: "villager",
       movement: "static",
       dialog: [
@@ -280,13 +280,13 @@ export const CH1_CAPITAL_SHRINE: MapDef = {
   id: "ch1-capital-shrine",
   name: "めがみの ほこら",
   theme: "interior",
-  legend: INTERIOR_LEGEND,
+  legend: CASTLE_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WFFFCCFFFW",
-    "WFFFCCFFFW",
-    "WFFFCCFFFW",
-    "WFFFCCFFFW",
+    "WWgWWWWgWW",
+    "WSSSaSSSSW",
+    "WScSrScSSW",
+    "WSSSrSSSSW",
+    "WSSSrSSSSW",
     "WWWWDWWWWW",
   ],
   encounterTableId: null,
@@ -294,7 +294,7 @@ export const CH1_CAPITAL_SHRINE: MapDef = {
     {
       id: "priest",
       x: 4,
-      y: 1,
+      y: 2,
       art: "scholar",
       movement: "static",
       dialog: [
@@ -323,8 +323,8 @@ export const CH1_MORIKAGE_MANABIYA: MapDef = {
   theme: "interior",
   legend: INTERIOR_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WPFTTTTFFW",
+    "WwWWhWWWwW",
+    "WkkTTTTkPW",
     "WFFFFFFFFW",
     "WFTTFFTTFW",
     "WFFFFFFFFW",
@@ -381,8 +381,8 @@ export const CH1_MORIKAGE_INN: MapDef = {
   theme: "interior",
   legend: INTERIOR_LEGEND,
   grid: [
-    "WWWWWWWWWW",
-    "WBFFFFFBFW",
+    "WwWWhWWwWW",
+    "WBFFFFFBbW",
     "WBFFFFFBFW",
     "WFFFFFFFFW",
     "WFTTFFFFPW",
