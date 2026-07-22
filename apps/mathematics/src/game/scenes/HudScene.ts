@@ -113,11 +113,13 @@ export class HudScene extends Scene {
     flight.events.on("hud-state", this.onState, this);
     flight.events.on("hud-time", this.onTime, this);
     flight.events.on("hud-boss", this.onBoss, this);
+    flight.events.on("hud-boss-clear", this.onBossClear, this);
     flight.events.on("hud-power-timer", this.onPowerTimer, this);
     this.events.once("shutdown", () => {
       flight.events.off("hud-state", this.onState, this);
       flight.events.off("hud-time", this.onTime, this);
       flight.events.off("hud-boss", this.onBoss, this);
+      flight.events.off("hud-boss-clear", this.onBossClear, this);
       flight.events.off("hud-power-timer", this.onPowerTimer, this);
     });
 
@@ -163,10 +165,18 @@ export class HudScene extends Scene {
   }
 
   private onBoss(b: { hp: number; maxHp: number; name: string }) {
-    this.bossName.setVisible(true).setText(`👑 ${b.name}`);
+    this.bossName.setVisible(true).setText(`⚔️ ${b.name}`);
     this.bossBarBg.setVisible(true);
     this.bossBar.setVisible(true);
     this.bossBar.width = 420 * (b.hp / b.maxHp);
     this.timeBar.setVisible(false);
+  }
+
+  /* 中ボス撃破 → ボスバーを片付けて進行バーに戻す */
+  private onBossClear() {
+    this.bossName.setVisible(false);
+    this.bossBarBg.setVisible(false);
+    this.bossBar.setVisible(false);
+    this.timeBar.setVisible(true);
   }
 }

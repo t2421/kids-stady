@@ -21,12 +21,21 @@ export interface BossDef {
   beamDamage: number;
 }
 
+export interface StageTheme {
+  /* 星雲レイヤーと惑星に乗せるティント (学年ごとの星の色) */
+  bgTint: number;
+  planetTint: number;
+}
+
 export interface OutputDef {
   capsuleSkills: string[];
   bossSkills: string[];
   answerTimeMs: number;
   /* ボス登場までの飛行パート秒数 */
   durationSec: number;
+  theme: StageTheme;
+  /* 飛行パート中間に出る中ボス (正解2回で撃破する小型版) */
+  midBoss: BossDef;
   boss: BossDef;
 }
 
@@ -88,6 +97,8 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g1_add_carry", "g1_sub_borrow"],
       answerTimeMs: 8000,
       durationSec: 100,
+      theme: { bgTint: 0x54d1a1, planetTint: 0x54d1a1 },
+      midBoss: { name: "けいさんガーディアン", hp: 40, chipScale: 0.05, beamDamage: 20 },
       boss: { name: "けいさんキング・イチ", hp: 100, chipScale: 0.05, beamDamage: 25 },
     },
   },
@@ -129,6 +140,8 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g2_kuku_hole", "g2_sub2"],
       answerTimeMs: 9000,
       durationSec: 100,
+      theme: { bgTint: 0x5ab8ff, planetTint: 0x5ab8ff },
+      midBoss: { name: "ひっさんガーディアン", hp: 45, chipScale: 0.05, beamDamage: 20 },
       boss: { name: "くくキング・ニ", hp: 110, chipScale: 0.05, beamDamage: 25 },
     },
   },
@@ -170,6 +183,8 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g3_div_amari", "g3_mult2x1"],
       answerTimeMs: 10000,
       durationSec: 100,
+      theme: { bgTint: 0xff9f43, planetTint: 0xff9f43 },
+      midBoss: { name: "わりざんガーディアン", hp: 50, chipScale: 0.05, beamDamage: 20 },
       boss: { name: "わりざんキング・サン", hp: 120, chipScale: 0.05, beamDamage: 25 },
     },
   },
@@ -211,6 +226,8 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g4_div2", "g4_bunsu"],
       answerTimeMs: 12000,
       durationSec: 100,
+      theme: { bgTint: 0xc86bff, planetTint: 0xc86bff },
+      midBoss: { name: "しょうすうガーディアン", hp: 55, chipScale: 0.05, beamDamage: 20 },
       boss: { name: "しょうすうキング・ヨン", hp: 130, chipScale: 0.05, beamDamage: 25 },
     },
   },
@@ -252,6 +269,8 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g5_bunsu_add", "g5_shosu_div"],
       answerTimeMs: 14000,
       durationSec: 100,
+      theme: { bgTint: 0xff7ba9, planetTint: 0xff7ba9 },
+      midBoss: { name: "ぶんすうガーディアン", hp: 60, chipScale: 0.05, beamDamage: 20 },
       boss: { name: "ぶんすうキング・ゴ", hp: 140, chipScale: 0.05, beamDamage: 25 },
     },
   },
@@ -293,6 +312,8 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g6_bunsu_div", "g6_en"],
       answerTimeMs: 15000,
       durationSec: 100,
+      theme: { bgTint: 0xffd93d, planetTint: 0xffd93d },
+      midBoss: { name: "まおうのガーディアン", hp: 65, chipScale: 0.05, beamDamage: 20 },
       boss: { name: "けいさんだいまおう", hp: 150, chipScale: 0.05, beamDamage: 25 },
     },
   },

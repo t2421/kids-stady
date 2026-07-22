@@ -68,9 +68,14 @@ export class FlightScene extends Scene {
   private boss: BossController | null = null;
   private bossCrown: Phaser.GameObjects.Image | null = null;
   private bossPhase = false;
+  private midBossPhase = false;
+  private midBossDone = false;
 
   private frozenGraceMs = 0; // フリーズ中にパネルが見当たらない時間 (ウォッチドッグ)
   private run = { correct: 0, wrong: 0, answerMs: [] as number[] };
+  /* まちがいリベンジ: このランで間違えた問題を後でもう一度出す (ラン内の間隔反復) */
+  private revengeQueue: Problem[] = [];
+  private streak = 0; // れんぞく正解
   private problemContext: ProblemContext | null = null;
   private onProblemDone:
     | ((r: { correct: boolean; timedOut: boolean; elapsedMs: number }) => void)
@@ -104,6 +109,10 @@ export class FlightScene extends Scene {
     const bgStars2 = this.add.tileSprite(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, "bg-stars2");
     this.layers = [bgVoid, bgStars1, bgStars2];
     for (const layer of this.layers) layer.setTileScale(1.5);
+    /* 学年ごとの星のテーマカラー (うっすら色を乗せる) */
+    const theme = this.output.theme;
+    bgVoid.setTint(theme.bgTint);
+    planet.setTint(theme.planetTint);
 
     this.pBullets = this.physics.add.group();
     this.eBullets = this.physics.add.group();
@@ -122,8 +131,11 @@ export class FlightScene extends Scene {
     this.setupInput();
     this.setupCollisions();
 
-    /* ボスせんだけモード: 飛行パートをスキップして即ボス */
-    if (this.bossOnly) this.elapsedSec = this.output.durationSec;
+    /* ボスせんだけモード: 飛行パートと中ボスをスキップして即ボス */
+    if (this.bossOnly) {
+      this.elapsedSec = this.output.durationSec;
+      this.midBossDone = true;
+    }
 
     this.scene.launch("Hud", { flight: this });
     /* Hud は非同期に起動するため、準備完了通知を受けて初期状態を再送する */
@@ -164,6 +176,10 @@ export class FlightScene extends Scene {
     this.formationInvalid.clear();
     this.boss = null;
     this.bossPhase = false;
+    this.midBossPhase = false;
+    this.midBossDone = false;
+    this.revengeQueue = [];
+    this.streak = 0;
     this.frozenGraceMs = 0;
     this.optionOrb = null;
     this.shieldSprite = null;
@@ -281,13 +297,14 @@ export class FlightScene extends Scene {
   }
 
   /* 撃破演出: Voidの破壊アニメーション + 火花 */
-  private explode(x: number, y: number, kind?: EnemyKind | "cruiser") {
+  private explode(x: number, y: number, kind?: EnemyKind | "cruiser" | "frigate") {
     const boomKey =
       kind === "ufo" ? "boom-scout" :
       kind === "rock" ? "boom-bomber" :
       kind === "bird" ? "boom-fighter" :
       kind === "red" ? "boom-torpedo" :
-      kind === "cruiser" ? "boom-cruiser" : null;
+      kind === "cruiser" ? "boom-cruiser" :
+      kind === "frigate" ? "boom-frigate" : null;
     if (boomKey) {
       const boom = this.add.sprite(x, y, boomKey.replace("boom-", "enemy-") + "-boom").setAngle(90);
       if (kind === "cruiser") boom.setScale(1.6);
@@ -427,13 +444,22 @@ export class FlightScene extends Scene {
     c.destroy();
     sfx.capsule();
 
-    const skills = isDrone ? this.output.bossSkills : this.output.capsuleSkills;
-    const skillId = pickSkill(skills, this.save.skillStats);
-    const problem = generate(skillId);
+    /* まちがいリベンジ: 通常カプセルの40%で、間違えた問題を再出題する */
+    let problem: Problem;
+    let isRevenge = false;
+    if (!isDrone && this.revengeQueue.length > 0 && Math.random() < 0.4) {
+      problem = this.revengeQueue.shift()!;
+      isRevenge = true;
+      this.showPop("リベンジ もんだい!", "#ff9f43");
+    } else {
+      const skills = isDrone ? this.output.bossSkills : this.output.capsuleSkills;
+      problem = generate(pickSkill(skills, this.save.skillStats));
+    }
     this.problemContext = isDrone ? "boss" : "capsule";
     const context = this.problemContext;
     this.openProblem(problem, this.output.answerTimeMs, (r) => {
       this.applyAnswerToSave(problem.skillId, r);
+      this.trackStreakAndRevenge(problem, r.correct, isRevenge);
       if (context === "boss") {
         if (r.correct) {
           /* 正解 → 自動で必殺技発動! */
@@ -449,6 +475,39 @@ export class FlightScene extends Scene {
       this.invulnUntil = this.time.now + 1000;
       this.pushHud();
     });
+  }
+
+  /* 連続正解コンボと、まちがいリベンジのキュー管理 */
+  private trackStreakAndRevenge(problem: Problem, correct: boolean, wasRevenge: boolean) {
+    if (correct) {
+      this.streak++;
+      if (wasRevenge) {
+        this.score += 80;
+        this.showPop("リベンジ せいこう! +80", "#7cfc9a");
+      } else if (this.streak >= 2) {
+        this.score += this.streak * 20;
+        this.showPop(`${this.streak}れんぞく せいかい!`, "#ffd93d");
+      }
+    } else {
+      this.streak = 0;
+      /* 同じ問題を後でもう一度 (最大5問まで保持) */
+      if (this.revengeQueue.length < 5) this.revengeQueue.push(problem);
+    }
+  }
+
+  /* 自機の頭上に短いメッセージを出す汎用ポップ */
+  private showPop(text: string, color: string) {
+    const pop = this.add
+      .text(this.ship.x + 10, this.ship.y - 44, text, {
+        fontFamily: "sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color,
+        stroke: "#0a0618",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+    this.tweens.add({ targets: pop, y: pop.y - 30, alpha: 0, duration: 1100, onComplete: () => pop.destroy() });
   }
 
   private openProblem(
@@ -522,7 +581,7 @@ export class FlightScene extends Scene {
 
   /* 武器の持続時間: 時間切れでパワーが1段落ちる (ボス戦中は停止) */
   private decayPower(dt: number) {
-    if (this.powerLevel <= 0 || this.bossPhase) return;
+    if (this.powerLevel <= 0 || this.bossPhase || this.midBossPhase) return;
     this.powerTimer -= dt;
     if (this.powerTimer <= 0) {
       this.powerLevel--;
@@ -575,13 +634,45 @@ export class FlightScene extends Scene {
     }
   }
 
-  /* ---------- ボス ---------- */
+  /* ---------- ボス / 中ボス ---------- */
 
-  private enterBossPhase() {
-    this.bossPhase = true;
+  private spawnBossController(
+    def: { name: string; hp: number; chipScale: number; beamDamage: number },
+    opts: { texture: string; scale: number; onDefeated: () => void },
+  ): BossController {
+    const controller = new BossController(
+      this,
+      def,
+      {
+        fireBullet: (x, y, vx, vy) => {
+          if (this.ended) return;
+          const b = this.eBullets.create(x, y, "enemy-bullet") as Phaser.Physics.Arcade.Image;
+          b.setVelocity(vx, vy);
+        },
+        onHpChanged: (hp, maxHp) => this.events.emit("hud-boss", { hp, maxHp, name: def.name }),
+        onDefeated: opts.onDefeated,
+      },
+      { texture: opts.texture, scale: opts.scale },
+    );
+    /* 本体を敵グループにも登録して被弾判定を通す */
+    const body = this.enemies.create(controller.sprite.x, controller.sprite.y, opts.texture) as Phaser.Physics.Arcade.Image;
+    body.setVisible(false);
+    body.setData("isBoss", true);
+    body.setData("hp", 999999);
+    body.setImmovable(true);
+    (body.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
+    body.setVelocity(0, 0);
+    controller.sprite.setData("bodyRef", body);
+    controller.enter(() => {
+      this.events.emit("hud-boss", { hp: controller.hp, maxHp: def.hp, name: def.name });
+    });
+    return controller;
+  }
+
+  private showBossWarning(name: string) {
     sfx.fanfare();
     const warn = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `⚔️ ${this.output.boss.name} が あらわれた!`, {
+      .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `⚔️ ${name} が あらわれた!`, {
         fontFamily: "sans-serif",
         fontSize: "34px",
         fontStyle: "bold",
@@ -591,30 +682,46 @@ export class FlightScene extends Scene {
       })
       .setOrigin(0.5);
     this.tweens.add({ targets: warn, alpha: 0, delay: 1600, duration: 500, onComplete: () => warn.destroy() });
+  }
 
-    this.boss = new BossController(this, this.output.boss, {
-      fireBullet: (x, y, vx, vy) => {
-        if (this.ended) return;
-        const b = this.eBullets.create(x, y, "enemy-bullet") as Phaser.Physics.Arcade.Image;
-        b.setVelocity(vx, vy);
-      },
-      onHpChanged: (hp, maxHp) => this.events.emit("hud-boss", { hp, maxHp, name: this.output.boss.name }),
+  /* 中ボス: 飛行パートの中間で登場。倒すと飛行が再開する */
+  private enterMidBossPhase() {
+    this.midBossPhase = true;
+    this.droneAccum = 6; // 最初のドローンを早めに
+    this.showBossWarning(this.output.midBoss.name);
+    this.boss = this.spawnBossController(this.output.midBoss, {
+      texture: "enemy-frigate",
+      scale: 1.3,
+      onDefeated: () => this.onMidBossDefeated(),
+    });
+  }
+
+  private onMidBossDefeated() {
+    const b = this.boss;
+    this.midBossPhase = false;
+    this.midBossDone = true;
+    this.boss = null;
+    if (b) {
+      const body = b.sprite.getData("bodyRef") as Phaser.Physics.Arcade.Image | undefined;
+      body?.destroy();
+      this.explode(b.sprite.x, b.sprite.y, "frigate");
+      this.tweens.add({ targets: b.sprite, alpha: 0, duration: 700, onComplete: () => b.destroy() });
+    }
+    this.score += 300;
+    this.events.emit("hud-boss-clear");
+    this.showPop("ガーディアン げきは! +300", "#7cfc9a");
+  }
+
+  private enterBossPhase() {
+    this.bossPhase = true;
+    this.showBossWarning(this.output.boss.name);
+    this.boss = this.spawnBossController(this.output.boss, {
+      texture: "enemy-cruiser",
+      scale: 1.6,
       onDefeated: () => this.stageClear(),
     });
-    /* ボス本体を敵グループにも登録して被弾判定を通す */
-    const bossBody = this.enemies.create(this.boss.sprite.x, this.boss.sprite.y, "enemy-cruiser") as Phaser.Physics.Arcade.Image;
-    bossBody.setVisible(false);
-    bossBody.setData("isBoss", true);
-    bossBody.setData("hp", 999999);
-    bossBody.setImmovable(true);
-    (bossBody.body as Phaser.Physics.Arcade.Body).setAllowGravity(false);
-    bossBody.setVelocity(0, 0);
-    this.boss.sprite.setData("bodyRef", bossBody);
     /* 「けいさんキング」の王冠 (ボスの頭上に追従) */
     this.bossCrown = this.add.image(this.boss.sprite.x, this.boss.sprite.y - 118, "ui-crown").setScale(2);
-    this.boss.enter(() => {
-      this.events.emit("hud-boss", { hp: this.boss!.hp, maxHp: this.output.boss.hp, name: this.output.boss.name });
-    });
   }
 
   /* 必殺技: ?ドローンの問題に正解すると自動発動する大ダメージビーム */
@@ -830,7 +937,7 @@ export class FlightScene extends Scene {
 
     this.decayPower(dt);
 
-    if (!this.bossPhase) {
+    if (!this.bossPhase && !this.midBossPhase) {
       this.elapsedSec += dt;
       this.events.emit("hud-time", {
         left: Math.max(0, this.output.durationSec - this.elapsedSec),
@@ -855,7 +962,11 @@ export class FlightScene extends Scene {
         this.spawnFormation();
       }
 
-      if (this.elapsedSec >= this.output.durationSec) this.enterBossPhase();
+      if (!this.midBossDone && this.elapsedSec >= this.output.durationSec / 2) {
+        this.enterMidBossPhase();
+      } else if (this.elapsedSec >= this.output.durationSec) {
+        this.enterBossPhase();
+      }
     } else if (this.boss && !this.boss.isDefeated) {
       /* ボス戦: 問題ドローンを定期供給 */
       this.droneAccum += dt;

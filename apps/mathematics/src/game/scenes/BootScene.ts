@@ -65,7 +65,7 @@ export class BootScene extends Scene {
     this.load.spritesheet("proj-bullet", v("proj-bullet"), { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet("proj-rocket", v("proj-rocket"), { frameWidth: 32, frameHeight: 32 });
     this.load.spritesheet("proj-zapper", v("proj-zapper"), { frameWidth: 32, frameHeight: 32 });
-    for (const e of ["scout", "fighter", "bomber", "torpedo"]) {
+    for (const e of ["scout", "fighter", "bomber", "torpedo", "frigate"]) {
       this.load.image(`enemy-${e}`, v(`enemy-${e}`));
       this.load.spritesheet(`enemy-${e}-boom`, v(`enemy-${e}-boom`), { frameWidth: 64, frameHeight: 64 });
     }
@@ -109,6 +109,7 @@ export class BootScene extends Scene {
     mk("boom-fighter", "enemy-fighter-boom", 8, 18, 0);
     mk("boom-bomber", "enemy-bomber-boom", 7, 18, 0);
     mk("boom-torpedo", "enemy-torpedo-boom", 9, 18, 0);
+    mk("boom-frigate", "enemy-frigate-boom", 8, 18, 0);
     mk("boom-cruiser", "enemy-cruiser-boom", 13, 14, 0);
     mk("planet-spin", "planet-earth", 76, 10, -1);
   }

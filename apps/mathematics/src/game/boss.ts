@@ -31,12 +31,20 @@ export class BossController {
   private entered = false;
   private defeated = false;
 
-  constructor(scene: Phaser.Scene, def: BossDef, hooks: BossHooks) {
+  constructor(
+    scene: Phaser.Scene,
+    def: BossDef,
+    hooks: BossHooks,
+    opts: { texture?: string; scale?: number } = {},
+  ) {
     this.scene = scene;
     this.def = def;
     this.hooks = hooks;
     this.hp = def.hp;
-    this.sprite = scene.add.image(GAME_WIDTH + 160, GAME_HEIGHT / 2, "enemy-cruiser").setAngle(90).setScale(1.6);
+    this.sprite = scene.add
+      .image(GAME_WIDTH + 160, GAME_HEIGHT / 2, opts.texture ?? "enemy-cruiser")
+      .setAngle(90)
+      .setScale(opts.scale ?? 1.6);
   }
 
   /* 画面右へスライドイン → 攻撃開始 */
