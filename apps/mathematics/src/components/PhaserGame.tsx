@@ -10,22 +10,38 @@ import type Phaser from "phaser";
  * ゲーム本体は #game-container 内の canvas に描画され、
  * React 側のオーバーレイ UI とは EventBus 経由でのみやり取りする。
  *
- * 注意: React StrictMode (dev) は mount→unmount→mount を行うため、
- * 素朴に作ると Phaser ゲームが2個生成される。さらに、ブート完了前の
- * game.destroy() は処理されず宙に浮く。そこで
- * - インスタンスは window 上のシングルトンとして管理し (HMR越しにも生き残る)
- * - 破棄は必ずブート完了を待ってから行う
+ * ライフサイクル:
+ * - React StrictMode (dev) は mount→unmount→mount するため、アンマウント時は
+ *   即破棄せず「キャンセル可能な遅延破棄」を予約する。直後に再マウントが来たら
+ *   予約を取り消して既存インスタンスを再利用 (ブート前の destroy は宙に浮くため)
+ * - 本物のアンマウント (ページ遷移) では予約が発火して destroy(true) される
+ * - 再利用時、古いコンテナごと canvas がDOMから外れていたら付け直す
  */
 
-type GameWindow = Window & { __mathGame?: Phaser.Game | null };
+type GameWindow = Window & {
+  __mathGame?: Phaser.Game | null;
+  __mathGameDestroyTimer?: number;
+};
 
 export function PhaserGame() {
   useLayoutEffect(() => {
     const w = window as GameWindow;
-    /* シングルトン: StrictMode の2回目マウントでは既存インスタンスを再利用する。
-       ゲームコードの変更はフルリロードで反映する運用 (HMRの部分適用はしない) */
+
+    /* 直前のアンマウントで予約された破棄をキャンセル (StrictModeの再マウント) */
+    if (w.__mathGameDestroyTimer !== undefined) {
+      window.clearTimeout(w.__mathGameDestroyTimer);
+      w.__mathGameDestroyTimer = undefined;
+    }
+
     if (!w.__mathGame) {
       w.__mathGame = startGame("game-container");
+    } else {
+      /* 再利用: canvas が現在のコンテナに居なければ付け直す */
+      const container = document.getElementById("game-container");
+      const canvas = w.__mathGame.canvas;
+      if (container && canvas && canvas.parentElement !== container) {
+        container.appendChild(canvas);
+      }
     }
 
     /* 最初のユーザー操作で効果音を有効化 (autoplay 制限対策) */
@@ -34,9 +50,16 @@ export function PhaserGame() {
 
     return () => {
       window.removeEventListener("pointerdown", unlock);
-      /* StrictMode の偽アンマウント直後に再マウントが来るため、ゲームは破棄しない。
-         EventBus.removeAllListeners() もしない — シーンが登録したリスナーまで
-         消えてしまう (問題パネルが開かなくなる)。リスナーは各自が外す設計 */
+      /* 本物のアンマウントなら発火し、StrictModeなら次のマウントで取り消される */
+      w.__mathGameDestroyTimer = window.setTimeout(() => {
+        w.__mathGameDestroyTimer = undefined;
+        try {
+          w.__mathGame?.destroy(true);
+        } catch {
+          /* noop */
+        }
+        w.__mathGame = null;
+      }, 80);
     };
   }, []);
 

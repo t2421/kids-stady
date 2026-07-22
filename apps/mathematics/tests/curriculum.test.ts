@@ -87,6 +87,53 @@ describe("curriculum: スキル別の値域", () => {
   });
 });
 
+describe("curriculum: 小1追加スキルの固有制約", () => {
+  it("g1_ten_pack: 10といくつ (答えは 11-19 または 1-9)", () => {
+    for (let i = 0; i < N; i++) {
+      const p = generate("g1_ten_pack");
+      const ans = Number(p.answer);
+      if (p.text.startsWith("10と")) {
+        expect(ans).toBeGreaterThanOrEqual(11);
+        expect(ans).toBeLessThanOrEqual(19);
+      } else {
+        expect(p.text).toMatch(/^1[1-9]は 10と いくつ\?$/);
+        expect(ans).toBeGreaterThanOrEqual(1);
+        expect(ans).toBeLessThanOrEqual(9);
+        expect(Number(p.text[1])).toBe(ans); // 「1n は…」の n が答え
+      }
+    }
+  });
+
+  it("g1_three: 左から順に計算して一致し、途中結果も 0-10", () => {
+    for (let i = 0; i < N; i++) {
+      const p = generate("g1_three");
+      const m = p.text.match(/^(\d) ([+-]) (\d) ([+-]) (\d) = \?$/);
+      expect(m).not.toBeNull();
+      const [, a, op1, b, op2, c] = m!;
+      const mid = op1 === "+" ? Number(a) + Number(b) : Number(a) - Number(b);
+      expect(mid).toBeGreaterThanOrEqual(0);
+      expect(mid).toBeLessThanOrEqual(10);
+      const result = op2 === "+" ? mid + Number(c) : mid - Number(c);
+      expect(result).toBeGreaterThanOrEqual(0);
+      expect(result).toBeLessThanOrEqual(10);
+      expect(Number(p.answer)).toBe(result);
+    }
+  });
+
+  it("g1_seq: 表示中の2数と答えが連続3数を成す (1-20)", () => {
+    for (let i = 0; i < N; i++) {
+      const p = generate("g1_seq");
+      const tokens = p.text.split("\n")[0].split(/\s+/);
+      expect(tokens).toHaveLength(3);
+      const filled = tokens.map((t) => (t === "□" ? Number(p.answer) : Number(t)));
+      expect(filled[1]).toBe(filled[0] + 1);
+      expect(filled[2]).toBe(filled[1] + 1);
+      expect(filled[0]).toBeGreaterThanOrEqual(1);
+      expect(filled[2]).toBeLessThanOrEqual(20);
+    }
+  });
+});
+
 describe("curriculum: pickSkill", () => {
   it("苦手なスキルが多く選ばれる", () => {
     const ids = ["g1_add_nc", "g1_sub_borrow"];

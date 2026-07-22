@@ -24,6 +24,8 @@ const config: Phaser.Types.Core.GameConfig = {
     default: "arcade",
     arcade: { debug: false },
   },
+  /* 子供が別の指を置いたままでも操作できるようマルチタッチを許可 (一度だけ) */
+  input: { activePointers: 3 },
   scene: [BootScene, TitleScene, GradeMapScene, GradeScene, HangarScene, FlightScene, HudScene],
 };
 

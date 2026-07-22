@@ -63,6 +63,7 @@ export class FlightScene extends Scene {
   private droneAccum = 6;
   private formationSeq = 0;
   private formationAlive = new Map<number, number>();
+  private formationInvalid = new Set<number>(); // 逃した/体当たりで消えた編隊はボーナス無効
 
   private boss: BossController | null = null;
   private bossCrown: Phaser.GameObjects.Image | null = null;
@@ -160,6 +161,7 @@ export class FlightScene extends Scene {
     this.droneAccum = 6;
     this.formationSeq = 0;
     this.formationAlive.clear();
+    this.formationInvalid.clear();
     this.boss = null;
     this.bossPhase = false;
     this.frozenGraceMs = 0;
@@ -172,8 +174,6 @@ export class FlightScene extends Scene {
   /* ---------- 入力: 相対ドラッグ + オートショット ---------- */
 
   private setupInput() {
-    /* 子供が別の指を画面に置いたままでも操作できるようマルチタッチを許可 */
-    this.input.addPointer(2);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (!p.isDown || this.frozen || this.ended) return;
       const dx = (p.x - p.prevPosition.x) * 1.15;
@@ -225,8 +225,16 @@ export class FlightScene extends Scene {
         enemy as Phaser.Physics.Arcade.Image,
       );
     });
-    this.physics.add.overlap(this.ship, this.enemies, (_s, enemy) => {
-      (enemy as Phaser.Physics.Arcade.Image).destroy();
+    this.physics.add.overlap(this.ship, this.enemies, (_s, obj) => {
+      const enemy = obj as Phaser.Physics.Arcade.Image;
+      /* ボスの当たり判定Bodyは消してはいけない (削れなくなる) */
+      if (enemy.getData("isBoss")) {
+        this.hurt();
+        return;
+      }
+      const formationId = enemy.getData("formationId") as number | undefined;
+      if (formationId != null) this.noteFormationDeath(formationId, false, 0, 0);
+      enemy.destroy();
       this.hurt();
     });
     this.physics.add.overlap(this.ship, this.eBullets, (_s, b) => {
@@ -265,13 +273,7 @@ export class FlightScene extends Scene {
     this.score += kind === "red" ? 20 : 10;
 
     if (formationId != null) {
-      const left = (this.formationAlive.get(formationId) ?? 1) - 1;
-      if (left <= 0) {
-        this.formationAlive.delete(formationId);
-        this.dropCapsule(enemy.x, enemy.y); // 編隊全滅 → 確定カプセル
-      } else {
-        this.formationAlive.set(formationId, left);
-      }
+      this.noteFormationDeath(formationId, true, enemy.x, enemy.y);
     } else if (kind === "rock" && Math.random() < 0.12) {
       this.dropCapsule(enemy.x, enemy.y);
     }
@@ -359,6 +361,20 @@ export class FlightScene extends Scene {
     e.setVelocityX(-speed);
   }
 
+  /* 編隊メンバー1体の消滅を記録する唯一の入口。
+     allowBonus=true (撃破) で全滅させ、かつ途中で1体も逃していなければ確定カプセル */
+  private noteFormationDeath(id: number, allowBonus: boolean, x: number, y: number) {
+    if (!allowBonus) this.formationInvalid.add(id);
+    const left = (this.formationAlive.get(id) ?? 0) - 1;
+    if (left > 0) {
+      this.formationAlive.set(id, left);
+      return;
+    }
+    this.formationAlive.delete(id);
+    const invalid = this.formationInvalid.delete(id);
+    if (!invalid && allowBonus) this.dropCapsule(x, y);
+  }
+
   private spawnFormation() {
     const id = ++this.formationSeq;
     const baseY = Phaser.Math.Between(90, GAME_HEIGHT - 90);
@@ -366,10 +382,8 @@ export class FlightScene extends Scene {
     for (let i = 0; i < 4; i++) {
       this.time.delayedCall(i * 260, () => {
         if (this.ended || this.bossPhase) {
-          /* ボス突入後は残数を減らして整合を保つ */
-          const left = (this.formationAlive.get(id) ?? 1) - 1;
-          if (left <= 0) this.formationAlive.delete(id);
-          else this.formationAlive.set(id, left);
+          /* ボス突入後は出現をやめ、残数を減らして整合を保つ (ボーナス無効) */
+          this.noteFormationDeath(id, false, 0, 0);
           return;
         }
         this.spawnEnemy("red", baseY, id);
@@ -408,6 +422,7 @@ export class FlightScene extends Scene {
   private collectCapsule(c: Phaser.Physics.Arcade.Image) {
     if (this.frozen || this.ended) return;
     const isDrone = !!c.getData("isDrone");
+    this.tweens.killTweensOf(c); // 脈動Tweenを残さない
     (c.getData("label") as Phaser.GameObjects.Text | undefined)?.destroy();
     c.destroy();
     sfx.capsule();
@@ -654,10 +669,11 @@ export class FlightScene extends Scene {
       ? Math.round(this.run.answerMs.reduce((s, x) => s + x, 0) / this.run.answerMs.length)
       : 0;
     const total = this.run.correct + this.run.wrong;
-    const accuracy = total ? Math.round((this.run.correct / total) * 100) : 100;
+    const accuracy = total ? Math.round((this.run.correct / total) * 100) : 0;
 
     this.save = markOutputCleared(this.save, this.gradeDef.grade, this.score);
-    this.save = addHistory(this.save, {
+    /* 1問も答えていないランは学習履歴に積まない (正答率が事実と乖離するため) */
+    if (total > 0) this.save = addHistory(this.save, {
       ts: Date.now(),
       grade: this.gradeDef.grade,
       mode: "output",
@@ -894,9 +910,10 @@ export class FlightScene extends Scene {
           const kind = s.getData("kind") as EnemyKind | undefined;
           const formationId = s.getData("formationId") as number | undefined;
           if (kind && formationId != null) {
-            /* 編隊が画面外へ逃げたら全滅ボーナスは不成立にする */
-            this.formationAlive.delete(formationId);
+            /* 編隊が画面外へ逃げたら全滅ボーナスは不成立 (残数の整合も保つ) */
+            this.noteFormationDeath(formationId, false, 0, 0);
           }
+          this.tweens.killTweensOf(s); // カプセルの無限Tweenを道連れにする
           (s.getData("label") as Phaser.GameObjects.Text | undefined)?.destroy();
           s.destroy();
         }
