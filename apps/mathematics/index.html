@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>マスマティクス (ローカル開発ガイド)</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #171225; color: #fff;
+         display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .card { max-width: 560px; padding: 32px; background: rgba(16,12,34,.92);
+          border: 3px solid #4a5e85; border-radius: 8px; line-height: 1.9; }
+  code { background: #0a0618; padding: 2px 8px; border-radius: 4px; color: #9be7ff; }
+  a { color: #ffd93d; }
+</style>
+</head>
+<body>
+<!--
+  このファイルはローカル静的サーバー (python3 -m http.server) 用の案内。
+  本番デプロイでは CI が Next.js のビルド成果物 (out/) をこのパスに配置するため、
+  このファイルは使われない (.github/workflows/deploy.yml の Assemble site 参照)。
+-->
+<div class="card">
+  <h1>マスマティクス は ビルド型アプリです</h1>
+  <p>ローカルで遊ぶには開発サーバーを起動してください:</p>
+  <p><code>cd apps/mathematics &amp;&amp; npm install &amp;&amp; npm run dev</code></p>
+  <p>→ <a href="http://localhost:3010/">http://localhost:3010/</a></p>
+  <p>ビルド済みの本番版はこちら:
+     <a href="https://t2421.github.io/kids-stady/apps/mathematics/">t2421.github.io/kids-stady/apps/mathematics/</a></p>
+</div>
+</body>
+</html>
