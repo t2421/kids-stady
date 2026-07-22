@@ -14,6 +14,7 @@ import { autosave, getSave, updateSave } from "../session";
 import { EventBus } from "../EventBus";
 import { fadeIn, fadeOutThen } from "../transition";
 import { MapView, tileCenter } from "../field/MapView";
+import { consumeDebugBattle } from "../debugBoot";
 import { buildStatusSections } from "../field/statusSections";
 import {
   handleHealInn,
@@ -117,6 +118,14 @@ export class FieldScene extends Scene {
 
     EventBus.emit("current-scene-ready", this);
     EventBus.emit("map-entered", { mapId: this.map.id, name: this.map.name });
+
+    /* dev: ?battle= 指定があれば即戦闘 (ビジュアルデバッグ用) */
+    const debugMonsters = consumeDebugBattle();
+    if (debugMonsters) {
+      this.time.delayedCall(400, () =>
+        this.startBattle({ monsterIds: debugMonsters, boss: true }),
+      );
+    }
   }
 
   update() {

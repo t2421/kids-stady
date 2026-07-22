@@ -1,5 +1,7 @@
 import { Scene } from "phaser";
 import { generateAllTextures } from "../textures";
+import { getDebugBoot } from "../debugBoot";
+import { ensureSession } from "../session";
 
 /*
  * 起動シーン。画像ファイルは使わず、すべてのテクスチャをここで手続き生成する
@@ -13,6 +15,17 @@ export class BootScene extends Scene {
   create() {
     this.createPixelTexture();
     generateAllTextures(this);
+
+    /* dev: ?map= 指定があればタイトルを飛ばして直接そのマップへ */
+    const debug = getDebugBoot();
+    if (debug.map) {
+      ensureSession();
+      this.scene.start("Field", {
+        mapId: debug.map.mapId,
+        spawn: debug.map.spawn,
+      });
+      return;
+    }
     this.scene.start("Title");
   }
 

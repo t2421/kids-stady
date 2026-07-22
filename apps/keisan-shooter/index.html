@@ -164,7 +164,7 @@
   <div id="combo-pop"></div>
   <div id="item-pop"></div>
   <div id="msg"></div>
-  <button id="hintbtn">&#127826; さくらんぼヒント</button>
+  <button type="button" id="hintbtn">&#127826; さくらんぼヒント</button>
   <div id="itemBar"></div>
 </div>
 <div id="levelup-pop"></div>
@@ -173,15 +173,15 @@
 <div class="overlay" id="playerSelect">
   <h1><span class="em">だれが</span> あそぶ?</h1>
   <div id="playerList"></div>
-  <button class="bigbtn" id="newPlayerBtn">&#10133; あたらしい プレイヤー</button>
+  <button type="button" class="bigbtn" id="newPlayerBtn">&#10133; あたらしい プレイヤー</button>
 </div>
 
 <div class="overlay" id="createProfile">
   <h2 class="create-title">プレイヤーを つくろう</h2>
   <div id="avatarPicker"></div>
   <input id="nameInput" type="text" maxlength="8" placeholder="なまえ (8もじまで)">
-  <button class="bigbtn" id="createConfirmBtn">つくる!</button>
-  <button class="bigbtn" id="createBackBtn">もどる</button>
+  <button type="button" class="bigbtn" id="createConfirmBtn">つくる!</button>
+  <button type="button" class="bigbtn" id="createBackBtn">もどる</button>
 </div>
 
 <div class="overlay" id="start">
@@ -195,10 +195,10 @@
     <div id="bestRow"></div>
     <div id="zukanRow"></div>
   </div>
-  <button class="bigbtn" id="startbtn">ぼうけんに でる!</button>
+  <button type="button" class="bigbtn" id="startbtn">ぼうけんに でる!</button>
   <div class="start-subrow">
-    <button class="bigbtn" id="statsBtn">&#128202; せいせきを みる</button>
-    <button class="bigbtn" id="switchPlayerBtn">&#128260; ちがう ひとが あそぶ</button>
+    <button type="button" class="bigbtn" id="statsBtn">&#128202; せいせきを みる</button>
+    <button type="button" class="bigbtn" id="switchPlayerBtn">&#128260; ちがう ひとが あそぶ</button>
   </div>
   <p id="rotate-tip">&#128241; iPadは よこむきが おすすめ</p>
 </div>
@@ -206,15 +206,15 @@
 <div class="overlay" id="map">
   <div id="mapTitle">&#128506;&#65039; ぼうけんマップ</div>
   <div id="mapList"></div>
-  <button class="bigbtn" id="mapBackBtn">もどる</button>
+  <button type="button" class="bigbtn" id="mapBackBtn">もどる</button>
 </div>
 
 <div class="overlay" id="storyIntro">
   <div class="story-icon" id="storyIcon">&#127795;</div>
   <h2 id="storyTitle">しずかなもり</h2>
   <p id="storyText"></p>
-  <button class="bigbtn" id="storyStartBtn">たたかう!</button>
-  <button class="bigbtn" id="storyBackBtn">マップへもどる</button>
+  <button type="button" class="bigbtn" id="storyStartBtn">たたかう!</button>
+  <button type="button" class="bigbtn" id="storyBackBtn">マップへもどる</button>
 </div>
 
 <div class="overlay" id="stageClear">
@@ -222,8 +222,8 @@
   <div class="story-icon" id="clearIcon">&#127881;</div>
   <p id="clearText"></p>
   <div id="stageClearGems"></div>
-  <button class="bigbtn" id="nextStageBtn"></button>
-  <button class="bigbtn" id="clearMapBtn">マップへ もどる</button>
+  <button type="button" class="bigbtn" id="nextStageBtn" aria-label="つぎのステージへ"></button>
+  <button type="button" class="bigbtn" id="clearMapBtn">マップへ もどる</button>
 </div>
 
 <div class="overlay" id="hintoverlay">
@@ -235,9 +235,9 @@
     <div id="cherryFeedback"></div>
     <div id="cherrySteps"></div>
     <div id="cherryPad"></div>
-    <button class="bigbtn small-btn" id="cherryResetBtn">&#8635; やりなおす</button>
+    <button type="button" class="bigbtn small-btn" id="cherryResetBtn">&#8635; やりなおす</button>
   </div>
-  <button class="bigbtn" id="hintclose">わかった!</button>
+  <button type="button" class="bigbtn" id="hintclose">わかった!</button>
 </div>
 
 <div class="overlay" id="mistakeOverlay">
@@ -247,23 +247,23 @@
     <div id="mistakeDiagramHost"></div>
     <div id="mistakeSteps"></div>
   </div>
-  <button class="bigbtn" id="mistakeNextBtn">つぎの もんだいへ</button>
+  <button type="button" class="bigbtn" id="mistakeNextBtn">つぎの もんだいへ</button>
 </div>
 
 <div class="overlay" id="statsScreen">
   <h1><span class="em">せいせき</span></h1>
   <div id="statsSummary"></div>
   <div id="statsHistory"></div>
-  <button class="bigbtn" id="statsBackBtn">もどる</button>
+  <button type="button" class="bigbtn" id="statsBackBtn">もどる</button>
 </div>
 
 <div class="overlay" id="gameover">
   <h1>ステージ<span class="em">しっぱい</span></h1>
   <div id="finalstats"></div>
   <div id="run-gems"></div>
-  <button class="bigbtn" id="continuebtn"></button>
-  <button class="bigbtn" id="retrybtn">もういちど!</button>
-  <button class="bigbtn" id="gameoverMapBtn">マップへ もどる</button>
+  <button type="button" class="bigbtn" id="continuebtn" aria-label="コンティニュー"></button>
+  <button type="button" class="bigbtn" id="retrybtn">もういちど!</button>
+  <button type="button" class="bigbtn" id="gameoverMapBtn">マップへ もどる</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha384-CI3ELBVUz9XQO+97x6nwMDPosPR5XvsxW2ua7N1Xeygeh1IxtgqtCkGfQY9WWdHu" crossorigin="anonymous"></script>
