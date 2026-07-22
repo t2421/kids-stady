@@ -28,10 +28,11 @@
     {
       id: "mathematics",
       title: "マスマティクス",
-      subject: "さんすう",
-      description: "けいさんで パワーアップする シューティング！じゅんびちゅう、おたのしみに。",
+      subject: "さんすう（小1〜小6）",
+      description: "けいさんで パワーアップする グラディウス風シューティング！ボスは ひっさつわざで たおせ。",
       emoji: "🚀",
-      color: "#ff9f43",
+      image: "shared/img/player-base.png",
+      color: "#9be7ff",
       path: "apps/mathematics/",
     },
   ];
