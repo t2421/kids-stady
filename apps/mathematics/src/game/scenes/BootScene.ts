@@ -56,24 +56,69 @@ export class BootScene extends Scene {
     }
   }
 
-  /* 自機: 右向きの宇宙戦闘機 */
+  /* 自機: ビックバイパー風の上面視戦闘機 (ツインノーズ+後退翼) */
   private createShip() {
     const g = this.g();
-    /* 尾翼 */
-    g.fillStyle(0x2e6fd8, 1);
-    g.fillTriangle(2, 4, 18, 18, 2, 32);
-    /* 機体 */
-    g.fillStyle(0x5ab8ff, 1);
-    g.fillTriangle(6, 18, 52, 10, 52, 26);
-    g.fillEllipse(30, 18, 44, 18);
-    /* コクピット */
-    g.fillStyle(0xffe28a, 1);
-    g.fillEllipse(38, 16, 12, 8);
-    /* エンジン光 */
-    g.fillStyle(0xff9f43, 1);
-    g.fillEllipse(6, 18, 8, 10);
-    g.generateTexture("ship", 56, 36);
+    const HULL = 0xdfe7f5; // シルバーホワイト
+    const SHADE = 0xa9b8d8;
+    const DARK = 0x5a6d92;
+    const RED = 0xe8483f;
+    const CANOPY = 0x35c4ff;
+    const GLOW = 0xffa93d;
+
+    /* 後退翼 (上下対称)。赤い前縁ライン付き */
+    g.fillStyle(SHADE, 1);
+    g.fillTriangle(36, 15, 8, 2, 20, 15); // 上翼
+    g.fillTriangle(36, 29, 8, 42, 20, 29); // 下翼
+    g.fillStyle(RED, 1);
+    g.fillTriangle(36, 15, 8, 2, 14, 4); // 上翼の前縁
+    g.fillTriangle(36, 29, 8, 42, 14, 40); // 下翼の前縁
+
+    /* 尾部エンジン */
+    g.fillStyle(DARK, 1);
+    g.fillRect(2, 15, 9, 14);
+    g.fillStyle(GLOW, 1);
+    g.fillEllipse(3, 22, 6, 9);
+
+    /* メイン機体 (くさび形の胴体) */
+    g.fillStyle(HULL, 1);
+    g.fillTriangle(64, 22, 26, 12, 26, 32);
+    g.fillRect(8, 14, 22, 16);
+    /* 胴体の陰影 (下半分) */
+    g.fillStyle(SHADE, 1);
+    g.fillTriangle(64, 22, 26, 22, 26, 32);
+    g.fillRect(8, 22, 22, 8);
+
+    /* ツインノーズ (ビックバイパーの象徴) */
+    g.fillStyle(HULL, 1);
+    g.fillTriangle(76, 9, 46, 5, 46, 13); // 上プロング
+    g.fillStyle(SHADE, 1);
+    g.fillTriangle(72, 35, 46, 31, 46, 39); // 下プロング
+    /* プロング間のインテーク (暗部) */
+    g.fillStyle(0x22314f, 1);
+    g.fillTriangle(62, 22, 46, 14, 46, 30);
+
+    /* 赤いアクセントストライプ */
+    g.fillStyle(RED, 1);
+    g.fillRect(24, 20, 26, 4);
+
+    /* キャノピー (青いガラス+ハイライト) */
+    g.fillStyle(CANOPY, 1);
+    g.fillEllipse(38, 18, 15, 9);
+    g.fillStyle(0xd9f5ff, 1);
+    g.fillEllipse(41, 16, 6, 3.5);
+
+    g.generateTexture("ship", 78, 44);
     g.destroy();
+
+    /* エンジンの噴射炎 (フリッカー表示用) */
+    const fl = this.g();
+    fl.fillStyle(0xff7b2d, 0.85);
+    fl.fillTriangle(20, 5, 0, 0, 0, 10);
+    fl.fillStyle(0xffd93d, 0.95);
+    fl.fillTriangle(13, 5, 2, 2, 2, 8);
+    fl.generateTexture("ship-flame", 20, 10);
+    fl.destroy();
 
     /* オプション (子機オーブ) */
     const o = this.g();

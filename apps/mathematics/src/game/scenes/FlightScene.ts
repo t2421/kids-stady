@@ -36,6 +36,7 @@ export class FlightScene extends Scene {
   private save!: MathSave;
 
   private ship!: Phaser.Physics.Arcade.Image;
+  private flame!: Phaser.GameObjects.Image;
   private optionOrb: Phaser.GameObjects.Image | null = null;
   private shieldSprite: Phaser.GameObjects.Image | null = null;
   private layers: Phaser.GameObjects.TileSprite[] = [];
@@ -99,8 +100,9 @@ export class FlightScene extends Scene {
     this.capsules = this.physics.add.group();
 
     this.ship = this.physics.add.image(120, GAME_HEIGHT / 2, "ship");
-    this.ship.setCircle(12, 16, 6); // 当たり判定は見た目より小さく
+    this.ship.setCircle(13, 26, 9); // 当たり判定は見た目より小さく (機体中心のみ)
     this.ship.setCollideWorldBounds(true);
+    this.flame = this.add.image(this.ship.x - 37, this.ship.y, "ship-flame").setOrigin(1, 0.5);
 
     this.setupInput();
     this.setupCollisions();
@@ -681,6 +683,11 @@ export class FlightScene extends Scene {
     this.layers[2].tilePositionX += 70 * dt;
 
     this.data.set("playerPos", { x: this.ship.x, y: this.ship.y });
+
+    /* 噴射炎の追従とフリッカー */
+    this.flame.setPosition(this.ship.x - 37, this.ship.y);
+    this.flame.setScale(0.7 + Math.random() * 0.5, 0.8 + Math.random() * 0.4);
+    this.flame.setAlpha(this.ship.alpha);
 
     /* オプション/バリアの追従 */
     if (this.optionOrb) {
