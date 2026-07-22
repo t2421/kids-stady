@@ -69,6 +69,7 @@ export class FlightScene extends Scene {
   private boss: BossController | null = null;
   private bossPhase = false;
 
+  private frozenGraceMs = 0; // フリーズ中にパネルが見当たらない時間 (ウォッチドッグ)
   private run = { correct: 0, wrong: 0, answerMs: [] as number[] };
   private problemContext: ProblemContext | null = null;
   private onProblemDone:
@@ -152,6 +153,7 @@ export class FlightScene extends Scene {
     this.formationAlive.clear();
     this.boss = null;
     this.bossPhase = false;
+    this.frozenGraceMs = 0;
     this.optionOrb = null;
     this.shieldSprite = null;
     this.run = { correct: 0, wrong: 0, answerMs: [] };
@@ -161,6 +163,8 @@ export class FlightScene extends Scene {
   /* ---------- 入力: 相対ドラッグ + オートショット ---------- */
 
   private setupInput() {
+    /* 子供が別の指を画面に置いたままでも操作できるようマルチタッチを許可 */
+    this.input.addPointer(2);
     this.input.on("pointermove", (p: Phaser.Input.Pointer) => {
       if (!p.isDown || this.frozen || this.ended) return;
       const dx = (p.x - p.prevPosition.x) * 1.15;
@@ -423,14 +427,16 @@ export class FlightScene extends Scene {
   }
 
   private handleProblemDone(r: { correct: boolean; timedOut: boolean; elapsedMs: number }) {
-    if (!this.onProblemDone) return;
     const cb = this.onProblemDone;
     this.onProblemDone = null;
-    if (r.correct) sfx.good();
-    else sfx.bad();
-    cb(r);
     this.problemContext = null;
-    this.freeze(false);
+    if (cb) {
+      if (r.correct) sfx.good();
+      else sfx.bad();
+      cb(r);
+    }
+    /* コールバックの有無に関わらず必ず解凍する (フリーズ取り残し防止) */
+    if (this.frozen) this.freeze(false);
   }
 
   private applyAnswerToSave(
@@ -717,6 +723,21 @@ export class FlightScene extends Scene {
   /* ---------- メインループ ---------- */
 
   update(_time: number, deltaMs: number) {
+    /* ウォッチドッグ: フリーズしたのに問題パネルが無い状態が続いたら自動復帰する。
+       (パネルとの同期が万一崩れても、操作不能のまま固まらないための保険) */
+    if (this.frozen && !this.ended) {
+      const panelVisible = document.querySelector(".pp-overlay") !== null;
+      this.frozenGraceMs = panelVisible ? 0 : this.frozenGraceMs + deltaMs;
+      if (this.frozenGraceMs > 1000) {
+        this.frozenGraceMs = 0;
+        this.onProblemDone = null;
+        this.problemContext = null;
+        this.freeze(false);
+      }
+    } else {
+      this.frozenGraceMs = 0;
+    }
+
     if (this.frozen || this.ended) return;
     const dt = Math.min(deltaMs / 1000, 1 / 20);
 
