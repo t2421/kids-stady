@@ -3,6 +3,7 @@ import { addVoidBackdrop } from "../backdrop";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
+import { isDebugMode } from "@/lib/debug";
 import { GRADES } from "@/lib/grades";
 import { isOutputUnlocked, loadSave } from "@/lib/save";
 
@@ -46,7 +47,7 @@ export class GradeMapScene extends Scene {
       const row = Math.floor(i / 3);
       const x = startX + col * (CARD_W + GAP_X);
       const y = startY + row * (CARD_H + GAP_Y);
-      const unlocked = g.implemented && g.grade <= unlockedGrade;
+      const unlocked = g.implemented && (g.grade <= unlockedGrade || isDebugMode());
       /* 出撃準備 (レッスン) を一度クリア済みなら、マップから直接出撃できる */
       const sortieReady =
         unlocked &&

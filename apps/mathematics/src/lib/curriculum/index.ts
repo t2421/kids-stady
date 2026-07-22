@@ -5,11 +5,23 @@
 
 import type { SkillStat } from "../save";
 import { GRADE1_SKILLS } from "./grade1";
+import { GRADE2_SKILLS } from "./grade2";
+import { GRADE3_SKILLS } from "./grade3";
+import { GRADE4_SKILLS } from "./grade4";
+import { GRADE5_SKILLS } from "./grade5";
+import { GRADE6_SKILLS } from "./grade6";
 import type { Problem, SkillDef } from "./types";
 
 export type { CherryHint, Op, Problem, SkillDef } from "./types";
 
-const ALL_SKILLS: SkillDef[] = [...GRADE1_SKILLS];
+const ALL_SKILLS: SkillDef[] = [
+  ...GRADE1_SKILLS,
+  ...GRADE2_SKILLS,
+  ...GRADE3_SKILLS,
+  ...GRADE4_SKILLS,
+  ...GRADE5_SKILLS,
+  ...GRADE6_SKILLS,
+];
 
 const SKILL_MAP = new Map(ALL_SKILLS.map((s) => [s.id, s]));
 

@@ -134,6 +134,73 @@ function genSubBorrow(): Problem {
   };
 }
 
+/* 10といくつ: 「10と 4で いくつ?」/「14は 10と いくつ?」 */
+function genTenPack(): Problem {
+  const n = randInt(1, 9);
+  const forward = Math.random() < 0.5;
+  const answer = forward ? 10 + n : n;
+  return {
+    skillId: "g1_ten_pack",
+    text: forward ? `10と ${n}で いくつ?` : `1${n}は 10と いくつ?`,
+    a: null,
+    b: null,
+    op: null,
+    answer: String(answer),
+    choices: uniqueChoices(answer, [answer - 1, answer + 1, forward ? n : 10 + n], 0, 20),
+    hint: null,
+    explain: forward
+      ? [`10と ${n}で ${10 + n}`, "10のまとまりに たすだけ!"]
+      : [`1${n}は 10と ${n}`, "10のまとまりを とりだそう"],
+  };
+}
+
+/* 3つの数の計算: 途中の結果も 0〜10 に収まる組合せだけ出す */
+function genThree(): Problem {
+  for (;;) {
+    const a = randInt(1, 9);
+    const b = randInt(1, 9);
+    const c = randInt(1, 9);
+    const op1 = Math.random() < 0.5 ? "+" : "-";
+    const op2 = Math.random() < 0.5 ? "+" : "-";
+    const mid = op1 === "+" ? a + b : a - b;
+    if (mid < 0 || mid > 10) continue;
+    const result = op2 === "+" ? mid + c : mid - c;
+    if (result < 0 || result > 10) continue;
+    return {
+      skillId: "g1_three",
+      text: `${a} ${op1} ${b} ${op2} ${c} = ?`,
+      a: null,
+      b: null,
+      op: null,
+      answer: String(result),
+      choices: uniqueChoices(result, [result - 1, result + 1, result + 2, result - 2], 0, 10),
+      hint: null,
+      explain: [`まえから じゅんに: ${a} ${op1} ${b} = ${mid}`, `${mid} ${op2} ${c} = ${result}`],
+    };
+  }
+}
+
+/* かずのならび: 20までの連続3数の穴うめ */
+function genSeq(): Problem {
+  const start = randInt(1, 18);
+  const holeIndex = randInt(0, 2);
+  const nums: (number | null)[] = [start, start + 1, start + 2];
+  const answer = nums[holeIndex] as number;
+  nums[holeIndex] = null;
+  const shown = nums.map((n) => (n === null ? "□" : String(n))).join("  ");
+  return {
+    skillId: "g1_seq",
+    text: `${shown}\n□に はいる かずは?`,
+    a: null,
+    b: null,
+    op: null,
+    answer: String(answer),
+    choices: uniqueChoices(answer, [answer - 1, answer + 1, answer - 2, answer + 2], 0, 20),
+    hint: null,
+    explain: [`かずは 1ずつ ふえていくよ`, `${start} → ${start + 1} → ${start + 2}`],
+  };
+}
+
 export const GRADE1_SKILLS: SkillDef[] = [
   { id: "g1_count", grade: 1, label: "かぞえる", generate: genCount },
   { id: "g1_compare", grade: 1, label: "くらべる", generate: genCompare },
@@ -141,6 +208,9 @@ export const GRADE1_SKILLS: SkillDef[] = [
   { id: "g1_add_carry", grade: 1, label: "くりあがり", generate: genAddCarry },
   { id: "g1_sub_nc", grade: 1, label: "ひきざん", generate: genSubNoCarry },
   { id: "g1_sub_borrow", grade: 1, label: "くりさがり", generate: genSubBorrow },
+  { id: "g1_ten_pack", grade: 1, label: "10といくつ", generate: genTenPack },
+  { id: "g1_three", grade: 1, label: "3つのかず", generate: genThree },
+  { id: "g1_seq", grade: 1, label: "かずのならび", generate: genSeq },
 ];
 
 export { shuffle };
