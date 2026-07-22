@@ -1,21 +1,28 @@
 import Phaser, { Scene } from "phaser";
 import type { EventCommand, MapDef, MapEvent, NpcDef } from "../../content/types";
 import { getMapDef } from "../../content/maps";
+import { getEncounterTable } from "../../content/encounters";
 import { TILE_SIZE } from "../../content/art/tiles";
 import type { Dir } from "../../lib/save";
 import type { RunnerInput, RunnerState } from "../../lib/events/runner";
 import { evalCond, startRun, step } from "../../lib/events/runner";
-import { actorTextureKey, tileTextureKey } from "../textures";
+import { pickEncounterGroup, rollEncounterSteps } from "../../lib/encounter";
+import { mulberry32 } from "../../lib/curriculum/types";
+import { heroStats } from "../../lib/battle/stats";
+import { actorTextureKey } from "../textures";
 import { autosave, getSave, updateSave } from "../session";
 import { EventBus } from "../EventBus";
 import { fadeIn, fadeOutThen } from "../transition";
+import { MapView, tileCenter } from "../field/MapView";
+import { buildStatusSections } from "../field/statusSections";
+import {
+  handleHealInn,
+  handleSavePoint,
+  handleShop,
+  handleSpellTest,
+} from "../field/effectHandlers";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
-import { getEncounterTable } from "../../content/encounters";
-import { getSpell } from "../../content/spells";
-import { getItem, SHOPS } from "../../content/items";
-import { mulberry32, randInt } from "../../lib/curriculum/types";
-import { expForLevel, heroStats } from "../../lib/battle/stats";
 
 const STEP_MS = 150;
 const ZOOM = 3;
@@ -37,12 +44,12 @@ interface FieldInitData {
 /*
  * 汎用マップシーン: 町・ダンジョン・フィールドすべて MapDef データで動く
  * (docs/kazu-quest-design-plan.md B2)。専用シーンは作らない。
+ * 描画は MapView、長いUIフローは field/effectHandlers に分離している。
  */
 export class FieldScene extends Scene {
   private map!: MapDef;
+  private view!: MapView;
   private player!: Phaser.GameObjects.Image;
-  private npcSprites = new Map<string, Phaser.GameObjects.Image>();
-  private eventSprites = new Map<string, Phaser.GameObjects.Image>();
   private gridX = 0;
   private gridY = 0;
   private facing: Dir = "down";
@@ -59,26 +66,23 @@ export class FieldScene extends Scene {
   private battleStarting = false;
   /* ボス戦などイベント発の戦闘後にランナーを再開するためのコールバック */
   private pendingBattleAdvance: ((won: boolean) => void) | null = null;
-  private pendingWinFlag: string | undefined;
 
   constructor() {
     super("Field");
   }
 
+  /* ---------- ライフサイクル ---------- */
+
   init(data: FieldInitData) {
     const save = getSave();
-    const mapId = data.mapId ?? save.location.mapId;
-    this.map = getMapDef(mapId);
+    this.map = getMapDef(data.mapId ?? save.location.mapId);
 
     if (data.spawn && this.map.spawns[data.spawn]) {
       const s = this.map.spawns[data.spawn];
-      this.gridX = s.x;
-      this.gridY = s.y;
-      this.facing = s.facing;
+      [this.gridX, this.gridY, this.facing] = [s.x, s.y, s.facing];
     } else if (this.map.id === save.location.mapId) {
-      this.gridX = save.location.x;
-      this.gridY = save.location.y;
-      this.facing = save.location.facing;
+      const l = save.location;
+      [this.gridX, this.gridY, this.facing] = [l.x, l.y, l.facing];
     } else {
       const fallback =
         this.map.spawns.start ?? Object.values(this.map.spawns)[0];
@@ -92,58 +96,59 @@ export class FieldScene extends Scene {
     this.runActive = false;
     this.battleStarting = false;
     this.pendingBattleAdvance = null;
-    this.pendingWinFlag = undefined;
-    this.npcSprites.clear();
-    this.eventSprites.clear();
     this.resetEncounterCounter();
   }
 
-  private resetEncounterCounter() {
-    const table = this.map?.encounterTableId
-      ? getEncounterTable(this.map.encounterTableId)
-      : undefined;
-    this.stepsToEncounter = table
-      ? randInt(this.rng, table.stepRange[0], table.stepRange[1])
-      : Infinity;
-  }
-
   create() {
-    /* デバッグトレース (E2E調査用 — M10で除去) */
-    (
-      (window as unknown as Record<string, unknown[]>).__KAZUQUEST_TRACE__ ??=
-        []
-    ).push({ t: Math.round(performance.now()), ev: "create", map: this.map.id });
-
     /* 入場時点で現在地をセーブに確定させる (以後 save.location が常に真) */
-    updateSave((save) => ({
-      ...save,
-      location: {
-        mapId: this.map.id,
-        x: this.gridX,
-        y: this.gridY,
-        facing: this.facing,
-      },
-    }));
+    this.saveLocation();
 
-    this.buildMapLayer();
-    this.buildNpcs();
-    this.buildEventSprites();
+    this.view = new MapView(this, this.map);
+    this.view.build(getSave().flags);
 
     this.player = this.add
-      .image(...this.tileCenter(this.gridX, this.gridY), actorTextureKey("hero"))
+      .image(...tileCenter(this.gridX, this.gridY), actorTextureKey("hero"))
       .setDepth(10);
     this.applyHeroFacing();
 
-    const widthPx = this.map.grid[0].length * TILE_SIZE;
-    const heightPx = this.map.grid.length * TILE_SIZE;
+    this.setupCamera();
+    this.setupInput();
+    this.setupUiScene();
+
+    EventBus.emit("current-scene-ready", this);
+    EventBus.emit("map-entered", { mapId: this.map.id, name: this.map.name });
+  }
+
+  update() {
+    if (
+      this.moving ||
+      this.transferring ||
+      this.runActive ||
+      this.battleStarting ||
+      this.isUiBusy()
+    ) {
+      return;
+    }
+    const dir = this.readDirection();
+    if (dir) this.tryMove(dir);
+  }
+
+  private setupCamera() {
     const cam = this.cameras.main;
     cam.setZoom(ZOOM);
-    cam.setBounds(0, 0, widthPx, heightPx);
+    cam.setBounds(
+      0,
+      0,
+      this.map.grid[0].length * TILE_SIZE,
+      this.map.grid.length * TILE_SIZE,
+    );
     cam.startFollow(this.player, true);
     /* startFollow 直後にカメラ位置を確定させてからフェードインを重ねる */
     cam.centerOn(this.player.x, this.player.y);
     fadeIn(this);
+  }
 
+  private setupInput() {
     const keyboard = this.input.keyboard!;
     this.cursors = keyboard.createCursorKeys();
     this.wasd = {
@@ -165,8 +170,9 @@ export class FieldScene extends Scene {
       this.pointerHeld = true;
     });
     this.input.on("pointerup", () => (this.pointerHeld = false));
+  }
 
-    /* 常駐UIシーンを確保 (初回のみ起動) */
+  private setupUiScene() {
     if (!this.scene.isActive("Ui")) {
       this.scene.launch("Ui");
     }
@@ -188,131 +194,28 @@ export class FieldScene extends Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
       EventBus.off("menu-button-pressed", onMenuButton),
     );
+
     /* Ui の create 完了を待ってからマップ名を出す */
     this.time.delayedCall(50, () => this.ui.showMapName?.(this.map.name));
-
-    EventBus.emit("current-scene-ready", this);
-    EventBus.emit("map-entered", { mapId: this.map.id, name: this.map.name });
-  }
-
-  update() {
-    if (
-      this.moving ||
-      this.transferring ||
-      this.runActive ||
-      this.battleStarting ||
-      this.isUiBusy()
-    ) {
-      return;
-    }
-    const dir = this.readDirection();
-    if (dir) this.tryMove(dir);
   }
 
   private isUiBusy(): boolean {
     return typeof this.ui?.isBusy === "function" && this.ui.isBusy();
   }
 
-  /* E2E・デバッグ用: 別マップの spawn へ移動する */
-  debugWarp(mapId: string, spawn: string): void {
-    this.transferTo(mapId, spawn);
-  }
-
-  /* E2E・デバッグ用: 現在マップ内の任意タイルへ移動する */
-  debugTeleport(x: number, y: number, facing: string): void {
-    const dir: Dir = (["up", "down", "left", "right"] as const).includes(
-      facing as Dir,
-    )
-      ? (facing as Dir)
-      : "down";
-    this.gridX = x;
-    this.gridY = y;
-    this.facing = dir;
-    this.moving = false;
-    this.player.setPosition(...this.tileCenter(x, y));
-    this.applyHeroFacing();
+  private saveLocation() {
     updateSave((save) => ({
       ...save,
-      location: { mapId: this.map.id, x, y, facing: dir },
+      location: {
+        mapId: this.map.id,
+        x: this.gridX,
+        y: this.gridY,
+        facing: this.facing,
+      },
     }));
   }
 
-  /* ---------- 描画 ---------- */
-
-  private buildMapLayer() {
-    /*
-     * タイルごとに静的 Image を置く。
-     * DynamicTexture への一括焼き込みも試したが、Phaser 4.2 では draw() が
-     * 描画されなかった (M4スパイクの結論)。マップは最大でも数千タイルなので
-     * 静的 Image で十分。性能が問題になったらチャンク化を検討する。
-     */
-    this.map.grid.forEach((row, y) => {
-      [...row].forEach((ch, x) => {
-        const spec = this.map.legend[ch];
-        if (!spec) return;
-        this.add
-          .image(...this.tileCenter(x, y), tileTextureKey(spec.art))
-          .setDepth(0);
-      });
-    });
-  }
-
-  private buildNpcs() {
-    const flags = getSave().flags;
-    for (const npc of this.map.npcs) {
-      if (npc.hideIf && evalCond(npc.hideIf, flags)) continue;
-      const sprite = this.add
-        .image(...this.tileCenter(npc.x, npc.y), actorTextureKey(npc.art))
-        .setDepth(5);
-      this.npcSprites.set(npc.id, sprite);
-    }
-  }
-
-  /* hideIf つき NPC がフラグ変化で消えるのを反映する */
-  private refreshNpcs() {
-    const flags = getSave().flags;
-    for (const npc of this.map.npcs) {
-      if (!npc.hideIf) continue;
-      const sprite = this.npcSprites.get(npc.id);
-      if (sprite && evalCond(npc.hideIf, flags)) {
-        sprite.destroy();
-        this.npcSprites.delete(npc.id);
-      }
-    }
-  }
-
-  /* 宝箱など、見た目を持つイベントを描画する (onceFlag 済みなら出さない) */
-  private buildEventSprites() {
-    const flags = getSave().flags;
-    for (const ev of this.map.events) {
-      if (!ev.art) continue;
-      if (ev.onceFlag && evalCond({ flag: ev.onceFlag, op: "set" }, flags)) {
-        continue;
-      }
-      const sprite = this.add
-        .image(...this.tileCenter(ev.x, ev.y), tileTextureKey(ev.art))
-        .setDepth(4);
-      this.eventSprites.set(ev.id, sprite);
-    }
-  }
-
-  private refreshEventSprites() {
-    const flags = getSave().flags;
-    for (const ev of this.map.events) {
-      const sprite = this.eventSprites.get(ev.id);
-      if (!sprite) continue;
-      if (ev.onceFlag && evalCond({ flag: ev.onceFlag, op: "set" }, flags)) {
-        sprite.destroy();
-        this.eventSprites.delete(ev.id);
-      }
-    }
-  }
-
   /* ---------- 移動 ---------- */
-
-  private tileCenter(x: number, y: number): [number, number] {
-    return [x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2];
-  }
 
   private readDirection(): Dir | null {
     if (this.cursors.up.isDown || this.wasd.W.isDown) return "up";
@@ -320,8 +223,7 @@ export class FieldScene extends Scene {
     if (this.cursors.left.isDown || this.wasd.A.isDown) return "left";
     if (this.cursors.right.isDown || this.wasd.D.isDown) return "right";
     if (this.pointerHeld) {
-      const pointer = this.input.activePointer;
-      const world = pointer.positionToCamera(
+      const world = this.input.activePointer.positionToCamera(
         this.cameras.main,
       ) as Phaser.Math.Vector2;
       const dx = world.x - this.player.x;
@@ -341,30 +243,20 @@ export class FieldScene extends Scene {
     if (x < 0 || x >= row.length) return false;
     const spec = this.map.legend[row[x]];
     if (!spec || !spec.walkable) return false;
-    /* 表示中の NPC がふさぐ (hideIf で消えた NPC は通れる) */
-    if (
-      this.map.npcs.some(
-        (n) => n.x === x && n.y === y && this.npcSprites.has(n.id),
-      )
-    ) {
+    /* 表示中の NPC・宝箱がふさぐ (hideIf/onceFlag で消えたものは通れる) */
+    if (this.map.npcs.some((n) => n.x === x && n.y === y && this.view.hasNpc(n.id))) {
       return false;
     }
-    /* 見えている宝箱などのイベントもふさぐ */
-    for (const ev of this.map.events) {
-      if (ev.x === x && ev.y === y && this.eventSprites.has(ev.id)) return false;
-    }
-    return true;
+    return !this.map.events.some(
+      (e) => e.x === x && e.y === y && this.view.hasEventSprite(e.id),
+    );
   }
 
   /* 向きに応じて勇者のスプライトを切り替える (下=正面/上=後ろ/左右=横+反転) */
   private applyHeroFacing() {
     if (!this.player) return;
     const art =
-      this.facing === "up"
-        ? "heroUp"
-        : this.facing === "down"
-          ? "hero"
-          : "heroSide";
+      this.facing === "up" ? "heroUp" : this.facing === "down" ? "hero" : "heroSide";
     this.player.setTexture(actorTextureKey(art));
     this.player.setFlipX(this.facing === "left");
   }
@@ -380,7 +272,7 @@ export class FieldScene extends Scene {
     this.moving = true;
     this.gridX = nx;
     this.gridY = ny;
-    const [px, py] = this.tileCenter(nx, ny);
+    const [px, py] = tileCenter(nx, ny);
     this.tweens.add({
       targets: this.player,
       x: px,
@@ -393,46 +285,39 @@ export class FieldScene extends Scene {
     });
   }
 
-  /* 1歩ごとの処理: 座標イベント → イベントランナー */
+  /* 1歩ごとの処理: 座標イベント → エンカウント */
   private onStep() {
-    updateSave((save) => ({
-      ...save,
-      location: {
-        mapId: this.map.id,
-        x: this.gridX,
-        y: this.gridY,
-        facing: this.facing,
-      },
-    }));
+    this.saveLocation();
 
     const event = this.findEvent("step", this.gridX, this.gridY);
     if (event) {
       this.runEvent(event);
       return;
     }
+    this.countEncounterStep();
+  }
 
-    /* ランダムエンカウント (encounter属性のタイルのみカウント) */
+  /* ---------- エンカウント ---------- */
+
+  private resetEncounterCounter() {
+    const table = this.map?.encounterTableId
+      ? getEncounterTable(this.map.encounterTableId)
+      : undefined;
+    this.stepsToEncounter = table ? rollEncounterSteps(table, this.rng) : Infinity;
+  }
+
+  private countEncounterStep() {
     const tile = this.map.legend[this.map.grid[this.gridY][this.gridX]];
-    if (tile?.encounter && this.map.encounterTableId) {
-      this.stepsToEncounter -= 1;
-      if (this.stepsToEncounter <= 0) {
-        const table = getEncounterTable(this.map.encounterTableId);
-        if (table) {
-          const sum = table.groups.reduce((s, g) => s + g.weight, 0);
-          let roll = this.rng() * sum;
-          let group = table.groups[table.groups.length - 1];
-          for (const g of table.groups) {
-            roll -= g.weight;
-            if (roll <= 0) {
-              group = g;
-              break;
-            }
-          }
-          this.resetEncounterCounter();
-          this.startBattle({ monsterIds: group.monsterIds, boss: false });
-        }
-      }
-    }
+    if (!tile?.encounter || !this.map.encounterTableId) return;
+    this.stepsToEncounter -= 1;
+    if (this.stepsToEncounter > 0) return;
+    const table = getEncounterTable(this.map.encounterTableId);
+    if (!table) return;
+    this.resetEncounterCounter();
+    this.startBattle({
+      monsterIds: pickEncounterGroup(table, this.rng),
+      boss: false,
+    });
   }
 
   /* ---------- 戦闘 ---------- */
@@ -456,7 +341,7 @@ export class FieldScene extends Scene {
         }));
         autosave();
       }
-      this.refreshEventSprites();
+      this.view.refresh(getSave().flags);
       const advance = this.pendingBattleAdvance;
       this.pendingBattleAdvance = null;
       advance?.(true);
@@ -472,7 +357,7 @@ export class FieldScene extends Scene {
     /* 全滅: ペナルティなしで ほこら (checkpoint) へ。HP/MP全回復 */
     this.pendingBattleAdvance = null;
     this.runActive = false;
-    const save = getSave();
+    const checkpoint = getSave().checkpoint;
     updateSave((s) => ({
       ...s,
       party: s.party.map((m) => {
@@ -483,29 +368,30 @@ export class FieldScene extends Scene {
     autosave();
     this.ui.showMessage(
       ["めのまえが まっくらに なった…", "…だいじょうぶ。", "もういちど ちょうせんしよう!"],
-      () => {
-        this.transferTo(save.checkpoint.mapId, save.checkpoint.spawn);
-      },
+      () => this.transferTo(checkpoint.mapId, checkpoint.spawn),
     );
   }
 
   /* ---------- 調べる / 話しかける ---------- */
 
+  private canAct(): boolean {
+    return (
+      !this.moving &&
+      !this.transferring &&
+      !this.runActive &&
+      !this.battleStarting &&
+      !this.isUiBusy() &&
+      this.time.now - this.lastRunEndAt >= INTERACT_COOLDOWN_MS
+    );
+  }
+
   private interact() {
-    if (
-      this.moving ||
-      this.transferring ||
-      this.runActive ||
-      this.isUiBusy() ||
-      this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS
-    ) {
-      return;
-    }
+    if (!this.canAct()) return;
     const { dx, dy } = DELTA[this.facing];
     this.interactAt(this.gridX + dx, this.gridY + dy);
   }
 
-  /* タップした隣接タイルの NPC・宝箱に触れる。処理したら true */
+  /* タップ: 自分=メニュー / 隣接タイルの NPC・宝箱=しらべる。処理したら true */
   private tryPointerInteract(pointer: Phaser.Input.Pointer): boolean {
     if (this.moving || this.runActive) return false;
     if (this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS) return false;
@@ -514,18 +400,13 @@ export class FieldScene extends Scene {
     ) as Phaser.Math.Vector2;
     const tx = Math.floor(world.x / TILE_SIZE);
     const ty = Math.floor(world.y / TILE_SIZE);
-    /* 自分をタップ → ステータスメニュー (タブレット向けの導線) */
     if (tx === this.gridX && ty === this.gridY) {
       this.openStatusMenu();
       return true;
     }
-    const adjacent =
-      Math.abs(tx - this.gridX) + Math.abs(ty - this.gridY) === 1;
-    if (!adjacent) return false;
-    if (!this.findNpc(tx, ty) && !this.findEvent("inspect", tx, ty)) {
-      return false;
-    }
-    /* 向きを合わせてから実行 */
+    if (Math.abs(tx - this.gridX) + Math.abs(ty - this.gridY) !== 1) return false;
+    if (!this.findNpc(tx, ty) && !this.findEvent("inspect", tx, ty)) return false;
+
     if (tx > this.gridX) this.facing = "right";
     else if (tx < this.gridX) this.facing = "left";
     else if (ty > this.gridY) this.facing = "down";
@@ -547,7 +428,7 @@ export class FieldScene extends Scene {
 
   private findNpc(x: number, y: number): NpcDef | undefined {
     return this.map.npcs.find(
-      (n) => n.x === x && n.y === y && this.npcSprites.has(n.id),
+      (n) => n.x === x && n.y === y && this.view.hasNpc(n.id),
     );
   }
 
@@ -567,14 +448,12 @@ export class FieldScene extends Scene {
   }
 
   private talkTo(npc: NpcDef) {
-    const flags = getSave().flags;
-    const entry = npc.dialog.find((d) => evalCond(d.if, flags));
+    const entry = npc.dialog.find((d) => evalCond(d.if, getSave().flags));
     if (!entry) return;
-    const commands: EventCommand[] = [
+    this.runCommands([
       { type: "message", pages: entry.pages },
       ...(entry.then ?? []),
-    ];
-    this.runCommands(commands);
+    ]);
   }
 
   private runEvent(event: MapEvent) {
@@ -584,59 +463,15 @@ export class FieldScene extends Scene {
     this.runCommands(commands);
   }
 
-  /* ---------- ステータスメニュー (つよさ・じゅもん・どうぐ) ---------- */
+  /* ---------- ステータスメニュー ---------- */
 
   private openStatusMenu() {
-    if (
-      !this.scene.isActive() /* 戦闘中 (sleep) は開かない */ ||
-      this.moving ||
-      this.transferring ||
-      this.runActive ||
-      this.battleStarting ||
-      this.isUiBusy() ||
-      this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS
-    ) {
-      return;
-    }
-    const save = getSave();
-    const hero = save.party.find((m) => m.memberId === "hero");
-    if (!hero) return;
-    const stats = heroStats(hero.level);
-    const nextNeed = Math.max(0, expForLevel(hero.level + 1) - hero.exp);
-
-    const spellNames = hero.learnedSpells
-      .map((id) => getSpell(id)?.name)
-      .filter((n): n is string => !!n);
-    const itemLines = Object.entries(save.inventory.items)
-      .filter(([, count]) => count > 0)
-      .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
-
+    /* 戦闘中 (sleep) は開かない */
+    if (!this.scene.isActive() || !this.canAct()) return;
+    const sections = buildStatusSections(getSave());
+    if (!sections) return;
     this.runActive = true;
-    this.ui.showStatusPanel(
-      [
-        {
-          title: "つよさ",
-          body: [
-            `ゆうしゃ  レベル ${hero.level}   ゴールド ${save.inventory.gold}G`,
-            `HP ${Math.min(hero.hp, stats.maxHp)}/${stats.maxHp}   MP ${Math.min(hero.mp, stats.maxMp)}/${stats.maxMp}`,
-            `こうげき ${stats.atk}   しゅび ${stats.def}   すばやさ ${stats.agi}`,
-            `つぎのレベルまで あと ${nextNeed}`,
-          ].join("\n"),
-        },
-        {
-          title: "じゅもん・とくぎ",
-          body:
-            spellNames.length > 0
-              ? spellNames.join("、")
-              : "まだ おぼえていない。まなびやで テストに ちょうせん しよう!",
-        },
-        {
-          title: "もちもの",
-          body: itemLines.length > 0 ? itemLines.join("、") : "なにも もっていない。",
-        },
-      ],
-      () => this.finishRun(),
-    );
+    this.ui.showStatusPanel(sections, () => this.finishRun());
   }
 
   /* ---------- イベントランナー駆動 ---------- */
@@ -676,36 +511,18 @@ export class FieldScene extends Scene {
           this.transferTo(effect.mapId, effect.spawn);
           break;
         case "savePoint":
-          updateSave((save) => ({
-            ...save,
-            checkpoint: {
+          handleSavePoint(
+            this.ui,
+            {
               mapId: this.map.id,
               spawn: this.map.spawns.save ? "save" : "start",
             },
-          }));
-          autosave();
-          this.ui.showMessage(["ぼうけんを きろくした!"], () => advance());
-          break;
-        case "healInn": {
-          const save = getSave();
-          if (save.inventory.gold < effect.price) {
-            this.ui.showMessage(["おかねが たりないみたい…"], () => advance());
-            break;
-          }
-          updateSave((s) => ({
-            ...s,
-            inventory: { ...s.inventory, gold: s.inventory.gold - effect.price },
-            party: s.party.map((m) => {
-              const stats = heroStats(m.level);
-              return { ...m, hp: stats.maxHp, mp: stats.maxMp };
-            }),
-          }));
-          autosave();
-          this.ui.showMessage(["ゆっくり やすんで…", "げんきに なった!"], () =>
-            advance(),
+            () => advance(),
           );
           break;
-        }
+        case "healInn":
+          handleHealInn(this.ui, effect.price, () => advance());
+          break;
         case "battle":
           /* 勝利したらランナー再開 (winFlag は onBattleResult が立てる)。
              敗北時は onBattleResult がラン中断+ほこら復帰を行う */
@@ -718,109 +535,12 @@ export class FieldScene extends Scene {
             winFlag: effect.winFlag,
           });
           break;
-        case "openSpellTest": {
-          /* React の SpellTestScreen に委譲。合格なら習得 (設計 A4) */
-          const alreadyLearned = getSave().party.some((m) =>
-            m.learnedSpells.includes(effect.spellId),
-          );
-          if (alreadyLearned) {
-            this.ui.showMessage(["その じゅもんは もう おぼえているよ!"], () =>
-              advance(),
-            );
-            break;
-          }
-          const onFinished = (result: {
-            spellId: string;
-            passed: boolean;
-            correct: number;
-            total: number;
-          }) => {
-            if (result.spellId !== effect.spellId) return;
-            EventBus.off("spell-test-finished", onFinished);
-            const spellName = getSpell(result.spellId)?.name ?? result.spellId;
-            if (result.passed) {
-              updateSave((s) => ({
-                ...s,
-                /* ストーリーゲート用に learned.<spellId> フラグも立てる */
-                flags: { ...s.flags, [`learned.${result.spellId}`]: true },
-                party: s.party.map((m) =>
-                  m.memberId === "hero" &&
-                  !m.learnedSpells.includes(result.spellId)
-                    ? { ...m, learnedSpells: [...m.learnedSpells, result.spellId] }
-                    : m,
-                ),
-              }));
-              autosave();
-              this.ui.showMessage(
-                [
-                  `${result.total}もん中 ${result.correct}もん せいかい!`,
-                  `ごうかく! ${spellName}を おぼえた!`,
-                ],
-                () => advance(),
-              );
-            } else {
-              this.ui.showMessage(
-                [
-                  `${result.total}もん中 ${result.correct}もん せいかい…`,
-                  "あと すこし! また ちょうせん してね。",
-                ],
-                () => advance(),
-              );
-            }
-          };
-          EventBus.on("spell-test-finished", onFinished);
-          EventBus.emit("open-spell-test", { spellId: effect.spellId });
+        case "openSpellTest":
+          handleSpellTest(this.ui, effect.spellId, () => advance());
           break;
-        }
-        case "openShop": {
-          /* 品物リストから選んで買う (設計変更 2026-07-22: 一覧選択式) */
-          const shop = SHOPS[effect.shopId];
-          const items = (shop?.itemIds ?? [])
-            .map((id) => getItem(id))
-            .filter((it): it is NonNullable<typeof it> => !!it);
-          if (items.length === 0) {
-            this.ui.showMessage(["いまは しなぎれ みたい。"], () => advance());
-            break;
-          }
-          const openList = () => {
-            const save = getSave();
-            const options = [
-              ...items.map((it) => `${it.name}  ${it.price}G`),
-              "やめる",
-            ];
-            this.ui.showList(
-              `なにを かう? (もちがね ${save.inventory.gold}G)`,
-              options,
-              (index) => {
-                if (index === null || index >= items.length) {
-                  this.ui.showMessage(["まいど ありがとう!"], () => advance());
-                  return;
-                }
-                const item = items[index];
-                if (getSave().inventory.gold < item.price) {
-                  this.ui.showMessage(["おかねが たりないよ…"], () => openList());
-                  return;
-                }
-                updateSave((s) => ({
-                  ...s,
-                  inventory: {
-                    gold: s.inventory.gold - item.price,
-                    items: {
-                      ...s.inventory.items,
-                      [item.id]: (s.inventory.items[item.id] ?? 0) + 1,
-                    },
-                  },
-                }));
-                autosave();
-                this.ui.showMessage([`${item.name}を てにいれた!`], () =>
-                  openList(),
-                );
-              },
-            );
-          };
-          openList();
+        case "openShop":
+          handleShop(this.ui, effect.shopId, () => advance());
           break;
-        }
       }
     };
 
@@ -830,23 +550,11 @@ export class FieldScene extends Scene {
   private finishRun() {
     this.runActive = false;
     this.lastRunEndAt = this.time.now;
-    this.refreshEventSprites();
-    this.refreshNpcs();
+    this.view.refresh(getSave().flags);
     autosave();
   }
 
   private transferTo(mapId: string, spawn: string) {
-    (
-      (window as unknown as Record<string, unknown[]>).__KAZUQUEST_TRACE__ ??=
-        []
-    ).push({
-      t: Math.round(performance.now()),
-      ev: "transferTo",
-      from: this.map.id,
-      to: mapId,
-      spawn,
-      blocked: this.transferring,
-    });
     if (this.transferring) return;
     this.transferring = true;
     const target = getMapDef(mapId);
@@ -864,5 +572,26 @@ export class FieldScene extends Scene {
     fadeOutThen(this, () => {
       this.scene.restart({ mapId, spawn });
     });
+  }
+
+  /* ---------- E2E・デバッグ用フック ---------- */
+
+  debugWarp(mapId: string, spawn: string): void {
+    this.transferTo(mapId, spawn);
+  }
+
+  debugTeleport(x: number, y: number, facing: string): void {
+    const dir: Dir = (["up", "down", "left", "right"] as const).includes(
+      facing as Dir,
+    )
+      ? (facing as Dir)
+      : "down";
+    this.gridX = x;
+    this.gridY = y;
+    this.facing = dir;
+    this.moving = false;
+    this.player.setPosition(...tileCenter(x, y));
+    this.applyHeroFacing();
+    this.saveLocation();
   }
 }
