@@ -1,5 +1,6 @@
 import { Scene } from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
+import { EventBus } from "../EventBus";
 
 /*
  * 常駐オーバーレイシーン。DQ風のメッセージウィンドウと はい/いいえ 選択を描く。
@@ -33,6 +34,8 @@ export class UiScene extends Scene {
   private listOptions: string[] = [];
   private listIndex = 0;
   private mapLabel?: Phaser.GameObjects.Text;
+  private statusPanel?: Phaser.GameObjects.Container;
+  private statusOnClose: (() => void) | null = null;
 
   constructor() {
     super({ key: "Ui", active: false });
@@ -51,13 +54,138 @@ export class UiScene extends Scene {
       this.moveChoice();
       this.moveList(1);
     });
-    this.input.keyboard?.on("keydown-X", () => this.cancelList());
+    this.input.keyboard?.on("keydown-X", () => {
+      this.cancelList();
+      this.closeStatusPanel();
+    });
+
+    this.buildMenuButton();
   }
 
   isBusy(): boolean {
     return (
-      this.job !== null || this.choiceResolve !== null || this.listResolve !== null
+      this.job !== null ||
+      this.choiceResolve !== null ||
+      this.listResolve !== null ||
+      this.statusPanel !== undefined
     );
+  }
+
+  /* ---------- 常設メニューボタン ---------- */
+
+  private buildMenuButton() {
+    const w = 132;
+    const h = 48;
+    const x = GAME_WIDTH - w / 2 - 16;
+    const y = h / 2 + 14;
+    const frame = this.add.rectangle(0, 0, w, h, 0xffffff, 1);
+    const box = this.add.rectangle(0, 0, w - 6, h - 6, 0x1a2f55, 0.95);
+    const label = this.add
+      .text(0, 0, "メニュー", {
+        fontFamily: "sans-serif",
+        fontSize: "22px",
+        fontStyle: "bold",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+    const button = this.add.container(x, y, [frame, box, label]).setDepth(18);
+    frame
+      .setInteractive()
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation();
+          if (this.statusPanel) {
+            this.closeStatusPanel();
+          } else {
+            EventBus.emit("menu-button-pressed");
+          }
+        },
+      );
+    button.setAlpha(0.92);
+  }
+
+  /* ---------- ステータスパネル (いつでも開ける全体表示) ---------- */
+
+  showStatusPanel(
+    sections: { title: string; body: string }[],
+    onClose: () => void,
+  ): void {
+    this.closeStatusPanel();
+    this.statusOnClose = onClose;
+
+    const w = GAME_WIDTH - 260;
+    const h = GAME_HEIGHT - 120;
+    const frame = this.add.rectangle(0, 0, w + 8, h + 8, 0xffffff, 1);
+    const box = this.add.rectangle(0, 0, w, h, 0x000000, 0.94);
+    const children: Phaser.GameObjects.GameObject[] = [frame, box];
+
+    let cursorY = -h / 2 + 24;
+    for (const section of sections) {
+      const title = this.add.text(-w / 2 + 28, cursorY, section.title, {
+        fontFamily: "sans-serif",
+        fontSize: "24px",
+        fontStyle: "bold",
+        color: "#ffd93d",
+      });
+      children.push(title);
+      cursorY += 36;
+      const body = this.add.text(-w / 2 + 44, cursorY, section.body, {
+        fontFamily: "sans-serif",
+        fontSize: "22px",
+        color: "#ffffff",
+        lineSpacing: 8,
+        wordWrap: { width: w - 88 },
+      });
+      children.push(body);
+      cursorY += body.height + 22;
+    }
+
+    /* 右下に置いて本文との重なりを避ける */
+    const closeX = w / 2 - 110;
+    const closeFrame = this.add.rectangle(closeX, h / 2 - 40, 180, 52, 0xffffff, 1);
+    const closeBox = this.add.rectangle(closeX, h / 2 - 40, 174, 46, 0x8a2f1c, 0.95);
+    const closeLabel = this.add
+      .text(closeX, h / 2 - 40, "とじる", {
+        fontFamily: "sans-serif",
+        fontSize: "24px",
+        fontStyle: "bold",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+    closeFrame
+      .setInteractive()
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation();
+          this.closeStatusPanel();
+        },
+      );
+    children.push(closeFrame, closeBox, closeLabel);
+
+    this.statusPanel = this.add
+      .container(GAME_WIDTH / 2, GAME_HEIGHT / 2, children)
+      .setDepth(16);
+  }
+
+  private closeStatusPanel() {
+    if (!this.statusPanel) return;
+    this.statusPanel.destroy();
+    this.statusPanel = undefined;
+    const onClose = this.statusOnClose;
+    this.statusOnClose = null;
+    onClose?.();
   }
 
   /* ---------- メッセージウィンドウ ---------- */
@@ -127,6 +255,10 @@ export class UiScene extends Scene {
   }
 
   private onAdvance() {
+    if (this.statusPanel) {
+      this.closeStatusPanel();
+      return;
+    }
     if (this.listResolve) {
       this.resolveList(this.listIndex);
       return;

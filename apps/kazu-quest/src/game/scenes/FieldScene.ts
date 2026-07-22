@@ -132,6 +132,7 @@ export class FieldScene extends Scene {
     this.player = this.add
       .image(...this.tileCenter(this.gridX, this.gridY), actorTextureKey("hero"))
       .setDepth(10);
+    this.applyHeroFacing();
 
     const widthPx = this.map.grid[0].length * TILE_SIZE;
     const heightPx = this.map.grid.length * TILE_SIZE;
@@ -179,6 +180,14 @@ export class FieldScene extends Scene {
         if (data) this.onBattleResult(data);
       },
     );
+
+    /* 常設メニューボタン (UiScene) → ステータスパネル。restart で重複登録
+       しないよう shutdown で解除する */
+    const onMenuButton = () => this.openStatusMenu();
+    EventBus.on("menu-button-pressed", onMenuButton);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
+      EventBus.off("menu-button-pressed", onMenuButton),
+    );
     /* Ui の create 完了を待ってからマップ名を出す */
     this.time.delayedCall(50, () => this.ui.showMapName?.(this.map.name));
 
@@ -221,6 +230,7 @@ export class FieldScene extends Scene {
     this.facing = dir;
     this.moving = false;
     this.player.setPosition(...this.tileCenter(x, y));
+    this.applyHeroFacing();
     updateSave((save) => ({
       ...save,
       location: { mapId: this.map.id, x, y, facing: dir },
@@ -346,8 +356,22 @@ export class FieldScene extends Scene {
     return true;
   }
 
+  /* 向きに応じて勇者のスプライトを切り替える (下=正面/上=後ろ/左右=横+反転) */
+  private applyHeroFacing() {
+    if (!this.player) return;
+    const art =
+      this.facing === "up"
+        ? "heroUp"
+        : this.facing === "down"
+          ? "hero"
+          : "heroSide";
+    this.player.setTexture(actorTextureKey(art));
+    this.player.setFlipX(this.facing === "left");
+  }
+
   private tryMove(dir: Dir) {
     this.facing = dir;
+    this.applyHeroFacing();
     const { dx, dy } = DELTA[dir];
     const nx = this.gridX + dx;
     const ny = this.gridY + dy;
@@ -506,6 +530,7 @@ export class FieldScene extends Scene {
     else if (tx < this.gridX) this.facing = "left";
     else if (ty > this.gridY) this.facing = "down";
     else this.facing = "up";
+    this.applyHeroFacing();
     this.interactAt(tx, ty);
     return true;
   }
@@ -563,6 +588,7 @@ export class FieldScene extends Scene {
 
   private openStatusMenu() {
     if (
+      !this.scene.isActive() /* 戦闘中 (sleep) は開かない */ ||
       this.moving ||
       this.transferring ||
       this.runActive ||
@@ -578,33 +604,38 @@ export class FieldScene extends Scene {
     const stats = heroStats(hero.level);
     const nextNeed = Math.max(0, expForLevel(hero.level + 1) - hero.exp);
 
-    const statusPage = [
-      `ゆうしゃ  レベル ${hero.level}`,
-      `HP ${Math.min(hero.hp, stats.maxHp)}/${stats.maxHp}  MP ${Math.min(hero.mp, stats.maxMp)}/${stats.maxMp}`,
-      `こうげき ${stats.atk}  しゅび ${stats.def}  すばやさ ${stats.agi}`,
-      `つぎのレベルまで あと ${nextNeed}`,
-      `ゴールド ${save.inventory.gold}G`,
-    ].join("\n");
-
     const spellNames = hero.learnedSpells
       .map((id) => getSpell(id)?.name)
       .filter((n): n is string => !!n);
-    const spellPage =
-      spellNames.length > 0
-        ? `おぼえた じゅもん・とくぎ:\n${spellNames.join("、")}`
-        : "じゅもんは まだ おぼえていない。\nまなびやで テストに ちょうせん しよう!";
-
     const itemLines = Object.entries(save.inventory.items)
       .filter(([, count]) => count > 0)
       .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
-    const itemPage =
-      itemLines.length > 0
-        ? `もちもの:\n${itemLines.join("、")}`
-        : "もちものは なにも ない。";
 
     this.runActive = true;
-    this.ui.showMessage([statusPage, spellPage, itemPage], () =>
-      this.finishRun(),
+    this.ui.showStatusPanel(
+      [
+        {
+          title: "つよさ",
+          body: [
+            `ゆうしゃ  レベル ${hero.level}   ゴールド ${save.inventory.gold}G`,
+            `HP ${Math.min(hero.hp, stats.maxHp)}/${stats.maxHp}   MP ${Math.min(hero.mp, stats.maxMp)}/${stats.maxMp}`,
+            `こうげき ${stats.atk}   しゅび ${stats.def}   すばやさ ${stats.agi}`,
+            `つぎのレベルまで あと ${nextNeed}`,
+          ].join("\n"),
+        },
+        {
+          title: "じゅもん・とくぎ",
+          body:
+            spellNames.length > 0
+              ? spellNames.join("、")
+              : "まだ おぼえていない。まなびやで テストに ちょうせん しよう!",
+        },
+        {
+          title: "もちもの",
+          body: itemLines.length > 0 ? itemLines.join("、") : "なにも もっていない。",
+        },
+      ],
+      () => this.finishRun(),
     );
   }
 
