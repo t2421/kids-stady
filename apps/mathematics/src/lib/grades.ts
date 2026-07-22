@@ -16,8 +16,10 @@ export interface Lesson {
 export interface BossDef {
   name: string;
   hp: number;
-  /* 通常ショットで削れるHPの上限割合。残りは必殺技でしか削れない */
-  chipCap: number;
+  /* 通常ショット1ダメージあたりの実効ダメージ倍率 (小さく削れる) */
+  chipScale: number;
+  /* ?ドローン正解で自動発動する必殺技のダメージ */
+  beamDamage: number;
 }
 
 export interface OutputDef {
@@ -79,7 +81,7 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g1_add_carry", "g1_sub_borrow"],
       answerTimeMs: 8000,
       durationSec: 100,
-      boss: { name: "けいさんキング・イチ", hp: 100, chipCap: 0.15 },
+      boss: { name: "けいさんキング・イチ", hp: 100, chipScale: 0.3, beamDamage: 25 },
     },
   },
   {

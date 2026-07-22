@@ -21,8 +21,6 @@ type EnemyKind = "ufo" | "rock" | "bird" | "red";
 type ProblemContext = "capsule" | "boss";
 
 const POWER_LADDER = ["れんしゃ", "ダブル", "ミサイル", "レーザー", "オプション", "バリア"] as const;
-const GAUGE_MAX = 3;
-const BEAM_DAMAGE = 30;
 /* 武器の持続時間: 問題を解き続けないとパワーが1段ずつ落ちていく */
 const POWER_DECAY_SEC = 8;
 
@@ -52,7 +50,6 @@ export class FlightScene extends Scene {
   private powerLevel = 0;
   private powerTimer = 0; // 現在のパワー段が落ちるまでの残り秒
   private score = 0;
-  private gauge = 0;
   private shieldCharges = 0;
   private invulnUntil = 0;
   private frozen = false;
@@ -121,11 +118,8 @@ export class FlightScene extends Scene {
       this.handleProblemDone(r);
     };
     EventBus.on("problem-done", onDone);
-    const onBeam = () => this.fireBeam();
-    EventBus.on("beam-pressed", onBeam);
     this.events.once("shutdown", () => {
       EventBus.off("problem-done", onDone);
-      EventBus.off("beam-pressed", onBeam);
       this.events.off("hud-request-state", onHudRequest);
       this.boss?.destroy();
       this.scene.stop("Hud");
@@ -139,7 +133,6 @@ export class FlightScene extends Scene {
     this.powerLevel = 0;
     this.powerTimer = 0;
     this.score = 0;
-    this.gauge = 0;
     this.shieldCharges = 0;
     this.invulnUntil = 0;
     this.frozen = false;
@@ -390,13 +383,13 @@ export class FlightScene extends Scene {
     const skillId = pickSkill(skills, this.save.skillStats);
     const problem = generate(skillId);
     this.problemContext = isDrone ? "boss" : "capsule";
+    const context = this.problemContext;
     this.openProblem(problem, this.output.answerTimeMs, (r) => {
       this.applyAnswerToSave(problem.skillId, r);
-      if (this.problemContext === "boss") {
+      if (context === "boss") {
         if (r.correct) {
-          this.gauge = Math.min(GAUGE_MAX, this.gauge + 1);
-          this.grantShield();
-          sfx.gauge();
+          /* 正解 → 自動で必殺技発動! */
+          this.fireBeam();
         } else {
           this.boss?.setAngry(true);
         }
@@ -528,11 +521,6 @@ export class FlightScene extends Scene {
     }
   }
 
-  private grantShield() {
-    this.shieldCharges = Math.max(this.shieldCharges, 1);
-    this.grantShieldSprite();
-  }
-
   private grantShieldSprite() {
     if (!this.shieldSprite) {
       this.shieldSprite = this.add.image(this.ship.x, this.ship.y, "shield-bubble");
@@ -579,14 +567,27 @@ export class FlightScene extends Scene {
     });
   }
 
+  /* 必殺技: ?ドローンの問題に正解すると自動発動する大ダメージビーム */
   private fireBeam() {
-    if (this.gauge < GAUGE_MAX || !this.boss || this.boss.isDefeated || this.frozen || this.ended) return;
-    this.gauge = 0;
+    if (!this.boss || this.boss.isDefeated || this.ended) return;
     sfx.beam();
     const beam = this.add.rectangle(GAME_WIDTH / 2, this.ship.y, GAME_WIDTH, 46, 0x9be7ff, 0.9);
     this.cameras.main.flash(300, 155, 231, 255);
+    this.cameras.main.shake(250, 0.008);
     this.tweens.add({ targets: beam, alpha: 0, duration: 500, onComplete: () => beam.destroy() });
-    this.boss.applyBeamDamage(BEAM_DAMAGE);
+    const pop = this.add
+      .text(GAME_WIDTH / 2, this.ship.y - 60, "💥 ひっさつ!", {
+        fontFamily: "sans-serif",
+        fontSize: "34px",
+        fontStyle: "bold",
+        color: "#ffd93d",
+        stroke: "#1a2a55",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+    this.tweens.add({ targets: pop, y: pop.y - 30, alpha: 0, duration: 900, onComplete: () => pop.destroy() });
+    this.boss.applyBeamDamage(this.output.boss.beamDamage);
+    this.score += 100;
     this.pushHud();
   }
 
@@ -713,8 +714,6 @@ export class FlightScene extends Scene {
       powerLevel: this.powerLevel,
       ladder: POWER_LADDER,
       score: this.score,
-      gauge: this.gauge,
-      gaugeMax: GAUGE_MAX,
       shieldCharges: this.shieldCharges,
       bossPhase: this.bossPhase,
     });

@@ -22,7 +22,7 @@ export class BossController {
   readonly def: BossDef;
   sprite: Phaser.GameObjects.Image;
   hp: number;
-  chipDamageLeft: number;
+  private chipAccum = 0; // 端数ダメージの持ち越し
   private scene: Phaser.Scene;
   private hooks: BossHooks;
   private patternTimer: Phaser.Time.TimerEvent | null = null;
@@ -36,7 +36,6 @@ export class BossController {
     this.def = def;
     this.hooks = hooks;
     this.hp = def.hp;
-    this.chipDamageLeft = Math.floor(def.hp * def.chipCap);
     this.sprite = scene.add.image(GAME_WIDTH + 120, GAME_HEIGHT / 2, "boss");
   }
 
@@ -75,12 +74,14 @@ export class BossController {
     return this.defeated;
   }
 
-  /* 通常ショットのチップダメージ (上限つき)。上限到達後は 0 */
+  /* 通常ショット: 常に当たるが chipScale 倍の小ダメージ。
+     端数は持ち越して、整数分たまったらHPに反映する */
   applyChipDamage(amount: number): number {
     if (this.defeated || !this.entered) return 0;
-    const dealt = Math.min(amount, this.chipDamageLeft);
+    this.chipAccum += amount * this.def.chipScale;
+    const dealt = Math.floor(this.chipAccum);
     if (dealt > 0) {
-      this.chipDamageLeft -= dealt;
+      this.chipAccum -= dealt;
       this.damage(dealt);
     }
     return dealt;

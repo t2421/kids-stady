@@ -1,5 +1,4 @@
 import Phaser, { Scene } from "phaser";
-import { EventBus } from "../EventBus";
 import { GAME_WIDTH } from "../main";
 import { sfx } from "../sfx";
 
@@ -8,8 +7,6 @@ interface HudState {
   powerLevel: number;
   ladder: readonly string[];
   score: number;
-  gauge: number;
-  gaugeMax: number;
   shieldCharges: number;
   bossPhase: boolean;
 }
@@ -28,9 +25,7 @@ export class HudScene extends Scene {
   private bossName!: Phaser.GameObjects.Text;
   private powerBarBg!: Phaser.GameObjects.Rectangle;
   private powerBar!: Phaser.GameObjects.Rectangle;
-  private gaugeText!: Phaser.GameObjects.Text;
-  private beamBtn!: Phaser.GameObjects.Text;
-  private gaugeFull = false;
+  private bossHint!: Phaser.GameObjects.Text;
 
   constructor() {
     super("Hud");
@@ -96,24 +91,18 @@ export class HudScene extends Scene {
       .setOrigin(0, 0.5)
       .setVisible(false);
 
-    /* 必殺技ゲージ+ボタン (右下) */
-    this.gaugeText = this.add
-      .text(GAME_WIDTH - 14, 486, "", { fontFamily: "sans-serif", fontSize: "18px" })
-      .setOrigin(1, 1);
-    this.beamBtn = this.add
-      .text(GAME_WIDTH - 14, 522, "💥 ひっさつ!", {
+    /* ボス戦の案内 (右下): ?ドローンを取って正解すれば必殺技 */
+    this.bossHint = this.add
+      .text(GAME_WIDTH - 14, 522, "❓を とって せいかい → 💥ひっさつ!", {
         fontFamily: "sans-serif",
-        fontSize: "20px",
+        fontSize: "17px",
         fontStyle: "bold",
-        color: "#5a6d92",
+        color: "#9be7ff",
         backgroundColor: "#13264a",
         padding: { x: 12, y: 8 },
       })
       .setOrigin(1, 1)
-      .setInteractive({ useHandCursor: true });
-    this.beamBtn.on("pointerdown", () => {
-      if (this.gaugeFull) EventBus.emit("beam-pressed");
-    });
+      .setVisible(false);
 
     flight.events.on("hud-state", this.onState, this);
     flight.events.on("hud-time", this.onTime, this);
@@ -148,17 +137,7 @@ export class HudScene extends Scene {
       }
     });
 
-    this.gaugeFull = s.gauge >= s.gaugeMax;
-    if (s.bossPhase) {
-      this.gaugeText.setText("⚡".repeat(s.gauge) + "・".repeat(Math.max(0, s.gaugeMax - s.gauge)));
-      this.beamBtn.setColor(this.gaugeFull ? "#0b1e3a" : "#5a6d92");
-      this.beamBtn.setBackgroundColor(this.gaugeFull ? "#ffd93d" : "#13264a");
-      if (this.gaugeFull) {
-        this.tweens.add({ targets: this.beamBtn, scale: { from: 1, to: 1.08 }, duration: 300, yoyo: true });
-      }
-    } else {
-      this.gaugeText.setText("");
-    }
+    this.bossHint.setVisible(s.bossPhase);
   }
 
   private onTime(t: { left: number; total: number }) {
