@@ -4,9 +4,12 @@
   "private": true,
   "description": "マスマティクス — グラディウス風・算数シューティング (Phaser 4 + Next.js)",
   "scripts": {
+    "predev": "npm run gen:sprites",
     "dev": "next dev -p 3010",
+    "prebuild": "npm run gen:sprites",
     "build": "next build",
     "start": "next start",
+    "gen:sprites": "node scripts/gen-sprites.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
@@ -21,6 +24,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "pngjs": "^7.0.0",
     "typescript": "^5",
     "vitest": "^3"
   }

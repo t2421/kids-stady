@@ -2,22 +2,48 @@ import Phaser, { Scene } from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 
 /*
- * 起動シーン。画像ファイルは使わず、すべてのテクスチャをここで手続き生成する
- * (リポジトリ方針: バイナリアセット0)。
+ * 起動シーン。スプライトは scripts/gen-sprites.mjs が生成した
+ * ピクセルアートPNG (public/assets/sprites/) を読み込む。
+ * 星空レイヤーだけはランダム性が欲しいので手続き生成する。
  */
+
+const SPRITE_KEYS = [
+  "ship",
+  "ship-flame",
+  "enemy-ufo",
+  "enemy-rock",
+  "enemy-bird",
+  "enemy-red",
+  "boss",
+  "capsule",
+  "drone",
+  "bullet",
+  "missile",
+  "laser",
+  "ebullet",
+  "option-orb",
+  "shield-bubble",
+] as const;
+
 export class BootScene extends Scene {
   constructor() {
     super("Boot");
   }
 
+  preload() {
+    for (const key of SPRITE_KEYS) {
+      /* 相対パス: dev では /assets/…、Pages では basePath 配下に解決される */
+      this.load.image(key, `assets/sprites/${key}.png`);
+    }
+  }
+
   create() {
+    /* ピクセルアートをぼかさず拡大する */
+    for (const key of SPRITE_KEYS) {
+      this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+    }
     this.createStarTexture();
     this.createStarfieldLayers();
-    this.createShip();
-    this.createBullets();
-    this.createEnemies();
-    this.createCapsule();
-    this.createBoss();
     this.scene.start("Title");
   }
 
@@ -54,216 +80,5 @@ export class BootScene extends Scene {
       g.generateTexture(layer.key, GAME_WIDTH, GAME_HEIGHT);
       g.destroy();
     }
-  }
-
-  /* 自機: ビックバイパー風の上面視戦闘機 (ツインノーズ+後退翼) */
-  private createShip() {
-    const g = this.g();
-    const HULL = 0xdfe7f5; // シルバーホワイト
-    const SHADE = 0xa9b8d8;
-    const DARK = 0x5a6d92;
-    const RED = 0xe8483f;
-    const CANOPY = 0x35c4ff;
-    const GLOW = 0xffa93d;
-
-    /* 後退翼 (上下対称)。赤い前縁ライン付き */
-    g.fillStyle(SHADE, 1);
-    g.fillTriangle(36, 15, 8, 2, 20, 15); // 上翼
-    g.fillTriangle(36, 29, 8, 42, 20, 29); // 下翼
-    g.fillStyle(RED, 1);
-    g.fillTriangle(36, 15, 8, 2, 14, 4); // 上翼の前縁
-    g.fillTriangle(36, 29, 8, 42, 14, 40); // 下翼の前縁
-
-    /* 尾部エンジン */
-    g.fillStyle(DARK, 1);
-    g.fillRect(2, 15, 9, 14);
-    g.fillStyle(GLOW, 1);
-    g.fillEllipse(3, 22, 6, 9);
-
-    /* メイン機体 (くさび形の胴体) */
-    g.fillStyle(HULL, 1);
-    g.fillTriangle(64, 22, 26, 12, 26, 32);
-    g.fillRect(8, 14, 22, 16);
-    /* 胴体の陰影 (下半分) */
-    g.fillStyle(SHADE, 1);
-    g.fillTriangle(64, 22, 26, 22, 26, 32);
-    g.fillRect(8, 22, 22, 8);
-
-    /* ツインノーズ (ビックバイパーの象徴) */
-    g.fillStyle(HULL, 1);
-    g.fillTriangle(76, 9, 46, 5, 46, 13); // 上プロング
-    g.fillStyle(SHADE, 1);
-    g.fillTriangle(72, 35, 46, 31, 46, 39); // 下プロング
-    /* プロング間のインテーク (暗部) */
-    g.fillStyle(0x22314f, 1);
-    g.fillTriangle(62, 22, 46, 14, 46, 30);
-
-    /* 赤いアクセントストライプ */
-    g.fillStyle(RED, 1);
-    g.fillRect(24, 20, 26, 4);
-
-    /* キャノピー (青いガラス+ハイライト) */
-    g.fillStyle(CANOPY, 1);
-    g.fillEllipse(38, 18, 15, 9);
-    g.fillStyle(0xd9f5ff, 1);
-    g.fillEllipse(41, 16, 6, 3.5);
-
-    g.generateTexture("ship", 78, 44);
-    g.destroy();
-
-    /* エンジンの噴射炎 (フリッカー表示用) */
-    const fl = this.g();
-    fl.fillStyle(0xff7b2d, 0.85);
-    fl.fillTriangle(20, 5, 0, 0, 0, 10);
-    fl.fillStyle(0xffd93d, 0.95);
-    fl.fillTriangle(13, 5, 2, 2, 2, 8);
-    fl.generateTexture("ship-flame", 20, 10);
-    fl.destroy();
-
-    /* オプション (子機オーブ) */
-    const o = this.g();
-    o.fillStyle(0xffd93d, 0.35);
-    o.fillCircle(10, 10, 10);
-    o.fillStyle(0xffd93d, 1);
-    o.fillCircle(10, 10, 6);
-    o.generateTexture("option-orb", 20, 20);
-    o.destroy();
-
-    /* バリア/シールドバブル */
-    const s = this.g();
-    s.lineStyle(3, 0x7cfc9a, 0.9);
-    s.strokeCircle(34, 34, 31);
-    s.fillStyle(0x7cfc9a, 0.14);
-    s.fillCircle(34, 34, 31);
-    s.generateTexture("shield-bubble", 68, 68);
-    s.destroy();
-  }
-
-  private createBullets() {
-    /* 自機弾 */
-    const b = this.g();
-    b.fillStyle(0xffe28a, 1);
-    b.fillRoundedRect(0, 0, 14, 4, 2);
-    b.generateTexture("bullet", 14, 4);
-    b.destroy();
-
-    /* ミサイル */
-    const m = this.g();
-    m.fillStyle(0xff9f43, 1);
-    m.fillRoundedRect(0, 2, 12, 5, 2);
-    m.fillStyle(0xffdd66, 1);
-    m.fillTriangle(12, 0, 18, 4.5, 12, 9);
-    m.generateTexture("missile", 18, 9);
-    m.destroy();
-
-    /* レーザー */
-    const l = this.g();
-    l.fillStyle(0x9be7ff, 0.5);
-    l.fillRect(0, 0, 42, 8);
-    l.fillStyle(0xe6f9ff, 1);
-    l.fillRect(0, 2, 42, 4);
-    l.generateTexture("laser", 42, 8);
-    l.destroy();
-
-    /* 敵弾 */
-    const e = this.g();
-    e.fillStyle(0xff7b7b, 1);
-    e.fillCircle(5, 5, 5);
-    e.fillStyle(0xffd1d1, 1);
-    e.fillCircle(5, 5, 2.2);
-    e.generateTexture("ebullet", 10, 10);
-    e.destroy();
-  }
-
-  private createEnemies() {
-    /* プチUFO (サイン波) */
-    const u = this.g();
-    u.fillStyle(0xc86bff, 1);
-    u.fillEllipse(18, 14, 34, 12);
-    u.fillStyle(0xe8c7ff, 1);
-    u.fillEllipse(18, 9, 16, 12);
-    u.fillStyle(0xffd93d, 1);
-    [6, 18, 30].forEach((x) => u.fillCircle(x, 16, 2.2));
-    u.generateTexture("enemy-ufo", 36, 22);
-    u.destroy();
-
-    /* ぐるぐる隕石 */
-    const r = this.g();
-    r.fillStyle(0xb08968, 1);
-    r.fillCircle(16, 16, 14);
-    r.fillStyle(0x8a6a50, 1);
-    r.fillCircle(10, 12, 4);
-    r.fillCircle(22, 20, 5);
-    r.fillCircle(20, 8, 2.5);
-    r.generateTexture("enemy-rock", 32, 32);
-    r.destroy();
-
-    /* つっこみ鳥 */
-    const b = this.g();
-    b.fillStyle(0x3ec46d, 1);
-    b.fillEllipse(16, 14, 26, 16);
-    b.fillTriangle(28, 10, 38, 14, 28, 18); /* くちばし... 左向きに飛ぶので右がしっぽ */
-    b.fillStyle(0x2a9a52, 1);
-    b.fillTriangle(6, 6, 16, 14, 6, 14);
-    b.fillStyle(0xffffff, 1);
-    b.fillCircle(10, 12, 3);
-    b.fillStyle(0x0b1e3a, 1);
-    b.fillCircle(9, 12, 1.5);
-    b.generateTexture("enemy-bird", 40, 28);
-    b.destroy();
-
-    /* 赤い編隊機 (全滅で確定カプセル) */
-    const f = this.g();
-    f.fillStyle(0xff5e5e, 1);
-    f.fillTriangle(34, 4, 2, 14, 34, 24);
-    f.fillStyle(0xffb1b1, 1);
-    f.fillEllipse(22, 14, 16, 10);
-    f.generateTexture("enemy-red", 36, 28);
-    f.destroy();
-  }
-
-  private createCapsule() {
-    const c = this.g();
-    c.fillStyle(0xffd93d, 0.25);
-    c.fillCircle(20, 20, 19);
-    c.fillStyle(0xffd93d, 1);
-    c.fillCircle(20, 20, 13);
-    c.generateTexture("capsule", 40, 40);
-    c.destroy();
-
-    /* ボス戦の問題ドローン */
-    const d = this.g();
-    d.fillStyle(0x9be7ff, 0.3);
-    d.fillCircle(22, 22, 21);
-    d.fillStyle(0x5ab8ff, 1);
-    d.fillCircle(22, 22, 14);
-    d.generateTexture("drone", 44, 44);
-    d.destroy();
-  }
-
-  private createBoss() {
-    const g = this.g();
-    /* 王冠つきの大型モンスター */
-    g.fillStyle(0x8447ff, 1);
-    g.fillRoundedRect(10, 30, 120, 90, 26);
-    g.fillStyle(0x6a30d9, 1);
-    g.fillRoundedRect(10, 84, 120, 36, { tl: 0, tr: 0, bl: 26, br: 26 });
-    /* 目 */
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(45, 66, 13);
-    g.fillCircle(95, 66, 13);
-    g.fillStyle(0x0b1e3a, 1);
-    g.fillCircle(41, 66, 6);
-    g.fillCircle(91, 66, 6);
-    /* 口 */
-    g.fillStyle(0x0b1e3a, 1);
-    g.fillRoundedRect(48, 92, 44, 14, 7);
-    /* 王冠 */
-    g.fillStyle(0xffd93d, 1);
-    g.fillTriangle(40, 30, 48, 8, 58, 30);
-    g.fillTriangle(58, 30, 70, 4, 82, 30);
-    g.fillTriangle(82, 30, 92, 8, 100, 30);
-    g.generateTexture("boss", 140, 124);
-    g.destroy();
   }
 }
