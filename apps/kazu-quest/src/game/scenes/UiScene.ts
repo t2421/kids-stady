@@ -150,6 +150,35 @@ export class UiScene extends Scene {
       cursorY += body.height + 22;
     }
 
+    /* プレイヤー切替 (左下) — ProfileGate を開く */
+    const switchX = -w / 2 + 150;
+    const switchFrame = this.add.rectangle(switchX, h / 2 - 40, 240, 52, 0xffffff, 1);
+    const switchBox = this.add.rectangle(switchX, h / 2 - 40, 234, 46, 0x1a4a72, 0.95);
+    const switchLabel = this.add
+      .text(switchX, h / 2 - 40, "ちがう ひとが あそぶ", {
+        fontFamily: "sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+    switchFrame
+      .setInteractive()
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation();
+          this.closeStatusPanel();
+          EventBus.emit("request-profile-gate");
+        },
+      );
+    children.push(switchFrame, switchBox, switchLabel);
+
     /* 右下に置いて本文との重なりを避ける */
     const closeX = w / 2 - 110;
     const closeFrame = this.add.rectangle(closeX, h / 2 - 40, 180, 52, 0xffffff, 1);

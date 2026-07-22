@@ -1,9 +1,15 @@
-/* 16x16 のレトロJRPG風フィールドタイル。テクスチャ名は "tile-" + キー。 */
+/*
+ * 16x16 のレトロJRPG風フィールドタイル。テクスチャ名は "tile-" + キー。
+ * 基本地形はここ、町・城の外観は tilesTown.ts、内装は tilesInterior.ts に分割し、
+ * TILE_ART として統合する。
+ */
 import type { PixelArt } from "./format";
+import { TOWN_TILES } from "./tilesTown";
+import { INTERIOR_TILES } from "./tilesInterior";
 
 export const TILE_SIZE = 16;
 
-export const TILE_ART: Record<string, PixelArt> = {
+const BASE_TILES: Record<string, PixelArt> = {
   grass: {
     palette: { g: "#398447", G: "#4fa35a", d: "#2d6d3a", l: "#70b868" },
     rows: [
@@ -11,6 +17,25 @@ export const TILE_ART: Record<string, PixelArt> = {
       "gggggdgggglggggg", "gggggdgggGgggggg", "Gggggggggggggdgg", "gggglggggggggdgg",
       "gggggggGgggggggg", "ggdgggggggglgggg", "ggdgggGggggggggg", "gggggggggggggGgg",
       "ggglggggdggggggg", "Ggggggggdgggglgg", "ggggGggggggggggg", "ggggggggggGggggg",
+    ],
+  },
+  /* 草のゆらぎ2種 (legend の variants で座標ハッシュ混合する) */
+  grass2: {
+    palette: { g: "#398447", G: "#4fa35a", d: "#2d6d3a", l: "#70b868" },
+    rows: [
+      "gggggggggggGgggg", "gdgggGgggggggggg", "ggggggggggggdggg", "ggggglgggggggggg",
+      "gGgggggggdgggggg", "ggggggggggggglgg", "ggggdggGgggggggg", "gggggggggggggggg",
+      "glgggggggggGgggg", "ggggggGggggggdgg", "gggggggggggggggg", "gdggglgggggggggg",
+      "ggggggggGggggggg", "ggggggggggdggggg", "gGgggggggggggglg", "gggggdgggggggggg",
+    ],
+  },
+  grass3: {
+    palette: { g: "#398447", G: "#4fa35a", d: "#2d6d3a", l: "#70b868", w: "#e8f2d8" },
+    rows: [
+      "gggggggggggggggg", "ggGggggggdgggggg", "gggggggggggggGgg", "ggggwggggggggggg",
+      "gggggggggggglggg", "gGgggggdgggggggg", "gggggggggggggggg", "ggggggGggggggwgg",
+      "ggdggggggggggggg", "gggggggggggggggg", "gglggggGgggggggg", "ggggggggggggdggg",
+      "gwggggggggGggggg", "gggggggggggggggg", "ggggGgggglgggggg", "gggggggdgggggggg",
     ],
   },
   bush: {
@@ -47,6 +72,16 @@ export const TILE_ART: Record<string, PixelArt> = {
       "pdppPppppppppdlp", "ppppppplpppppdpp", "pPpppdppppPppppp", "pppppdpppppppppp",
       "pplppppppdppppPp", "pppppPpppdpppppp", "pdpppppppppplppp", "pdppplppPppppppp",
       "pppPppppppdppppp", "pppppppdppdppPpp", "pPpplppdpppppppp", "pppppppppppppppp",
+    ],
+  },
+  /* 道のゆらぎ (小石まじり) */
+  path2: {
+    palette: { p: "#c6a267", P: "#ddbd7d", d: "#a88351", l: "#ead29b", s: "#8f7a55" },
+    rows: [
+      "pppppppppppppppp", "ppPppssppppppppp", "pppppssppdpppPpp", "pdpppppppppppppp",
+      "ppppppppppplpppp", "pPppppppsspppppp", "ppppdpppssppppPp", "pppppppppppppppp",
+      "pplpppppppppdppp", "ppppppPppppppppp", "pssppppppppplppp", "pssppplppPpppppp",
+      "ppppppppppppsspp", "pPppppppdpppsspp", "pppplppppppppppp", "ppppppPppppppppp",
     ],
   },
   wall: {
@@ -92,6 +127,16 @@ export const TILE_ART: Record<string, PixelArt> = {
       "ccccckkcccccdccc", "cdcckddkcccccccc", "cdccckkccccllccc", "ccccccccccccCccc",
       "cCcccccdcccccccc", "cllccccdccccckkc", "cCcccccccccckddk", "ccccccdcccccckkc",
       "ccccccdcccCccccc", "cckkccccccllcccc", "ckddkcccccCccccc", "cckkcccccccccccc",
+    ],
+  },
+  /* 洞くつ床のゆらぎ (がれき多め) */
+  caveFloor2: {
+    palette: { c: "#48404e", C: "#595160", d: "#37313d", l: "#6d6472", k: "#29242e" },
+    rows: [
+      "cccccCcccccccccc", "cdcccccccckkcccc", "ccccccccckddkccc", "clcccdcccckkcccc",
+      "cccccdcccccccccc", "ccCccccccccclccc", "cccccccCcccccccc", "ckkcccccccdccccc",
+      "kddkccccccdccccc", "ckkccclccccccCcc", "cccccccccccccccc", "cccCccccdccccccc",
+      "cclccccckkcccdcc", "ccccccckddkccccc", "cCcccccckkcccccc", "cccccccccccclccc",
     ],
   },
   chest: {
@@ -149,4 +194,10 @@ export const TILE_ART: Record<string, PixelArt> = {
       "kkddkkkkkkddkkkk", "CCkCCCCCCkkCCCCC", "lCkCCClCCkkCClCC", "CCkCCCCCCkkCCCCC",
     ],
   },
+};
+
+export const TILE_ART: Record<string, PixelArt> = {
+  ...BASE_TILES,
+  ...TOWN_TILES,
+  ...INTERIOR_TILES,
 };

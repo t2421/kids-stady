@@ -103,9 +103,22 @@ async function warp(page: Page, mapId: string, spawn: string) {
   throw new Error(`warp ${mapId}/${spawn} に失敗`);
 }
 
-/* タイトル→フィールド (ハジマリ村) */
+/* プロフィール作成 → タイトル → フィールド (ハジマリ村) */
 async function startGame(page: Page) {
   await page.goto("/");
+  /* 初回はプロフィールゲート (作成モード) が出る → そのまま はじめる */
+  const startButton = page.locator('[data-testid="profile-start"]');
+  try {
+    await startButton.waitFor({ state: "visible", timeout: 20_000 });
+  } catch {
+    /* 高負荷時に初回描画が間に合わないことがある → リロードして再試行 */
+    await page.reload();
+    await startButton.waitFor({ state: "visible", timeout: 30_000 });
+  }
+  await startButton.click();
+  await page
+    .locator('[data-testid="profile-gate"]')
+    .waitFor({ state: "hidden", timeout: 10_000 });
   await waitForScene(page, "Title");
   await page.locator("canvas").click({ position: { x: 640, y: 360 } });
   await waitForScene(page, "Field");

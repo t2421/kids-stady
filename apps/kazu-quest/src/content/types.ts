@@ -11,6 +11,11 @@ import type { Dir } from "../lib/save";
 export interface TileSpec {
   /* ドット絵テクスチャ名 (art/tiles.ts のキー) */
   art: string;
+  /*
+   * 見た目のゆらぎ候補。指定すると座標ハッシュで決定的に1つ選ぶ
+   * (広い草原などの単調な繰り返しを崩す)。同じ art を複数入れて重み付けする。
+   */
+  variants?: string[];
   walkable: boolean;
   /* true ならこのタイルでエンカウント判定 (草むら・洞くつ床など) */
   encounter?: boolean;

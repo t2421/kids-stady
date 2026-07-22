@@ -6,7 +6,7 @@
 
 import type { Scene } from "phaser";
 import type Phaser from "phaser";
-import type { MapDef } from "../../content/types";
+import type { MapDef, TileSpec } from "../../content/types";
 import type { SaveData } from "../../lib/save";
 import { TILE_SIZE } from "../../content/art/tiles";
 import { evalCond } from "../../lib/events/runner";
@@ -14,6 +14,17 @@ import { actorTextureKey, tileTextureKey } from "../textures";
 
 export function tileCenter(x: number, y: number): [number, number] {
   return [x * TILE_SIZE + TILE_SIZE / 2, y * TILE_SIZE + TILE_SIZE / 2];
+}
+
+/*
+ * variants 指定タイルの見た目を座標から決定的に選ぶ。
+ * 乱数だと再訪のたびに景色が変わるので、必ず (x, y) だけから決める。
+ */
+export function pickTileArt(spec: TileSpec, x: number, y: number): string {
+  const pool = spec.variants;
+  if (!pool || pool.length === 0) return spec.art;
+  const hash = (x * 7919 + y * 104729 + ((x * 31 + y * 7) % 13)) % pool.length;
+  return pool[hash];
 }
 
 export class MapView {
@@ -37,7 +48,7 @@ export class MapView {
         const spec = this.map.legend[ch];
         if (!spec) return;
         this.scene.add
-          .image(...tileCenter(x, y), tileTextureKey(spec.art))
+          .image(...tileCenter(x, y), tileTextureKey(pickTileArt(spec, x, y)))
           .setDepth(0);
       });
     });

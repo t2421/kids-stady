@@ -19,12 +19,18 @@ const SpellTestScreen = dynamic(
   { ssr: false },
 );
 
+const ProfileGate = dynamic(
+  () => import("@/components/ProfileGate").then((m) => m.ProfileGate),
+  { ssr: false },
+);
+
 export default function Home() {
   return (
     <>
       <PhaserGame />
       <MathPromptPanel />
       <SpellTestScreen />
+      <ProfileGate />
     </>
   );
 }
