@@ -54,6 +54,7 @@ function genBunsuMul(): Problem {
   const [b, denominatorB] = reducedProperFraction();
   const resultNumerator = a * b;
   const resultDenominator = denominatorA * denominatorB;
+  const divisor = gcd(resultNumerator, resultDenominator);
   const answer = formatFraction(resultNumerator, resultDenominator);
   return {
     skillId: "g6_bunsu_mul",
@@ -63,8 +64,14 @@ function genBunsuMul(): Problem {
     op: null,
     answer,
     choices: fractionChoices(answer, resultNumerator, resultDenominator),
-    hint: null,
-    explain: [`分子どうし、分母どうしを かける`, `${a * b}/${denominatorA * denominatorB}を やくぶんして ${answer}`],
+    hint: { type: "text", lines: ["分子どうし、分母どうしを かけ、さいごに 約分しよう"] },
+    explain: [
+      `分子どうしは ${a} × ${b} = ${resultNumerator}、分母どうしは ${denominatorA} × ${denominatorB} = ${resultDenominator}`,
+      divisor > 1
+        ? `${resultNumerator}/${resultDenominator}の 分子と分母を ${divisor}で わって ${answer}`
+        : `${resultNumerator}/${resultDenominator}は これ以上 約分できない`,
+      `${a}/${denominatorA} × ${b}/${denominatorB} = ${answer}。答えは ${answer}`,
+    ],
   };
 }
 
@@ -73,6 +80,7 @@ function genBunsuDiv(): Problem {
   const [b, denominatorB] = reducedProperFraction();
   const resultNumerator = a * denominatorB;
   const resultDenominator = denominatorA * b;
+  const divisor = gcd(resultNumerator, resultDenominator);
   const answer = formatFraction(resultNumerator, resultDenominator);
   return {
     skillId: "g6_bunsu_div",
@@ -87,8 +95,12 @@ function genBunsuDiv(): Problem {
       formatFraction(resultNumerator + 1, resultDenominator),
       formatFraction(resultNumerator, resultDenominator + 1),
     ]),
-    hint: null,
-    explain: [`わる数 ${b}/${denominatorB}を ${denominatorB}/${b}に して かける`, `${a}/${denominatorA} × ${denominatorB}/${b} = ${answer}`],
+    hint: { type: "text", lines: ["わる数の 分子と分母を ひっくり返して、かけ算に なおそう"] },
+    explain: [
+      `わる数 ${b}/${denominatorB}を ${denominatorB}/${b}に ひっくり返す`,
+      `${a}/${denominatorA} × ${denominatorB}/${b} = ${resultNumerator}/${resultDenominator}${divisor > 1 ? `、分子と分母を ${divisor}で わる` : "。これは これ以上 約分できない"}`,
+      `${a}/${denominatorA} ÷ ${b}/${denominatorB} = ${answer}。答えは ${answer}`,
+    ],
   };
 }
 
@@ -105,10 +117,10 @@ function genMoji(): Problem {
     op: null,
     answer: String(x),
     choices: uniqueChoices(x, [multiply ? b - a : b * a, x - 1, x + 1, a], 0, 120),
-    hint: null,
+    hint: { type: "text", lines: [multiply ? "かけている数と 反対の けい算をして、文字だけに しよう" : "たしている数と 反対の けい算をして、文字だけに しよう"] },
     explain: multiply
-      ? [`x = ${b} ÷ ${a}`, `${b} ÷ ${a} = ${x}`]
-      : [`x = ${b} - ${a}`, `${b} - ${a} = ${x}`],
+      ? [`xに ${a}を かけて ${b}なので、反対の わり算をする`, `x = ${b} ÷ ${a} = ${x}`, `たしかめると ${x} × ${a} = ${b}。答えは ${x}`]
+      : [`xに ${a}を たして ${b}なので、反対の ひき算をする`, `x = ${b} - ${a} = ${x}`, `たしかめると ${x} + ${a} = ${b}。答えは ${x}`],
   };
 }
 
@@ -127,8 +139,8 @@ function genHi(): Problem {
       op: null,
       answer: String(answer),
       choices: uniqueChoices(answer, [b + multiplier, b * (multiplier - 1), answer - 1, answer + 1], 0, 50),
-      hint: null,
-      explain: [`${a}から ${c}は ${multiplier}ばい`, `${b}も ${multiplier}ばいして ${answer}`],
+      hint: { type: "text", lines: ["左の比が 何倍に なったかを しらべ、右の比も おなじだけ かけよう"] },
+      explain: [`${a}から ${c}へは ${c} ÷ ${a} = ${multiplier}で、${multiplier}倍`, `右も おなじく ${b} × ${multiplier} = ${answer}`, `${a}:${b} = ${c}:${answer}。□に 入る 答えは ${answer}`],
     };
   }
   const answer = formatFraction(a, b);
@@ -145,8 +157,8 @@ function genHi(): Problem {
       formatFraction(a, b + 1),
       String(a - b),
     ]),
-    hint: null,
-    explain: [`比のあたいは ${a} ÷ ${b}`, `やくぶんすると ${answer}`],
+    hint: { type: "text", lines: ["比の 前の数を 後ろの数で わり、分数に なおして 約分しよう"] },
+    explain: [`${a}:${b}の 比の値は、前の数を 後ろの数で わる`, `${a} ÷ ${b} = ${a}/${b}`, `${a}/${b}を 約分すると ${answer}。答えは ${answer}`],
   };
 }
 
@@ -168,10 +180,10 @@ function genHayasa(): Problem {
     choices: uniqueChoices(answer, findSpeed
       ? [distance * hours, distance - hours, speed + 10, speed - 10]
       : [speed + hours, distance + speed, distance - speed, distance + 10], 0, 500),
-    hint: null,
+    hint: { type: "text", lines: [findSpeed ? "きょりを 時間で わって、一時間ぶんの きょりを もとめよう" : "一時間ぶんの きょりに 時間を かけよう"] },
     explain: findSpeed
-      ? [`時速 = きょり ÷ 時間`, `${distance} ÷ ${hours} = ${speed}`]
-      : [`きょり = 時速 × 時間`, `${speed} × ${hours} = ${distance}`],
+      ? [`時速は きょり ÷ 時間で もとめる`, `${distance}km ÷ ${hours}時間 = ${speed}km`, `一時間に ${speed}km すすむので、答えは 時速 ${speed}km`]
+      : [`きょりは 時速 × 時間で もとめる`, `時速 ${speed}km × ${hours}時間 = ${distance}km`, `${hours}時間ぶんの きょりは ${distance}km。答えは ${distance}km`],
   };
 }
 
@@ -193,10 +205,10 @@ function genEn(): Problem {
     choices: stringChoices(answer, area
       ? [formatDecimal(3.14 * value * 2), formatDecimal(3.14 * value), formatDecimal(value * value)]
       : [formatDecimal(3.14 * value * 2), formatDecimal(3.14 * (value / 2) ** 2), formatDecimal(value * 2)]),
-    hint: null,
+    hint: { type: "text", lines: [area ? "半径を 二回 かけてから、円周率を かけよう" : "直径に 円周率を かけよう"] },
     explain: area
-      ? [`円のめんせき = はんけい × はんけい × 3.14`, `${value} × ${value} × 3.14 = ${answer}`]
-      : [`円しゅう = 直径 × 3.14`, `${value} × 3.14 = ${answer}`],
+      ? [`円の めんせきは 半径 × 半径 × 3.14で もとめる`, `${value}cm × ${value}cm × 3.14 = ${answer}cm²`, `半径 ${value}cmの 円の めんせきは ${answer}cm²。答えは ${answer}cm²`]
+      : [`円しゅうは 直径 × 3.14で もとめる`, `${value}cm × 3.14 = ${answer}cm`, `直径 ${value}cmの 円しゅうは ${answer}cm。答えは ${answer}cm`],
   };
 }
 

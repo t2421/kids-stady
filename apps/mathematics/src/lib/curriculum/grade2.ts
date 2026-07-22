@@ -29,10 +29,18 @@ function genAdd2(): Problem {
       op: "+",
       answer: String(answer),
       choices: uniqueChoices(answer, [answer - 10, answer + 10, answer - 1, answer + 1], 0, 110),
-      hint: null,
+      hint: { type: "text", lines: ["一のくらいから じゅんに たそう", "十になったら 十のくらいへ くり上げよう"] },
       explain: carry
-        ? [`1のくらいから たすと、10をこえたら 1くりあげる`, `${a} + ${b} = ${answer}`]
-        : [`1のくらい、10のくらいの じゅんに たそう`, `${a} + ${b} = ${answer}`],
+        ? [
+            `一のくらい: ${a % 10} + ${b % 10} = ${(a % 10) + (b % 10)}。${(a + b) % 10}を かいて 1くり上げ`,
+            `十のくらい: ${Math.floor(a / 10)} + ${Math.floor(b / 10)} + 1 = ${Math.floor(answer / 10)}`,
+            `たしかめると ${a} + ${b} = ${answer}。こたえは ${answer}`,
+          ]
+        : [
+            `一のくらい: ${a % 10} + ${b % 10} = ${answer % 10}`,
+            `十のくらい: ${Math.floor(a / 10)} + ${Math.floor(b / 10)} = ${Math.floor(answer / 10)}`,
+            `たしかめると ${a} + ${b} = ${answer}。こたえは ${answer}`,
+          ],
     };
   }
 }
@@ -52,10 +60,18 @@ function genSub2(): Problem {
       op: "-",
       answer: String(answer),
       choices: uniqueChoices(answer, [answer + 10, answer - 10, answer + 1, answer - 1], 0, 99),
-      hint: null,
+      hint: { type: "text", lines: ["一のくらいから じゅんに ひこう", "ひけないときは 十のくらいから かりよう"] },
       explain: borrow
-        ? [`1のくらいで ひけないので、10のくらいから 1かりる`, `${a} - ${b} = ${answer}`]
-        : [`1のくらい、10のくらいの じゅんに ひこう`, `${a} - ${b} = ${answer}`],
+        ? [
+            `一のくらい: ${a % 10}では ${b % 10}を ひけないので、10を かりる`,
+            `${(a % 10) + 10} - ${b % 10} = ${answer % 10}、十のくらいは ${Math.floor(a / 10) - 1} - ${Math.floor(b / 10)} = ${Math.floor(answer / 10)}`,
+            `たしかめると ${a} - ${b} = ${answer}。こたえは ${answer}`,
+          ]
+        : [
+            `一のくらい: ${a % 10} - ${b % 10} = ${answer % 10}`,
+            `十のくらい: ${Math.floor(a / 10)} - ${Math.floor(b / 10)} = ${Math.floor(answer / 10)}`,
+            `たしかめると ${a} - ${b} = ${answer}。こたえは ${answer}`,
+          ],
     };
   }
 }
@@ -72,8 +88,8 @@ function genKuku(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [(n - 1) * m, (n + 1) * m, n * (m - 1), n * (m + 1)], 0, 90),
-    hint: null,
-    explain: [`${n}のだんを おもいだそう`, `${n} × ${m} = ${answer}`],
+    hint: { type: "text", lines: ["左のかずの だんを じゅんに いってみよう"] },
+    explain: [`${n}のだんを ${m}こぶん たどる`, `${n}を ${m}かい たすと ${answer}`, `${n} × ${m} = ${answer}。こたえは ${answer}`],
   };
 }
 
@@ -89,8 +105,8 @@ function genKukuHole(): Problem {
     op: null,
     answer: String(missing),
     choices: uniqueChoices(missing, [missing - 1, missing + 1, missing - 2, missing + 2], 1, 9),
-    hint: null,
-    explain: [`${n}のだんで ${product}に なるところを さがす`, `${n} × ${missing} = ${product}`],
+    hint: { type: "text", lines: ["左のかずの だんを じゅんに いい、右のかずで とめよう"] },
+    explain: [`${n}のだんを じゅんに たどって ${product}を さがす`, `${n} × ${missing} = ${product}`, `□に はいる こたえは ${missing}`],
   };
 }
 
@@ -106,8 +122,8 @@ function genKazu(): Problem {
       op: null,
       answer: String(answer),
       choices: uniqueChoices(answer, [n, answer - 10, answer + 10], 0, 100),
-      hint: null,
-      explain: [`10が ${n}こだから、10 × ${n}`, `こたえは ${answer}`],
+      hint: { type: "text", lines: ["十が いくつあるかを かけ算で あらわそう"] },
+      explain: [`十が ${n}こ あるので、10を ${n}こ あつめる`, `10 × ${n} = ${answer}`, `こたえは ${answer}`],
     };
   }
   const hundreds = randInt(1, 9);
@@ -121,8 +137,8 @@ function genKazu(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [hundreds * 100 + tens, answer - 10, answer + 10, hundreds * 10 + tens * 100], 0, 1000),
-    hint: null,
-    explain: [`100が ${hundreds}こで ${hundreds * 100}`, `10が ${tens}こで ${tens * 10}、あわせて ${answer}`],
+    hint: { type: "text", lines: ["百のまとまりと 十のまとまりを べつべつに かぞえよう"] },
+    explain: [`100が ${hundreds}こで ${hundreds} × 100 = ${hundreds * 100}`, `10が ${tens}こで ${tens} × 10 = ${tens * 10}`, `${hundreds * 100} + ${tens * 10} = ${answer}。こたえは ${answer}`],
   };
 }
 
@@ -136,8 +152,8 @@ function genTime(): Problem {
       op: null,
       answer: "60ぷん",
       choices: stringChoices("60ぷん", ["30ぷん", "100ぷん"]),
-      hint: null,
-      explain: ["1じかんは 60ぷん"],
+      hint: { type: "text", lines: ["時計の 長いはりが ひとまわりする ぷん数を おもい出そう"] },
+      explain: ["時計の 長いはりが ひとまわりすると 1じかん", "1じかん = 60ぷん。こたえは 60ぷん"],
     };
   }
   const hour = randInt(1, 12);
@@ -155,10 +171,10 @@ function genTime(): Problem {
     choices: stringChoices(answer, halfPast
       ? [`${hour}じ`, `${nextHour}じ30ぷん`, `${wrongHour}じ`]
       : [`${nextHour}じ`, `${hour}じ`, `${wrongHour}じ30ぷん`]),
-    hint: null,
+    hint: { type: "text", lines: ["時計の 長いはりを 半まわり すすめよう"] },
     explain: halfPast
-      ? [`${hour}じ30ぷんから 30ぷん すすむと、つぎの じこく`, `こたえは ${nextHour}じ`]
-      : [`${hour}じから 30ぷん すすむ`, `こたえは ${hour}じ30ぷん`],
+      ? [`${hour}じ30ぷんから 長いはりを 30ぷん すすめる`, `長いはりが 12に つき、短いはりは ${nextHour}へ すすむ`, `こたえは ${nextHour}じ`]
+      : [`${hour}じから 長いはりを 30ぷん すすめる`, `長いはりは 6、短いはりは ${hour}と ${nextHour}の あいだ`, `こたえは ${hour}じ30ぷん`],
   };
 }
 
@@ -172,8 +188,8 @@ function genLength(): Problem {
       op: null,
       answer: "10mm",
       choices: stringChoices("10mm", ["1mm", "100mm"]),
-      hint: null,
-      explain: ["1cmは 10mm"],
+      hint: { type: "text", lines: ["ものさしで 一センチの あいだの 小さな めもりを かぞえよう"] },
+      explain: ["1cmの あいだには 1mmの めもりが 10こ ある", "1cm = 10mm。こたえは 10mm"],
     };
   }
   const cm = randInt(1, 9);
@@ -187,8 +203,8 @@ function genLength(): Problem {
     op: null,
     answer: `${answer}mm`,
     choices: stringChoices(`${answer}mm`, [`${cm + mm}mm`, `${cm * 10}mm`, `${answer + 10}mm`]),
-    hint: null,
-    explain: [`${cm}cmは ${cm * 10}mm`, `${cm * 10}mm + ${mm}mm = ${answer}mm`],
+    hint: { type: "text", lines: ["センチを ミリに なおしてから、のこりの ミリを たそう"] },
+    explain: [`1cm = 10mmなので、${cm}cm = ${cm} × 10 = ${cm * 10}mm`, `${cm * 10}mm + ${mm}mm = ${answer}mm`, `こたえは ${answer}mm`],
   };
 }
 

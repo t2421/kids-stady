@@ -230,12 +230,25 @@ export function ProblemPanel() {
 
         {view === "question" && hintOpen && problem.hint && (
           <div className="pp-hint-view">
-            <h2 className="pp-heading">🍒 さくらんぼヒント</h2>
-            <CherryDiagram
-              top={problem.b ?? problem.hint.split.first + problem.hint.split.second}
-              split={problem.hint.split}
-              interactive
-            />
+            {problem.hint.type === "cherry" ? (
+              <>
+                <h2 className="pp-heading">🍒 さくらんぼヒント</h2>
+                <CherryDiagram
+                  top={problem.b ?? problem.hint.split.first + problem.hint.split.second}
+                  split={problem.hint.split}
+                  interactive
+                />
+              </>
+            ) : (
+              <>
+                <h2 className="pp-heading">💡 かんがえかた</h2>
+                <ol className="pp-steps pp-hint-steps">
+                  {problem.hint.lines.map((line, index) => (
+                    <li key={`${line}-${index}`}>{line}</li>
+                  ))}
+                </ol>
+              </>
+            )}
             <button
               type="button"
               className="pp-secondary-button"
@@ -275,7 +288,7 @@ export function ProblemPanel() {
 
             {canShowHint && (
               <button type="button" className="pp-hint-button" onClick={openHint}>
-                🍒 さくらんぼヒント
+                {problem.hint?.type === "cherry" ? "🍒 さくらんぼヒント" : "💡 ヒント"}
               </button>
             )}
           </>
@@ -288,7 +301,7 @@ export function ProblemPanel() {
               こたえは <strong>{problem.answer}</strong>
             </p>
 
-            {problem.hint && (
+            {problem.hint?.type === "cherry" && (
               <CherryDiagram
                 top={problem.b ?? problem.hint.split.first + problem.hint.split.second}
                 split={problem.hint.split}

@@ -12,7 +12,7 @@ import { GRADE5_SKILLS } from "./grade5";
 import { GRADE6_SKILLS } from "./grade6";
 import type { Problem, SkillDef } from "./types";
 
-export type { CherryHint, Op, Problem, SkillDef } from "./types";
+export type { CherryHint, Hint, Op, Problem, SkillDef, TextHint } from "./types";
 
 const ALL_SKILLS: SkillDef[] = [
   ...GRADE1_SKILLS,

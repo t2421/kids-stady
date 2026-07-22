@@ -397,3 +397,16 @@
     transition: none;
   }
 }
+
+/* かんがえかたヒント (テキストヒント) */
+.pp-hint-steps {
+  font-size: 22px;
+  line-height: 2;
+  text-align: left;
+  color: #ffe9a8;
+  background: rgba(74, 47, 14, 0.35);
+  border: 2px solid rgba(255, 217, 61, 0.4);
+  border-radius: 12px;
+  padding: 14px 18px 14px 40px;
+  max-width: 560px;
+}

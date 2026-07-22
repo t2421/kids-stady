@@ -54,8 +54,8 @@ function genShosuMul(): Problem {
       formatDecimal(productHundredths / 1000),
       formatDecimal((productHundredths + 1) / 100),
     ]),
-    hint: null,
-    explain: [`整数のように ${leftTenths} × ${rightTenths} = ${productHundredths}`, `小数点を 2けた もどして ${answer}`],
+    hint: { type: "text", lines: ["小数点を いったん かくして かけ、二つの数の 小数けたぶん もどそう"] },
+    explain: [`小数点を いったん かくして、${leftTenths} × ${rightTenths}を けいさんする`, `${leftTenths} × ${rightTenths} = ${productHundredths}。小数のけたは あわせて 2けた`, `小数点を 2けた もどすと ${(leftTenths / 10).toFixed(1)} × ${(rightTenths / 10).toFixed(1)} = ${answer}。こたえは ${answer}`],
   };
 }
 
@@ -83,8 +83,12 @@ function genShosuDiv(): Problem {
       formatDecimal(quotientTenths),
       formatDecimal((quotientTenths + 1) / 10),
     ]),
-    hint: null,
-    explain: [`わる数を整数にするため、どちらも 10ばいする`, `こたえは ${answer}`],
+    hint: { type: "text", lines: ["わる数が 整数に なるまで、わられる数と いっしょに 小数点を 右へ うつそう"] },
+    explain: [
+      `わる数 ${(divisorTenths / 10).toFixed(1)}を 整数にするため、どちらも 10ばいする`,
+      `${formatDecimal(dividend)} ÷ ${(divisorTenths / 10).toFixed(1)} = ${formatDecimal(dividend * 10)} ÷ ${divisorTenths}`,
+      `${formatDecimal(dividend * 10)} ÷ ${divisorTenths} = ${answer}。こたえは ${answer}`,
+    ],
   };
 }
 
@@ -116,8 +120,13 @@ function genBunsuAdd(): Problem {
         formatFraction(Math.max(1, resultNumerator - 1), commonDenominator),
         formatFraction(resultNumerator, commonDenominator + 1),
       ]),
-      hint: null,
-      explain: [`${commonDenominator}を きょうつうの分母にする`, `${convertedA}/${commonDenominator} ${addition ? "+" : "-"} ${convertedB}/${commonDenominator} = ${answer}`],
+      hint: { type: "text", lines: ["二つの分母の ばい数を さがし、分母を そろえてから けいさんしよう"] },
+      explain: [
+        `分母 ${denominatorA}と ${denominatorB}を ${commonDenominator}に そろえる（通分）`,
+        `${numeratorA}/${denominatorA} = ${convertedA}/${commonDenominator}、${numeratorB}/${denominatorB} = ${convertedB}/${commonDenominator}`,
+        `${convertedA}/${commonDenominator} ${addition ? "+" : "-"} ${convertedB}/${commonDenominator} = ${resultNumerator}/${commonDenominator}`,
+        `${resultNumerator}/${commonDenominator}を 約分して、答えは ${answer}`,
+      ],
     };
   }
 }
@@ -145,8 +154,8 @@ function genYakubun(): Problem {
         formatFraction(shownNumerator, shownDenominator - multiplier),
         formatFraction(numerator, shownDenominator),
       ]),
-      hint: null,
-      explain: [`分子と分母を どちらも ${multiplier}で わる`, `${shownNumerator}/${shownDenominator} = ${answer}`],
+      hint: { type: "text", lines: ["分子と分母を どちらも わり切れる おなじ数で わろう"] },
+      explain: [`${shownNumerator}と ${shownDenominator}は どちらも ${multiplier}で わり切れる`, `分子は ${shownNumerator} ÷ ${multiplier} = ${numerator}、分母は ${shownDenominator} ÷ ${multiplier} = ${denominator}`, `${shownNumerator}/${shownDenominator} = ${answer}。これ以上 約分できないので、答えは ${answer}`],
     };
   }
 }
@@ -166,10 +175,10 @@ function genBaisu(): Problem {
     choices: uniqueChoices(answer, leastCommonMultiple
       ? [a * b, Math.max(a, b), answer + Math.min(a, b)]
       : [Math.min(a, b), 1, answer + 1, answer - 1], 0, 150),
-    hint: null,
+    hint: { type: "text", lines: [leastCommonMultiple ? "二つの数の ばい数を ならべ、はじめに そろう数を さがそう" : "二つの数を どちらも わり切れる数を ならべ、いちばん大きい数を さがそう"] },
     explain: leastCommonMultiple
-      ? [`${a}と ${b}の ばいすうを ならべる`, `はじめて そろうのは ${answer}`]
-      : [`${a}と ${b}を どちらも わり切れる数を さがす`, `いちばん大きいのは ${answer}`],
+      ? [`${a}の ばい数と ${b}の ばい数を 小さいじゅんに ならべる`, `${answer}は ${a}でも ${b}でも わり切れ、はじめて そろう`, `だから ${a}と ${b}の さいしょうこうばいすうは ${answer}`]
+      : [`${a}と ${b}を どちらも わり切れる数を さがす`, `${a} ÷ ${answer} = ${a / answer}、${b} ÷ ${answer} = ${b / answer}で、どちらも あまりなし`, `その中で いちばん大きいので、さいだいこうやくすうは ${answer}`],
   };
 }
 
@@ -188,8 +197,8 @@ function genWariai(): Problem {
       op: null,
       answer: String(answer),
       choices: uniqueChoices(answer, [people - answer, answer * 10, answer + digit, answer - digit], 0, 100),
-      hint: null,
-      explain: [`${percent}%は ${formatDecimal(percent / 100, 1)}`, `${people} × ${formatDecimal(percent / 100, 1)} = ${answer}人`],
+      hint: { type: "text", lines: ["パーセントを 小数に なおし、『の』を かけ算に しよう"] },
+      explain: [`${percent}%を 小数に なおすと ${percent} ÷ 100 = ${formatDecimal(percent / 100, 1)}`, `${people}人の ${percent}%は ${people} × ${formatDecimal(percent / 100, 1)} = ${answer}`, `単位を つけて、答えは ${answer}人`],
     };
   }
   if (kind === 1) {
@@ -202,8 +211,8 @@ function genWariai(): Problem {
       op: null,
       answer,
       choices: stringChoices(answer, [`${digit}%`, `${percent + 10}%`, `${percent * 10}%`]),
-      hint: null,
-      explain: [`小数を %にするときは 100ばいする`, `0.${digit} = ${answer}`],
+      hint: { type: "text", lines: ["小数を パーセントに なおすときは、小数点を 右へ 二けた うつそう"] },
+      explain: [`小数を %に なおすには 100ばいする`, `0.${digit} × 100 = ${percent}`, `%を つけて、0.${digit} = ${answer}。答えは ${answer}`],
     };
   }
   const answer = `0.${digit}`;
@@ -215,8 +224,8 @@ function genWariai(): Problem {
     op: null,
     answer,
     choices: stringChoices(answer, [`${digit}`, `0.0${digit}`, String(percent)]),
-    hint: null,
-    explain: [`%を 小数にするときは 100で わる`, `${percent}% = ${answer}`],
+    hint: { type: "text", lines: ["パーセントを 小数に なおすときは、小数点を 左へ 二けた うつそう"] },
+    explain: [`%を 小数に なおすには 100で わる`, `${percent} ÷ 100 = ${answer}`, `${percent}% = ${answer}。答えは ${answer}`],
   };
 }
 
@@ -239,8 +248,8 @@ function genHeikin(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [answer - 1, answer + 1, Math.floor(total / 2), total], 0, 270),
-    hint: null,
-    explain: [`ぜんぶ たすと ${a} + ${b} + ${c} = ${total}`, `${total} ÷ 3 = ${answer}`],
+    hint: { type: "text", lines: ["すべての数を たしてから、数の こ数で わろう"] },
+    explain: [`まず 三つの数を たすと ${a} + ${b} + ${c} = ${total}`, `合計 ${total}を 三つに ひとしく 分けて ${total} ÷ 3 = ${answer}`, `たしかめると ${answer} × 3 = ${total}。答えは ${answer}`],
   };
 }
 

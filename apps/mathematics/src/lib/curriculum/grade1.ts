@@ -25,8 +25,12 @@ function genCount(): Problem {
     op: null,
     answer: String(n),
     choices: uniqueChoices(n, [n - 1, n + 1, n - 2, n + 2], 0, 10),
-    hint: null,
-    explain: [`ひとつずつ かぞえよう: ${emoji}が ${n}こ`, `こたえは ${n}`],
+    hint: { type: "text", lines: ["ゆびで ささずに、めで ひとつずつ かぞえてみよう"] },
+    explain: [
+      `${emoji}を ひとつずつ かぞえると…`,
+      `1、2、3…と かぞえて ぜんぶで ${n}こ`,
+      `こたえは ${n}`,
+    ],
   };
 }
 
@@ -44,8 +48,11 @@ function genCompare(): Problem {
     answer: String(Math.max(a, b)),
     /* くらべる問題は3択の中身が固定 (a / b / おなじ)。シャッフルしない */
     choices: [String(a), String(b), "おなじ"],
-    hint: null,
-    explain: [`${Math.max(a, b)} のほうが ${Math.min(a, b)} より おおきい`],
+    hint: { type: "text", lines: ["かずの ならびで あとに くるほうが おおきいよ"] },
+    explain: [
+      `かぞえていくと ${Math.min(a, b)} のほうが さきに でてくる`,
+      `だから ${Math.max(a, b)} のほうが おおきい`,
+    ],
   };
 }
 
@@ -62,8 +69,12 @@ function genAddNoCarry(): Problem {
     op: "+",
     answer: String(sum),
     choices: uniqueChoices(sum, [sum - 1, sum + 1, sum + 2, sum - 2], 0, 10),
-    hint: null,
-    explain: [`${a} + ${b} = ${sum}`, "10までの たしざんは ぱっと いえると つよい!"],
+    hint: { type: "text", lines: [`${a}から ${b}こ ぶん かぞえて すすもう`] },
+    explain: [
+      `${a}に ${b}を たすよ`,
+      `${a}から ${b}こ すすむと ${sum}`,
+      `10までの たしざんは ぱっと いえると つよい!`,
+    ],
   };
 }
 
@@ -84,9 +95,10 @@ function genAddCarry(): Problem {
     choices: uniqueChoices(sum, [sum - 1, sum + 1, sum - 10, sum + 10], 0, 20),
     hint: { type: "cherry", split: { first, second } },
     explain: [
-      `${b} を ${first} と ${second} に わける (さくらんぼ)`,
-      `${a} + ${first} = 10`,
-      `10 + ${second} = ${sum}`,
+      `まず ${a}を 10に したいな`,
+      `${b}を ${first}と ${second}に わける (さくらんぼ)`,
+      `${a} + ${first} = 10、 10 + ${second} = ${sum}`,
+      `こたえは ${sum}`,
     ],
   };
 }
@@ -104,8 +116,12 @@ function genSubNoCarry(): Problem {
     op: "-",
     answer: String(diff),
     choices: uniqueChoices(diff, [diff - 1, diff + 1, diff + 2, diff - 2], 0, 10),
-    hint: null,
-    explain: [`${a} - ${b} = ${diff}`, "10までの ひきざんも ぱっと いえるように!"],
+    hint: { type: "text", lines: [`${a}から ${b}こ ぶん もどって かぞえよう`] },
+    explain: [
+      `${a}から ${b}を ひくよ`,
+      `${a}から ${b}こ もどると ${diff}`,
+      `10までの ひきざんも ぱっと いえるように!`,
+    ],
   };
 }
 
@@ -127,9 +143,10 @@ function genSubBorrow(): Problem {
     choices: uniqueChoices(diff, [diff - 1, diff + 1, diff + 10, diff - 10], 0, 20),
     hint: { type: "cherry", split: { first, second } },
     explain: [
-      `${b} を ${first} と ${second} に わける (さくらんぼ)`,
-      `${a} - ${first} = 10`,
-      `10 - ${second} = ${diff}`,
+      `まず ${a}を 10に したいな`,
+      `${b}を ${first}と ${second}に わける (さくらんぼ)`,
+      `${a} - ${first} = 10、 10 - ${second} = ${diff}`,
+      `こたえは ${diff}`,
     ],
   };
 }
@@ -147,10 +164,19 @@ function genTenPack(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [answer - 1, answer + 1, forward ? n : 10 + n], 0, 20),
-    hint: null,
+    hint: {
+      type: "text",
+      lines: ["10のまとまりと バラで かんがえよう"],
+    },
     explain: forward
-      ? [`10と ${n}で ${10 + n}`, "10のまとまりに たすだけ!"]
-      : [`1${n}は 10と ${n}`, "10のまとまりを とりだそう"],
+      ? [
+          `10のまとまりが 1つと、バラが ${n}こ`,
+          `あわせて ${10 + n}`,
+        ]
+      : [
+          `1${n}は 10のまとまりと バラに わけられる`,
+          `10と ${n}に わかれるから、こたえは ${n}`,
+        ],
   };
 }
 
@@ -174,8 +200,13 @@ function genThree(): Problem {
       op: null,
       answer: String(result),
       choices: uniqueChoices(result, [result - 1, result + 1, result + 2, result - 2], 0, 10),
-      hint: null,
-      explain: [`まえから じゅんに: ${a} ${op1} ${b} = ${mid}`, `${mid} ${op2} ${c} = ${result}`],
+      hint: { type: "text", lines: ["まえから じゅんばんに ひとつずつ けいさんしよう"] },
+      explain: [
+        `まえから じゅんに けいさんするよ`,
+        `まず ${a} ${op1} ${b} = ${mid}`,
+        `つぎに ${mid} ${op2} ${c} = ${result}`,
+        `こたえは ${result}`,
+      ],
     };
   }
 }
@@ -196,8 +227,12 @@ function genSeq(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [answer - 1, answer + 1, answer - 2, answer + 2], 0, 20),
-    hint: null,
-    explain: [`かずは 1ずつ ふえていくよ`, `${start} → ${start + 1} → ${start + 2}`],
+    hint: { type: "text", lines: ["かずは 1ずつ ふえて ならんでいるよ"] },
+    explain: [
+      `1ずつ ふえる ならびだね`,
+      `${start} → ${start + 1} → ${start + 2}`,
+      `□に はいるのは ${answer}`,
+    ],
   };
 }
 

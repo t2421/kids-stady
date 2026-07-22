@@ -44,7 +44,7 @@ describe("curriculum: スキル別の値域", () => {
       const p = generate("g1_add_nc");
       expect(p.a! + p.b!).toBeLessThanOrEqual(10);
       expect(Number(p.answer)).toBe(p.a! + p.b!);
-      expect(p.hint).toBeNull();
+      expect(p.hint?.type).toBe("text"); // かんがえかたヒントが付く (さくらんぼは carry のみ)
     }
   });
 
@@ -55,7 +55,8 @@ describe("curriculum: スキル別の値域", () => {
       expect(p.b).toBeLessThanOrEqual(9);
       expect(p.a! + p.b!).toBeGreaterThanOrEqual(11);
       expect(Number(p.answer)).toBe(p.a! + p.b!);
-      const s = p.hint!.split;
+      expect(p.hint!.type).toBe("cherry");
+      const s = (p.hint as { type: "cherry"; split: { first: number; second: number } }).split;
       expect(p.a! + s.first).toBe(10);
       expect(s.first + s.second).toBe(p.b);
       expect(s.first).toBeGreaterThan(0);
@@ -79,7 +80,8 @@ describe("curriculum: スキル別の値域", () => {
       expect(p.a).toBeLessThanOrEqual(18);
       expect(p.b! > p.a! % 10).toBe(true); // くりさがりが必要
       expect(Number(p.answer)).toBe(p.a! - p.b!);
-      const s = p.hint!.split;
+      expect(p.hint!.type).toBe("cherry");
+      const s = (p.hint as { type: "cherry"; split: { first: number; second: number } }).split;
       expect(p.a! - s.first).toBe(10);
       expect(s.first + s.second).toBe(p.b);
       expect(s.second).toBeGreaterThan(0);

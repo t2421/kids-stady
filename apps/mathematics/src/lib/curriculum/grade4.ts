@@ -51,8 +51,8 @@ function genDiv2(): Problem {
     op: null,
     answer: String(quotient),
     choices: uniqueChoices(quotient, [quotient - 1, quotient + 1, quotient - 10, quotient + 10], 1, 110),
-    hint: null,
-    explain: [`${divisor} × □ = ${dividend}と かんがえる`, `${divisor} × ${quotient} = ${dividend}`],
+    hint: { type: "text", lines: ["わる数の ばい数で、わられる数に なるものを さがそう"] },
+    explain: [`${dividend} ÷ ${divisor}は、${divisor} × □ = ${dividend}と かんがえる`, `${divisor} × ${quotient} = ${dividend}なので、商は ${quotient}`, `たしかめると ${quotient} × ${divisor} = ${dividend}。こたえは ${quotient}`],
   };
 }
 
@@ -70,8 +70,12 @@ function genGaisu(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [truncated, truncated + unit, answer - unit, answer + unit], 0, 11000),
-    hint: null,
-    explain: [`${thousand ? "百" : "十"}のくらいを 見る`, `${n}を ししゃごにゅうすると ${answer}`],
+    hint: { type: "text", lines: ["のこす くらいの 一つ右を 見て、切り上げるか 切りすてるか きめよう"] },
+    explain: [
+      `${thousand ? "千" : "百"}のくらいまでにするので、${thousand ? "百" : "十"}のくらいの ${Math.floor(n / (unit / 10)) % 10}を 見る`,
+      `${Math.floor(n / (unit / 10)) % 10}は ${Math.floor(n / (unit / 10)) % 10 >= 5 ? "5いじょうなので 切り上げる" : "4いかなので 切りすてる"}`,
+      `${n}を ししゃごにゅうすると ${answer}。こたえは ${answer}`,
+    ],
   };
 }
 
@@ -95,8 +99,8 @@ function genShosuMul(): Problem {
       op: null,
       answer,
       choices: stringChoices(answer, [decimal(product - 1), decimal(product + 1), String(product), decimal(value + integer)]),
-      hint: null,
-      explain: [`小数点を いったんかくして ${value} × ${integer}`, `小数点を もどして ${answer}`],
+      hint: { type: "text", lines: ["小数点を いったん かくして かけ、もとの いちへ もどそう"] },
+      explain: [`${decimal(value)}を 十分の一が ${value}こ と かんがえる`, `${value} × ${integer} = ${product}なので、十分の一が ${product}こ`, `小数点を もどすと ${decimal(value)} × ${integer} = ${answer}。こたえは ${answer}`],
     };
   }
   let quotient: number;
@@ -115,8 +119,8 @@ function genShosuMul(): Problem {
     op: null,
     answer,
     choices: stringChoices(answer, [decimal(quotient - 1), decimal(quotient + 1), String(quotient), decimal(dividend - divisor)]),
-    hint: null,
-    explain: [`${divisor} × ${answer} = ${decimal(dividend)}`, `だから ${decimal(dividend)} ÷ ${divisor} = ${answer}`],
+    hint: { type: "text", lines: ["わる数を かけて、わられる小数に なる数を さがそう"] },
+    explain: [`${decimal(dividend)} ÷ ${divisor}は、${divisor} × □ = ${decimal(dividend)}と かんがえる`, `${divisor} × ${answer} = ${decimal(dividend)}`, `だから ${decimal(dividend)} ÷ ${divisor} = ${answer}。こたえは ${answer}`],
   };
 }
 
@@ -134,10 +138,10 @@ function genKimari(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [parentheses ? a + b * c : (a + b) * c, answer - c, answer + c], 0, 170),
-    hint: null,
+    hint: { type: "text", lines: ["かっこの中を さきに、つぎに かけ算、さいごに たし算をしよう"] },
     explain: parentheses
-      ? [`かっこの中を さきに: ${a} + ${b} = ${a + b}`, `${a + b} × ${c} = ${answer}`]
-      : [`かけ算を さきに: ${b} × ${c} = ${b * c}`, `${a} + ${b * c} = ${answer}`],
+      ? [`かっこの中を さきに けいさんする`, `${a} + ${b} = ${a + b}、つぎに ${a + b} × ${c} = ${answer}`, `たしかめると (${a} + ${b}) × ${c} = ${answer}。こたえは ${answer}`]
+      : [`たし算より かけ算を さきに けいさんする`, `${b} × ${c} = ${b * c}、つぎに ${a} + ${b * c} = ${answer}`, `たしかめると ${a} + ${b} × ${c} = ${answer}。こたえは ${answer}`],
   };
 }
 
@@ -164,8 +168,8 @@ function genBunsu(): Problem {
         String(whole),
         formatFraction(improperNumerator + 1, denominator),
       ]),
-      hint: null,
-      explain: [`${whole}は ${whole * denominator}/${denominator}`, `${whole * denominator + numerator}/${denominator} = ${answer}`],
+      hint: { type: "text", lines: ["整数を 分母と おなじ数の 分数に なおし、分子を たそう"] },
+      explain: [`整数 ${whole}を 分母 ${denominator}の 分数にすると ${whole * denominator}/${denominator}`, `分子を たして ${whole * denominator} + ${numerator} = ${improperNumerator}`, `${whole}と${numerator}/${denominator} = ${improperNumerator}/${denominator}。こたえは ${answer}`],
     };
   }
   const answer = `${whole}と${numerator}/${denominator}`;
@@ -180,8 +184,8 @@ function genBunsu(): Problem {
       `${whole + 1}と${numerator}/${denominator}`,
       `${whole + 2}と${numerator}/${denominator}`,
     ]),
-    hint: null,
-    explain: [`${improperNumerator} ÷ ${denominator} = ${whole} あまり ${numerator}`, `こたえは ${answer}`],
+    hint: { type: "text", lines: ["分子を 分母で わり、商を 整数、あまりを 分子にしよう"] },
+    explain: [`分子 ${improperNumerator}を 分母 ${denominator}で わる`, `${improperNumerator} ÷ ${denominator} = ${whole} あまり ${numerator}`, `整数は ${whole}、分数は ${numerator}/${denominator}。こたえは ${answer}`],
   };
 }
 
@@ -197,8 +201,8 @@ function genMenseki(): Problem {
     op: null,
     answer: `${answer}cm²`,
     choices: stringChoices(`${answer}cm²`, [`${height + width}cm²`, `${answer - 1}cm²`, `${answer + 1}cm²`]),
-    hint: null,
-    explain: [`長方形の めんせきは たて × よこ`, `${height} × ${width} = ${answer}cm²`],
+    hint: { type: "text", lines: ["たてと よこの 長さを かけて、正方形が いくつ入るか もとめよう"] },
+    explain: [`長方形の めんせきは たて × よこで もとめる`, `たて ${height}cm × よこ ${width}cm = ${answer}cm²`, `たしかめると ${height} × ${width} = ${answer}。こたえは ${answer}cm²`],
   };
 }
 

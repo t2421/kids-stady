@@ -44,8 +44,8 @@ function genDiv(): Problem {
     op: null,
     answer: String(quotient),
     choices: uniqueChoices(quotient, [quotient - 1, quotient + 1, divisor, quotient + 2], 1, 10),
-    hint: null,
-    explain: [`${divisor} × ${quotient} = ${dividend}`, `だから ${dividend} ÷ ${divisor} = ${quotient}`],
+    hint: { type: "text", lines: ["わる数の だんで、わられる数に なるところを さがそう"] },
+    explain: [`${divisor}のだんで ${dividend}に なるところを さがす`, `${divisor} × ${quotient} = ${dividend}`, `だから ${dividend} ÷ ${divisor} = ${quotient}。こたえは ${quotient}`],
   };
 }
 
@@ -66,8 +66,8 @@ function genDivAmari(): Problem {
       `${quotient + 1}あまり${remainder}`,
       `${quotient - 1}あまり${remainder}`,
     ]),
-    hint: null,
-    explain: [`${divisor} × ${quotient} = ${divisor * quotient}`, `${dividend} - ${divisor * quotient} = ${remainder}、こたえは ${answer}`],
+    hint: { type: "text", lines: ["わる数の だんで、わられる数を こえない いちばん近い数を さがそう"] },
+    explain: [`${divisor}のだんで ${dividend}を こえないのは ${divisor} × ${quotient} = ${divisor * quotient}`, `${dividend} - ${divisor * quotient} = ${remainder}。${remainder}は ${divisor}より 小さい`, `こたえは ${answer}`],
   };
 }
 
@@ -105,8 +105,8 @@ function genAdd3(): Problem {
         op: "+",
         answer: String(answer),
         choices: uniqueChoices(answer, [answer - 100, answer + 100, answer - 10, answer + 10], 0, 1100),
-        hint: null,
-        explain: ["1のくらいから じゅんに たして、10をこえたら くりあげる", `${a} + ${b} = ${answer}`],
+        hint: { type: "text", lines: ["一のくらいから じゅんに たし、十になったら 上のくらいへ 送ろう"] },
+        explain: ["一のくらいから じゅんに たし、十のまとまりを くり上げる", `${a}と ${b}を くらいごとに たすと ${answer}`, `${a} + ${b} = ${answer}。こたえは ${answer}`],
       };
     }
     if (a <= b || !hasBorrow(a, b)) continue;
@@ -119,8 +119,8 @@ function genAdd3(): Problem {
       op: "-",
       answer: String(answer),
       choices: uniqueChoices(answer, [answer + 100, answer - 100, answer + 10, answer - 10], 0, 899),
-      hint: null,
-      explain: ["1のくらいから じゅんに ひいて、たりなければ 1つ上のくらいから かりる", `${a} - ${b} = ${answer}`],
+      hint: { type: "text", lines: ["一のくらいから じゅんに ひき、たりなければ 上のくらいから かりよう"] },
+      explain: ["一のくらいから じゅんに ひき、たりないくらいでは 上から 十を かりる", `${a}から ${b}を くらいごとに ひくと ${answer}`, `${a} - ${b} = ${answer}。こたえは ${answer}`],
     };
   }
 }
@@ -137,8 +137,13 @@ function genMult2x1(): Problem {
     op: null,
     answer: String(answer),
     choices: uniqueChoices(answer, [(a - 1) * b, (a + 1) * b, answer - 10, answer + 10], 0, 500),
-    hint: null,
-    explain: [`${a}を 10のくらいと 1のくらいに わけて ${b}ばいする`, `${a} × ${b} = ${answer}`],
+    hint: { type: "text", lines: ["かけられる数を 十のまとまりと ばらに わけて、それぞれ かけよう"] },
+    explain: [
+      `${a}を ${Math.floor(a / 10) * 10}と ${a % 10}に わける`,
+      `${Math.floor(a / 10) * 10} × ${b} = ${Math.floor(a / 10) * 10 * b}、${a % 10} × ${b} = ${(a % 10) * b}`,
+      `${Math.floor(a / 10) * 10 * b} + ${(a % 10) * b} = ${answer}`,
+      `だから ${a} × ${b} = ${answer}。こたえは ${answer}`,
+    ],
   };
 }
 
@@ -167,8 +172,12 @@ function genShosu(): Problem {
     op: null,
     answer,
     choices: stringChoices(answer, [formatTenths(result - 1), formatTenths(result + 1), String(result), formatTenths(result + 10)]),
-    hint: null,
-    explain: [`0.1が いくつあるかで ${addition ? "たす" : "ひく"}`, `こたえは ${answer}`],
+    hint: { type: "text", lines: ["小数点を そろえ、十分の一が いくつあるかで けいさんしよう"] },
+    explain: [
+      `${(left / 10).toFixed(1)}は 0.1が ${left}こ、${(right / 10).toFixed(1)}は 0.1が ${right}こ`,
+      `十分の一を ${left} ${addition ? "+" : "-"} ${right} = ${result}こ と けいさんする`,
+      `${(left / 10).toFixed(1)} ${addition ? "+" : "-"} ${(right / 10).toFixed(1)} = ${answer}。こたえは ${answer}`,
+    ],
   };
 }
 
@@ -200,8 +209,8 @@ function genBunsu(): Problem {
       formatFraction(resultNumerator, denominator + 1),
       formatFraction(Math.abs(a - b) || 1, denominator),
     ]),
-    hint: null,
-    explain: [`分母は そのまま、分子を ${addition ? "たす" : "ひく"}`, `${a} ${addition ? "+" : "-"} ${b} = ${resultNumerator}、こたえは ${answer}`],
+    hint: { type: "text", lines: ["分母が おなじなので、分子だけを たしたり ひいたりしよう"] },
+    explain: [`分母は ${denominator}のまま、分子を ${addition ? "たす" : "ひく"}`, `${a} ${addition ? "+" : "-"} ${b} = ${resultNumerator}なので ${resultNumerator}/${denominator}`, `${resultNumerator}/${denominator}を かんたんにして、こたえは ${answer}`],
   };
 }
 
@@ -219,8 +228,8 @@ function genTani(): Problem {
       op: null,
       answer,
       choices: stringChoices(answer, [`100${target}`, `10${target}`, `10000${target}`]),
-      hint: null,
-      explain: [`1${source}は 1000${target}`],
+      hint: { type: "text", lines: ["大きい たんいを 小さい たんいに なおす きまりを おもい出そう"] },
+      explain: [`${source}から ${target}へは、大きい たんいを 小さい たんいに なおす`, `1${source} = 1000${target}。こたえは 1000${target}`],
     };
   }
   const km = randInt(1, 9);
@@ -234,8 +243,8 @@ function genTani(): Problem {
     op: null,
     answer: `${answer}m`,
     choices: stringChoices(`${answer}m`, [`${km * 100 + m}m`, `${km * 1000}m`, `${answer + 1000}m`]),
-    hint: null,
-    explain: [`${km}kmは ${km * 1000}m`, `${km * 1000}m + ${m}m = ${answer}m`],
+    hint: { type: "text", lines: ["キロメートルを メートルに なおしてから、メートルどうしを たそう"] },
+    explain: [`1km = 1000mなので、${km}km = ${km} × 1000 = ${km * 1000}m`, `${km * 1000}m + ${m}m = ${answer}m`, `こたえは ${answer}m`],
   };
 }
 
