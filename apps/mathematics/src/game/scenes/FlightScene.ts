@@ -77,11 +77,14 @@ export class FlightScene extends Scene {
     super("Flight");
   }
 
-  init(data: { grade: number }) {
+  private bossOnly = false;
+
+  init(data: { grade: number; bossOnly?: boolean }) {
     const def = getGrade(data.grade);
     if (!def || !def.output) throw new Error(`grade ${data.grade} not playable`);
     this.gradeDef = def;
     this.output = def.output;
+    this.bossOnly = data.bossOnly === true;
   }
 
   create() {
@@ -107,6 +110,9 @@ export class FlightScene extends Scene {
 
     this.setupInput();
     this.setupCollisions();
+
+    /* ボスせんだけモード: 飛行パートをスキップして即ボス */
+    if (this.bossOnly) this.elapsedSec = this.output.durationSec;
 
     this.scene.launch("Hud", { flight: this });
     /* Hud は非同期に起動するため、準備完了通知を受けて初期状態を再送する */
@@ -667,7 +673,7 @@ export class FlightScene extends Scene {
       "ゲームオーバー…",
       [`スコア: ${this.score}`, "もういちど ちょうせんしよう!"],
       "もういちど",
-      () => this.scene.restart({ grade: this.gradeDef.grade }),
+      () => this.scene.restart({ grade: this.gradeDef.grade, bossOnly: this.bossOnly }),
       "マップへ",
       () => this.scene.start("GradeMap"),
     );

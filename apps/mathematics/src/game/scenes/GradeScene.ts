@@ -117,6 +117,22 @@ export class GradeScene extends Scene {
         yoyo: true,
         repeat: -1,
       });
+
+      /* ボス戦だけをやり直したいとき用のショートカット */
+      const bossBtn = this.add
+        .text(GAME_WIDTH / 2 + 210, launchY + 16, "👑 ボスせんに ちょうせん!", {
+          fontFamily: "sans-serif",
+          fontSize: "17px",
+          fontStyle: "bold",
+          color: "#e8c7ff",
+          backgroundColor: "#2a1a4a",
+          padding: { x: 14, y: 8 },
+        })
+        .setOrigin(0.5)
+        .setInteractive({ useHandCursor: true });
+      bossBtn.on("pointerdown", () =>
+        this.scene.start("Flight", { grade: this.gradeDef.grade, bossOnly: true }),
+      );
     }
 
     const back = this.add
