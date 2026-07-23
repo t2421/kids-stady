@@ -113,6 +113,10 @@ export class FlightScene extends Scene {
     const theme = this.output.theme;
     bgVoid.setTint(theme.bgTint);
     planet.setTint(theme.planetTint);
+    /* 高学年ほど おどろおどろしい暗さに */
+    if (theme.darkness > 0) {
+      this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x05030c, theme.darkness);
+    }
 
     this.pBullets = this.physics.add.group();
     this.eBullets = this.physics.add.group();
@@ -175,6 +179,7 @@ export class FlightScene extends Scene {
     this.formationAlive.clear();
     this.formationInvalid.clear();
     this.boss = null;
+    this.bossAura = null;
     this.bossPhase = false;
     this.midBossPhase = false;
     this.midBossDone = false;
@@ -372,9 +377,10 @@ export class FlightScene extends Scene {
     e.setCircle(18, 14, 14);
     e.setData("kind", kind);
     e.setData("baseY", spawnY);
-    e.setData("hp", kind === "rock" ? 2 : 1);
+    const diff = this.output.difficulty;
+    e.setData("hp", kind === "rock" ? 2 + diff.rockHpBonus : 1);
     if (formationId != null) e.setData("formationId", formationId);
-    const speed = kind === "bird" ? 210 : kind === "red" ? 170 : 130;
+    const speed = (kind === "bird" ? 210 : kind === "red" ? 170 : 130) * diff.enemySpeedMul;
     e.setVelocityX(-speed);
   }
 
@@ -636,10 +642,25 @@ export class FlightScene extends Scene {
 
   /* ---------- ボス / 中ボス ---------- */
 
+  private bossAura: Phaser.GameObjects.Arc | null = null;
+
   private spawnBossController(
-    def: { name: string; hp: number; chipScale: number; beamDamage: number },
+    def: { name: string; hp: number; chipScale: number; beamDamage: number; scale?: number; aggression?: number; aura?: boolean },
     opts: { texture: string; scale: number; onDefeated: () => void },
   ): BossController {
+    /* 威圧オーラ: 高学年ボスの背後で赤黒く脈動する */
+    if (def.aura) {
+      this.bossAura = this.add.circle(GAME_WIDTH + 160, GAME_HEIGHT / 2, 110 * (def.scale ?? opts.scale), 0xff2035, 0.16);
+      this.tweens.add({
+        targets: this.bossAura,
+        scale: { from: 1, to: 1.25 },
+        alpha: { from: 0.16, to: 0.3 },
+        duration: 900,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
+    }
     const controller = new BossController(
       this,
       def,
@@ -652,7 +673,7 @@ export class FlightScene extends Scene {
         onHpChanged: (hp, maxHp) => this.events.emit("hud-boss", { hp, maxHp, name: def.name }),
         onDefeated: opts.onDefeated,
       },
-      { texture: opts.texture, scale: opts.scale },
+      { texture: opts.texture, scale: def.scale ?? opts.scale },
     );
     /* 本体を敵グループにも登録して被弾判定を通す */
     const body = this.enemies.create(controller.sprite.x, controller.sprite.y, opts.texture) as Phaser.Physics.Arcade.Image;
@@ -669,26 +690,30 @@ export class FlightScene extends Scene {
     return controller;
   }
 
-  private showBossWarning(name: string) {
-    sfx.fanfare();
+  private showBossWarning(name: string, aggression = 1) {
+    sfx.roar();
+    this.cameras.main.shake(300 + aggression * 200, 0.004 * aggression);
+    const size = Math.round(30 + aggression * 8);
     const warn = this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `⚔️ ${name} が あらわれた!`, {
         fontFamily: "sans-serif",
-        fontSize: "34px",
+        fontSize: `${size}px`,
         fontStyle: "bold",
-        color: "#ff7b7b",
-        stroke: "#1a2a55",
-        strokeThickness: 6,
+        color: aggression >= 1.35 ? "#ff3b4d" : "#ff7b7b",
+        stroke: "#0a0618",
+        strokeThickness: 7,
       })
-      .setOrigin(0.5);
-    this.tweens.add({ targets: warn, alpha: 0, delay: 1600, duration: 500, onComplete: () => warn.destroy() });
+      .setOrigin(0.5)
+      .setScale(0.6);
+    this.tweens.add({ targets: warn, scale: 1, duration: 260, ease: "Back.easeOut" });
+    this.tweens.add({ targets: warn, alpha: 0, delay: 1700, duration: 500, onComplete: () => warn.destroy() });
   }
 
   /* 中ボス: 飛行パートの中間で登場。倒すと飛行が再開する */
   private enterMidBossPhase() {
     this.midBossPhase = true;
     this.droneAccum = 6; // 最初のドローンを早めに
-    this.showBossWarning(this.output.midBoss.name);
+    this.showBossWarning(this.output.midBoss.name, this.output.midBoss.aggression ?? 1);
     this.boss = this.spawnBossController(this.output.midBoss, {
       texture: "enemy-frigate",
       scale: 1.3,
@@ -697,6 +722,8 @@ export class FlightScene extends Scene {
   }
 
   private onMidBossDefeated() {
+    this.bossAura?.destroy();
+    this.bossAura = null;
     const b = this.boss;
     this.midBossPhase = false;
     this.midBossDone = true;
@@ -714,7 +741,7 @@ export class FlightScene extends Scene {
 
   private enterBossPhase() {
     this.bossPhase = true;
-    this.showBossWarning(this.output.boss.name);
+    this.showBossWarning(this.output.boss.name, this.output.boss.aggression ?? 1);
     this.boss = this.spawnBossController(this.output.boss, {
       texture: "enemy-cruiser",
       scale: 1.6,
@@ -753,6 +780,8 @@ export class FlightScene extends Scene {
   private stageClear() {
     if (this.ended) return;
     this.ended = true;
+    this.bossAura?.destroy();
+    this.bossAura = null;
     sfx.fanfare();
     const bossBody = this.boss?.sprite.getData("bodyRef") as Phaser.Physics.Arcade.Image | undefined;
     bossBody?.destroy();
@@ -944,20 +973,21 @@ export class FlightScene extends Scene {
         total: this.output.durationSec,
       });
 
-      /* ウェーブスポーン: テンポよく湧かせてピンチを作る */
+      /* ウェーブスポーン: 学年difficultyに応じてテンポと密度が上がる */
+      const diff = this.output.difficulty;
       this.spawnAccum += dt;
-      if (this.spawnAccum >= 0.9) {
+      if (this.spawnAccum >= diff.spawnIntervalSec) {
         this.spawnAccum = 0;
         const roll = Math.random();
         this.spawnEnemy(roll < 0.4 ? "ufo" : roll < 0.75 ? "rock" : "bird");
         /* ときどき2体同時 (上下バラけて) */
-        if (Math.random() < 0.35) {
+        if (Math.random() < diff.doubleSpawnChance) {
           const roll2 = Math.random();
           this.spawnEnemy(roll2 < 0.5 ? "ufo" : roll2 < 0.8 ? "rock" : "bird");
         }
       }
       this.formationAccum += dt;
-      if (this.formationAccum >= 12) {
+      if (this.formationAccum >= diff.formationIntervalSec) {
         this.formationAccum = 0;
         this.spawnFormation();
       }
@@ -977,6 +1007,7 @@ export class FlightScene extends Scene {
       const bossBody = this.boss.sprite.getData("bodyRef") as Phaser.Physics.Arcade.Image | undefined;
       bossBody?.setPosition(this.boss.sprite.x, this.boss.sprite.y);
       this.bossCrown?.setPosition(this.boss.sprite.x, this.boss.sprite.y - 118);
+      this.bossAura?.setPosition(this.boss.sprite.x, this.boss.sprite.y);
     }
 
     this.updateEnemies(dt);
@@ -997,11 +1028,12 @@ export class FlightScene extends Scene {
         const dy = this.ship.y - e.y;
         e.setVelocityY(Phaser.Math.Clamp(dy * 2.2, -140, 140));
       }
-      /* UFOはときどき狙い弾を撃つ */
-      if (kind === "ufo" && Math.random() < 0.35 * dt && e.x > GAME_WIDTH * 0.4) {
+      /* UFOはときどき狙い弾を撃つ (学年が上がるほど頻繁・高速) */
+      const diff = this.output.difficulty;
+      if (kind === "ufo" && Math.random() < diff.ufoFireRate * dt && e.x > GAME_WIDTH * 0.4) {
         const b = this.eBullets.create(e.x - 16, e.y + 8, "enemy-bullet") as Phaser.Physics.Arcade.Image;
         const angle = Math.atan2(this.ship.y - e.y, this.ship.x - e.x);
-        b.setVelocity(Math.cos(angle) * 170, Math.sin(angle) * 170);
+        b.setVelocity(Math.cos(angle) * diff.eBulletSpeed, Math.sin(angle) * diff.eBulletSpeed);
       }
     }
 

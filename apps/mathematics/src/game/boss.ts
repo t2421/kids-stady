@@ -148,8 +148,9 @@ export class BossController {
       else if (pattern === "spread") this.fireSpread();
       else this.fireSweep();
       this.angry = false;
-      /* フェーズが進むほど攻撃間隔が短くなる */
-      const base = 3400 - this.phase * 500;
+      /* フェーズが進むほど・学年が上がるほど攻撃間隔が短くなる */
+      const aggression = this.def.aggression ?? 1;
+      const base = (3400 - this.phase * 500) / aggression;
       this.scheduleNextAttack(base + Phaser.Math.Between(0, 800));
     });
   }
@@ -191,7 +192,7 @@ export class BossController {
     const player = this.playerPos();
     const src = { x: this.sprite.x - 70, y: this.sprite.y };
     const angle = Math.atan2(player.y - src.y, player.x - src.x);
-    const speed = 190 + this.phase * 25;
+    const speed = (190 + this.phase * 25) * (this.def.aggression ?? 1);
     for (let i = 0; i < 3; i++) {
       this.scene.time.delayedCall(i * 220, () => {
         if (this.defeated) return;
@@ -208,8 +209,9 @@ export class BossController {
   /* 扇形弾 (怒りで少しだけ密になる) */
   private fireSpread() {
     const src = { x: this.sprite.x - 70, y: this.sprite.y };
-    const n = (this.angry ? 6 : 5) + this.phase;
-    const speed = 160 + this.phase * 20;
+    const aggression = this.def.aggression ?? 1;
+    const n = (this.angry ? 6 : 5) + this.phase + Math.floor(aggression - 1 + 0.001);
+    const speed = (160 + this.phase * 20) * aggression;
     for (let i = 0; i < n; i++) {
       const angle = Math.PI + ((i - (n - 1) / 2) * 0.75) / (n - 1) * 2;
       this.hooks.fireBullet(
@@ -224,7 +226,7 @@ export class BossController {
   /* 横スイープ: 予告したレーンに弾幕を流す */
   private fireSweep() {
     const laneY = this.sprite.y;
-    const speed = 300 + this.phase * 40;
+    const speed = (300 + this.phase * 40) * (this.def.aggression ?? 1);
     for (let i = 0; i < 6; i++) {
       this.scene.time.delayedCall(i * 130, () => {
         if (this.defeated) return;

@@ -19,12 +19,33 @@ export interface BossDef {
   chipScale: number;
   /* ?ドローン正解で自動発動する必殺技のダメージ */
   beamDamage: number;
+  /* 表示スケール (大きいほど威圧感)。省略時 1.6 */
+  scale?: number;
+  /* 攻撃の激しさ倍率 (弾速・頻度・弾数)。省略時 1.0 */
+  aggression?: number;
+  /* 脈動する威圧オーラ (高学年ボス) */
+  aura?: boolean;
 }
 
 export interface StageTheme {
   /* 星雲レイヤーと惑星に乗せるティント (学年ごとの星の色) */
   bgTint: number;
   planetTint: number;
+  /* 画面全体の暗幕 (0-1)。高学年ほど おどろおどろしく */
+  darkness: number;
+}
+
+/* 学年が上がるほど厳しくなる飛行パートの難易度 */
+export interface DifficultyDef {
+  enemySpeedMul: number;
+  spawnIntervalSec: number;
+  doubleSpawnChance: number;
+  formationIntervalSec: number;
+  /* UFOが1秒あたりに撃つ確率 */
+  ufoFireRate: number;
+  eBulletSpeed: number;
+  /* 岩石メカの追加HP */
+  rockHpBonus: number;
 }
 
 export interface OutputDef {
@@ -34,6 +55,7 @@ export interface OutputDef {
   /* ボス登場までの飛行パート秒数 */
   durationSec: number;
   theme: StageTheme;
+  difficulty: DifficultyDef;
   /* 飛行パート中間に出る中ボス (正解2回で撃破する小型版) */
   midBoss: BossDef;
   boss: BossDef;
@@ -97,9 +119,10 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g1_add_carry", "g1_sub_borrow"],
       answerTimeMs: 8000,
       durationSec: 100,
-      theme: { bgTint: 0x54d1a1, planetTint: 0x54d1a1 },
-      midBoss: { name: "けいさんガーディアン", hp: 40, chipScale: 0.05, beamDamage: 20 },
-      boss: { name: "けいさんキング・イチ", hp: 100, chipScale: 0.05, beamDamage: 25 },
+      theme: { bgTint: 0x54d1a1, planetTint: 0x54d1a1, darkness: 0.0 },
+      difficulty: { enemySpeedMul: 1.0, spawnIntervalSec: 0.9, doubleSpawnChance: 0.35, formationIntervalSec: 12, ufoFireRate: 0.35, eBulletSpeed: 170, rockHpBonus: 0 },
+      midBoss: { name: "けいさんガーディアン", hp: 40, chipScale: 0.05, beamDamage: 20, scale: 1.3, aggression: 1.0 },
+      boss: { name: "けいさんキング・イチ", hp: 100, chipScale: 0.05, beamDamage: 25, scale: 1.6, aggression: 1.0 },
     },
   },
   {
@@ -140,9 +163,10 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g2_kuku_hole", "g2_sub2"],
       answerTimeMs: 9000,
       durationSec: 100,
-      theme: { bgTint: 0x5ab8ff, planetTint: 0x5ab8ff },
-      midBoss: { name: "ひっさんガーディアン", hp: 45, chipScale: 0.05, beamDamage: 20 },
-      boss: { name: "くくキング・ニ", hp: 110, chipScale: 0.05, beamDamage: 25 },
+      theme: { bgTint: 0x5ab8ff, planetTint: 0x5ab8ff, darkness: 0.06 },
+      difficulty: { enemySpeedMul: 1.1, spawnIntervalSec: 0.85, doubleSpawnChance: 0.4, formationIntervalSec: 11.5, ufoFireRate: 0.45, eBulletSpeed: 180, rockHpBonus: 0 },
+      midBoss: { name: "ひっさんガーディアン", hp: 45, chipScale: 0.05, beamDamage: 20, scale: 1.3, aggression: 1.0 },
+      boss: { name: "くくキング・ニ", hp: 110, chipScale: 0.05, beamDamage: 25, scale: 1.65, aggression: 1.1 },
     },
   },
   {
@@ -183,9 +207,10 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g3_div_amari", "g3_mult2x1"],
       answerTimeMs: 10000,
       durationSec: 100,
-      theme: { bgTint: 0xff9f43, planetTint: 0xff9f43 },
-      midBoss: { name: "わりざんガーディアン", hp: 50, chipScale: 0.05, beamDamage: 20 },
-      boss: { name: "わりざんキング・サン", hp: 120, chipScale: 0.05, beamDamage: 25 },
+      theme: { bgTint: 0xff9f43, planetTint: 0xff9f43, darkness: 0.12 },
+      difficulty: { enemySpeedMul: 1.2, spawnIntervalSec: 0.8, doubleSpawnChance: 0.45, formationIntervalSec: 11, ufoFireRate: 0.55, eBulletSpeed: 190, rockHpBonus: 0 },
+      midBoss: { name: "わりざんガーディアン", hp: 50, chipScale: 0.05, beamDamage: 20, scale: 1.35, aggression: 1.1 },
+      boss: { name: "わりざんキング・サン", hp: 120, chipScale: 0.05, beamDamage: 25, scale: 1.7, aggression: 1.2 },
     },
   },
   {
@@ -226,9 +251,10 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g4_div2", "g4_bunsu"],
       answerTimeMs: 12000,
       durationSec: 100,
-      theme: { bgTint: 0xc86bff, planetTint: 0xc86bff },
-      midBoss: { name: "しょうすうガーディアン", hp: 55, chipScale: 0.05, beamDamage: 20 },
-      boss: { name: "しょうすうキング・ヨン", hp: 130, chipScale: 0.05, beamDamage: 25 },
+      theme: { bgTint: 0x9a5fd0, planetTint: 0x9a5fd0, darkness: 0.2 },
+      difficulty: { enemySpeedMul: 1.3, spawnIntervalSec: 0.72, doubleSpawnChance: 0.5, formationIntervalSec: 10.5, ufoFireRate: 0.65, eBulletSpeed: 205, rockHpBonus: 1 },
+      midBoss: { name: "しょうすうガーディアン", hp: 55, chipScale: 0.05, beamDamage: 20, scale: 1.4, aggression: 1.2 },
+      boss: { name: "しょうすうキング・ヨン", hp: 130, chipScale: 0.05, beamDamage: 25, scale: 1.75, aggression: 1.35, aura: true },
     },
   },
   {
@@ -269,9 +295,10 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g5_bunsu_add", "g5_shosu_div"],
       answerTimeMs: 14000,
       durationSec: 100,
-      theme: { bgTint: 0xff7ba9, planetTint: 0xff7ba9 },
-      midBoss: { name: "ぶんすうガーディアン", hp: 60, chipScale: 0.05, beamDamage: 20 },
-      boss: { name: "ぶんすうキング・ゴ", hp: 140, chipScale: 0.05, beamDamage: 25 },
+      theme: { bgTint: 0xb03060, planetTint: 0xb03060, darkness: 0.28 },
+      difficulty: { enemySpeedMul: 1.45, spawnIntervalSec: 0.65, doubleSpawnChance: 0.55, formationIntervalSec: 10, ufoFireRate: 0.8, eBulletSpeed: 220, rockHpBonus: 1 },
+      midBoss: { name: "ぶんすうガーディアン", hp: 60, chipScale: 0.05, beamDamage: 20, scale: 1.45, aggression: 1.3 },
+      boss: { name: "ぶんすうキング・ゴ", hp: 140, chipScale: 0.05, beamDamage: 25, scale: 1.85, aggression: 1.5, aura: true },
     },
   },
   {
@@ -312,9 +339,10 @@ export const GRADES: GradeDef[] = [
       bossSkills: ["g6_bunsu_div", "g6_en"],
       answerTimeMs: 15000,
       durationSec: 100,
-      theme: { bgTint: 0xffd93d, planetTint: 0xffd93d },
-      midBoss: { name: "まおうのガーディアン", hp: 65, chipScale: 0.05, beamDamage: 20 },
-      boss: { name: "けいさんだいまおう", hp: 150, chipScale: 0.05, beamDamage: 25 },
+      theme: { bgTint: 0x7a1f2b, planetTint: 0x7a1f2b, darkness: 0.36 },
+      difficulty: { enemySpeedMul: 1.6, spawnIntervalSec: 0.58, doubleSpawnChance: 0.6, formationIntervalSec: 9, ufoFireRate: 0.95, eBulletSpeed: 240, rockHpBonus: 1 },
+      midBoss: { name: "まおうのガーディアン", hp: 65, chipScale: 0.05, beamDamage: 20, scale: 1.5, aggression: 1.45, aura: true },
+      boss: { name: "けいさんだいまおう", hp: 150, chipScale: 0.05, beamDamage: 25, scale: 2.0, aggression: 1.7, aura: true },
     },
   },
 ];

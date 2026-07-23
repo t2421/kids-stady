@@ -90,4 +90,10 @@ export const sfx = {
     tone(440, 0.08, "sine", 0.14);
     tone(880, 0.12, "sine", 0.12, 0.06);
   },
+  /* ボス登場の咆哮 (低音のうなり) */
+  roar() {
+    tone(80, 0.5, "sawtooth", 0.2);
+    tone(55, 0.7, "square", 0.18, 0.1);
+    tone(110, 0.4, "sawtooth", 0.14, 0.25);
+  },
 };
