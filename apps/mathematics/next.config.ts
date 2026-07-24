@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 /*
@@ -9,6 +10,9 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const nextConfig: NextConfig = {
   output: "export",
+  /* shared/ (リポジトリ共通コード) を import できるよう、ワークスペースルートを明示。
+     CI ではルートに lockfile が無く、既定だと apps/mathematics がルート扱いになるため必須 */
+  turbopack: { root: path.join(__dirname, "../..") },
   basePath,
   assetPrefix: basePath,
   images: { unoptimized: true },
