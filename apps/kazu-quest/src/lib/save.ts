@@ -8,6 +8,14 @@ import { readJSON, writeJSON } from "./profiles";
 
 export type Dir = "up" | "down" | "left" | "right";
 
+/* 装備部位。アイテム定義 (content/types.ts) からも参照される */
+export type EquipSlot = "weapon" | "armor" | "shield";
+
+export const EQUIP_SLOTS: EquipSlot[] = ["weapon", "armor", "shield"];
+
+/* 部位 → 装備中の itemId。装備中のアイテムは inventory.items から出ている */
+export type Equipment = Partial<Record<EquipSlot, string>>;
+
 export interface PartyMember {
   memberId: string;
   level: number;
@@ -15,6 +23,7 @@ export interface PartyMember {
   hp: number;
   mp: number;
   learnedSpells: string[];
+  equipment: Equipment;
 }
 
 export interface HistoryEntry {
@@ -73,6 +82,7 @@ export function defaultSave(): SaveData {
         hp: 25,
         mp: 8,
         learnedSpells: [],
+        equipment: {},
       },
     ],
     location: { ...START_LOCATION },
@@ -97,6 +107,16 @@ function asStringArray(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((s): s is string => typeof s === "string") : [];
 }
 
+function normalizeEquipment(raw: unknown): Equipment {
+  if (typeof raw !== "object" || raw === null) return {};
+  const out: Equipment = {};
+  for (const slot of EQUIP_SLOTS) {
+    const v = (raw as Record<string, unknown>)[slot];
+    if (typeof v === "string" && v) out[slot] = v;
+  }
+  return out;
+}
+
 function normalizeParty(raw: unknown, fallback: PartyMember[]): PartyMember[] {
   if (!Array.isArray(raw)) return fallback;
   const members = raw
@@ -112,6 +132,7 @@ function normalizeParty(raw: unknown, fallback: PartyMember[]): PartyMember[] {
       hp: Math.max(0, asNumber(m.hp, 1)),
       mp: Math.max(0, asNumber(m.mp, 0)),
       learnedSpells: asStringArray(m.learnedSpells),
+      equipment: normalizeEquipment(m.equipment),
     }));
   return members.length > 0 ? members : fallback;
 }

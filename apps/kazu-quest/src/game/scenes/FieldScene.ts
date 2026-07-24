@@ -13,7 +13,9 @@ import { actorTextureKey } from "../textures";
 import { autosave, getSave, updateSave } from "../session";
 import { EventBus } from "../EventBus";
 import { fadeIn, fadeOutThen } from "../transition";
-import { MapView, tileCenter } from "../field/MapView";
+import { addFootShadow, MapView, tileCenter } from "../field/MapView";
+import { createCaveDarkness } from "../field/atmosphere";
+import { openEquipMenu } from "../field/equipMenu";
 import { consumeDebugBattle } from "../debugBoot";
 import { buildStatusSections } from "../field/statusSections";
 import {
@@ -51,6 +53,8 @@ export class FieldScene extends Scene {
   private map!: MapDef;
   private view!: MapView;
   private player!: Phaser.GameObjects.Image;
+  private playerShadow!: Phaser.GameObjects.Ellipse;
+  private darkness: Phaser.GameObjects.Image | null = null;
   private gridX = 0;
   private gridY = 0;
   private facing: Dir = "down";
@@ -107,10 +111,17 @@ export class FieldScene extends Scene {
     this.view = new MapView(this, this.map);
     this.view.build(getSave().flags);
 
+    this.playerShadow = addFootShadow(this, ...tileCenter(this.gridX, this.gridY));
     this.player = this.add
       .image(...tileCenter(this.gridX, this.gridY), actorTextureKey("hero"))
       .setDepth(10);
     this.applyHeroFacing();
+
+    /* 洞くつは勇者のまわりだけ松明で照らされる */
+    this.darkness =
+      this.map.theme === "cave"
+        ? createCaveDarkness(this, this.player.x, this.player.y)
+        : null;
 
     this.setupCamera();
     this.setupInput();
@@ -129,6 +140,10 @@ export class FieldScene extends Scene {
   }
 
   update() {
+    /* 影と闇は移動ツイーン中も毎フレーム追従させる */
+    this.playerShadow.setPosition(this.player.x, this.player.y + 6);
+    this.darkness?.setPosition(this.player.x, this.player.y);
+
     if (
       this.moving ||
       this.transferring ||
@@ -207,9 +222,13 @@ export class FieldScene extends Scene {
        しないよう shutdown で解除する */
     const onMenuButton = () => this.openStatusMenu();
     EventBus.on("menu-button-pressed", onMenuButton);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () =>
-      EventBus.off("menu-button-pressed", onMenuButton),
-    );
+    /* ステータスパネルの「そうびを かえる」→ 装備メニュー */
+    const onEquipMenu = () => this.openEquipFlow();
+    EventBus.on("request-equip-menu", onEquipMenu);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      EventBus.off("menu-button-pressed", onMenuButton);
+      EventBus.off("request-equip-menu", onEquipMenu);
+    });
 
     /* Ui の create 完了を待ってからマップ名を出す */
     this.time.delayedCall(50, () => this.ui.showMapName?.(this.map.name));
@@ -294,7 +313,13 @@ export class FieldScene extends Scene {
       x: px,
       y: py,
       duration: STEP_MS,
+      /* DQ風の小さなホップ。y はツイーンが使うので描画原点で浮かせ、
+         足元の影は地面に残す (接地感) */
+      onUpdate: (tween) => {
+        this.player.displayOriginY = 8 + Math.sin(tween.progress * Math.PI) * 1.5;
+      },
       onComplete: () => {
+        this.player.displayOriginY = 8;
         this.moving = false;
         this.onStep();
       },
@@ -488,6 +513,22 @@ export class FieldScene extends Scene {
     if (!sections) return;
     this.runActive = true;
     this.ui.showStatusPanel(sections, () => this.finishRun());
+  }
+
+  /* パネル閉→装備メニューの連続遷移なので canAct のクールダウンは見ない */
+  private openEquipFlow() {
+    if (
+      !this.scene.isActive() ||
+      this.moving ||
+      this.transferring ||
+      this.runActive ||
+      this.battleStarting ||
+      this.isUiBusy()
+    ) {
+      return;
+    }
+    this.runActive = true;
+    openEquipMenu(this.ui, () => this.finishRun());
   }
 
   /* ---------- イベントランナー駆動 ---------- */

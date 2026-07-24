@@ -18,6 +18,7 @@ const HERO: PartyMember = {
   hp: 999,
   mp: 999,
   learnedSpells: ["hikidama"],
+  equipment: {},
 };
 
 const KESHIGOMUN: MonsterDef = {
@@ -235,6 +236,7 @@ describe("applyVictory", () => {
       hp: 3,
       mp: 0,
       learnedSpells: [],
+      equipment: {},
     };
     const battle = createBattle([member], [KESHIGOMUN], false);
     const bigExp = expForLevel(3);
@@ -253,6 +255,7 @@ describe("applyVictory", () => {
       hp: heroStats(5).maxHp,
       mp: heroStats(5).maxMp,
       learnedSpells: [],
+      equipment: {},
     };
     const battle = createBattle([member], [KESHIGOMUN], false);
     battle.members[0].hp = 10; /* 戦闘でダメージを受けた状態 */

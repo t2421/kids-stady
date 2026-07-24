@@ -60,6 +60,12 @@ export function PhaserGame() {
             ),
           }));
         },
+        grantGold: (amount: number) => {
+          updateSave((s) => ({
+            ...s,
+            inventory: { ...s.inventory, gold: s.inventory.gold + amount },
+          }));
+        },
         warp: (mapId: string, spawn: string) => {
           const field = game?.scene.getScene("Field") as unknown as
             | { debugWarp?: (mapId: string, spawn: string) => void }

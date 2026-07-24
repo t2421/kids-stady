@@ -179,6 +179,35 @@ export class UiScene extends Scene {
       );
     children.push(switchFrame, switchBox, switchLabel);
 
+    /* そうび変更 (下中央) — パネルを閉じてから装備メニューを開いてもらう */
+    const equipX = -w / 2 + 380;
+    const equipFrame = this.add.rectangle(equipX, h / 2 - 40, 200, 52, 0xffffff, 1);
+    const equipBox = this.add.rectangle(equipX, h / 2 - 40, 194, 46, 0x2f6b3a, 0.95);
+    const equipLabel = this.add
+      .text(equipX, h / 2 - 40, "そうびを かえる", {
+        fontFamily: "sans-serif",
+        fontSize: "20px",
+        fontStyle: "bold",
+        color: "#ffffff",
+      })
+      .setOrigin(0.5);
+    equipFrame
+      .setInteractive()
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          ev: Phaser.Types.Input.EventData,
+        ) => {
+          ev.stopPropagation();
+          this.closeStatusPanel();
+          EventBus.emit("request-equip-menu");
+        },
+      );
+    children.push(equipFrame, equipBox, equipLabel);
+
     /* 右下に置いて本文との重なりを避ける */
     const closeX = w / 2 - 110;
     const closeFrame = this.add.rectangle(closeX, h / 2 - 40, 180, 52, 0xffffff, 1);

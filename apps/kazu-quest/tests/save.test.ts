@@ -65,7 +65,15 @@ describe("normalizeSave", () => {
       ],
     });
     expect(n.party).toEqual([
-      { memberId: "hero", level: 4, exp: 30, hp: 20, mp: 5, learnedSpells: ["hikidama"] },
+      {
+        memberId: "hero",
+        level: 4,
+        exp: 30,
+        hp: 20,
+        mp: 5,
+        learnedSpells: ["hikidama"],
+        equipment: {},
+      },
     ]);
   });
 });

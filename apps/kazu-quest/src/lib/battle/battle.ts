@@ -11,6 +11,7 @@ import type { MonsterDef, SpellDef } from "../../content/types";
 import type { PartyMember } from "../save";
 import type { Rng } from "../curriculum/types";
 import { heroStats, levelForExp } from "./stats";
+import { equippedStats } from "./equipment";
 
 export interface Combatant {
   id: string;
@@ -84,7 +85,8 @@ export interface RoundResult {
 }
 
 export function makeMemberCombatant(member: PartyMember): Combatant {
-  const stats = heroStats(member.level);
+  /* atk/def は装備補正込み。HP/MP上限はレベル由来のまま */
+  const stats = equippedStats(member);
   return {
     id: member.memberId,
     name: member.memberId === "hero" ? "ゆうしゃ" : member.memberId,

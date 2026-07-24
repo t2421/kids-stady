@@ -10,7 +10,7 @@ import { listMaps, hasMap, getMapDef } from "../src/content/maps";
 import { TILE_ART } from "../src/content/art/tiles";
 import { ACTOR_ART } from "../src/content/art/actors";
 import { MONSTER_ART } from "../src/content/art/monsters";
-import { ITEMS } from "../src/content/items";
+import { ITEMS, SHOPS } from "../src/content/items";
 import { MONSTERS } from "../src/content/monsters";
 import { ENCOUNTER_TABLES } from "../src/content/encounters";
 import { SPELLS } from "../src/content/spells";
@@ -29,6 +29,29 @@ describe("spells", () => {
       expect(spell.learnTest.passCount).toBeLessThanOrEqual(spell.learnTest.questions);
       expect(spell.mpCost).toBeGreaterThan(0);
       expect(spell.battleTimeLimitMs).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("items & shops", () => {
+  it("equip items declare a slot and at least one bonus", () => {
+    for (const item of Object.values(ITEMS)) {
+      if (item.kind !== "equip") continue;
+      expect(item.slot, `装備 "${item.id}" の slot`).toBeDefined();
+      expect(
+        (item.atk ?? 0) + (item.def ?? 0),
+        `装備 "${item.id}" に補正がない`,
+      ).toBeGreaterThan(0);
+      expect(item.price).toBeGreaterThan(0);
+    }
+  });
+
+  it("shops reference existing items", () => {
+    for (const shop of Object.values(SHOPS)) {
+      expect(shop.itemIds.length).toBeGreaterThan(0);
+      for (const id of shop.itemIds) {
+        expect(ITEMS[id], `店 "${shop.id}" の item "${id}"`).toBeDefined();
+      }
     }
   });
 });

@@ -4,7 +4,7 @@
  * 参照整合性は tests/content.test.ts のバリデーションで守る。
  */
 
-import type { Dir } from "../lib/save";
+import type { Dir, EquipSlot } from "../lib/save";
 
 /* ---------- マップ ---------- */
 
@@ -145,6 +145,10 @@ export interface ItemDef {
   kind: "heal" | "key" | "equip";
   /* heal 系の回復量 */
   power?: number;
+  /* kind === "equip" のとき必須: 装備部位と能力補正 */
+  slot?: EquipSlot;
+  atk?: number;
+  def?: number;
   price: number;
   description: string;
 }

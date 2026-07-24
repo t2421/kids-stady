@@ -7,6 +7,7 @@
 import { EventBus } from "../EventBus";
 import { autosave, getSave, updateSave } from "../session";
 import { heroStats } from "../../lib/battle/stats";
+import { equipItem } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem, SHOPS } from "../../content/items";
 import type { UiScene } from "../scenes/UiScene";
@@ -140,6 +141,26 @@ export function handleShop(
           },
         }));
         autosave();
+        /* 装備品は DQ 流に「すぐ そうびする?」と聞く */
+        if (item.kind === "equip") {
+          ui.showMessage([`${item.name}を てにいれた!`], () => {
+            ui.showChoice("すぐ そうびする?", (yes) => {
+              if (!yes) {
+                openList();
+                return;
+              }
+              const next = equipItem(getSave(), "hero", item.id);
+              if (next) {
+                updateSave(() => next);
+                autosave();
+                ui.showMessage([`${item.name}を そうびした!`], openList);
+              } else {
+                openList();
+              }
+            });
+          });
+          return;
+        }
         ui.showMessage([`${item.name}を てにいれた!`], openList);
       },
     );
