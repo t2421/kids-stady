@@ -66,5 +66,8 @@
 - `skillId` はアプリ側で一意になる接頭辞を付ける (mathematics: `g1_add_carry` 等 / keisan-shooter: `ks_add_carry` 等)
 - `ms` は直近の解答時間 (cap 20)。**計測できない場合は記録しない** (0 を渡すと ms には積まれず正誤だけ記録)
 - `daily` は日別の正誤集計 (cap 60日、古い日から削除)
-- 実装: TS `apps/mathematics/src/lib/learning.ts` / vanilla `shared/js/learning.js` (`KidsLearning.record(profileId, app, skillId, correct, elapsedMs)`)
+- **実装は単一ソース**: `shared/learning-core/learning.ts` が正典。
+  - Next系アプリはこれを直接 import する (mathematics は `src/lib/learning.ts` が再エクスポート)
+  - 静的アプリは `shared/js/learning.js` (`KidsLearning.record/load/remove` + 分析ヘルパ) を `<script>` で読む。
+    **このファイルは自動生成** (`cd apps/mathematics && npm run gen:learning`)。直接編集しない
 - プロフィール削除時はこのキーも削除してよい (削除実行アプリの責務)

@@ -4,15 +4,16 @@
   "private": true,
   "description": "マスマティクス — グラディウス風・算数シューティング (Phaser 4 + Next.js)",
   "scripts": {
-    "predev": "npm run gen:sprites",
+    "predev": "npm run gen:sprites && npm run gen:learning",
     "dev": "next dev -p 3010",
-    "prebuild": "npm run gen:sprites",
+    "prebuild": "npm run gen:sprites && npm run gen:learning",
     "build": "next build",
     "start": "next start",
     "gen:sprites": "node scripts/gen-sprites.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "gen:learning": "esbuild ../../shared/learning-core/vanilla-entry.ts --bundle --format=iife --outfile=../../shared/js/learning.js --banner:js=\"/* 自動生成: shared/learning-core から npm run gen:learning で生成。直接編集しない */\""
   },
   "dependencies": {
     "next": "^16.2.10",
@@ -24,6 +25,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.1",
     "pngjs": "^7.0.0",
     "typescript": "^5",
     "vitest": "^3"

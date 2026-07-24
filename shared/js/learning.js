@@ -1,117 +1,159 @@
-/*
- * ゲーム横断の共有学習ログ (vanilla版)。
- * キー: kidsStudy.learning.v1.<プロフィールid>。契約の正典は docs/save-data.md。
- * TypeScript 実装 (apps/mathematics/src/lib/learning.ts) と挙動を一致させること。
- *
- * 使い方 (静的アプリから):
- *   KidsLearning.record(profileId, "keisan-shooter", "ks_add_carry", true, 0);
- *   (解答時間が計測できない場合は elapsedMs に 0 を渡す)
- */
-(function (global) {
-  "use strict";
-
-  var MS_LIMIT = 20;
-  var DAILY_LIMIT = 60;
-
-  function key(profileId) {
-    return "kidsStudy.learning.v1." + profileId;
-  }
-
-  function readJSON(k) {
+/* 自動生成: shared/learning-core から npm run gen:learning で生成。直接編集しない */
+(() => {
+  // ../../shared/learning-core/learning.ts
+  function readJSON(key2) {
     try {
-      return JSON.parse(localStorage.getItem(k));
-    } catch (e) {
+      if (typeof localStorage === "undefined") return null;
+      const raw = localStorage.getItem(key2);
+      return raw == null ? null : JSON.parse(raw);
+    } catch {
       return null;
     }
   }
-
-  function writeJSON(k, value) {
+  function writeJSON(key2, value) {
     try {
-      localStorage.setItem(k, JSON.stringify(value));
-    } catch (e) {
-      /* ストレージが使えない環境ではあきらめる */
+      if (typeof localStorage === "undefined") return;
+      localStorage.setItem(key2, JSON.stringify(value));
+    } catch {
     }
   }
-
+  function removeKey(key2) {
+    try {
+      if (typeof localStorage === "undefined") return;
+      localStorage.removeItem(key2);
+    } catch {
+    }
+  }
+  var LEARNING_MS_LIMIT = 20;
+  var LEARNING_DAILY_LIMIT = 60;
+  function key(profileId) {
+    return "kidsStudy.learning.v1." + profileId;
+  }
+  function emptyLog() {
+    return { version: 1, skills: {}, daily: {} };
+  }
   function toCount(v) {
-    var n = typeof v === "number" && isFinite(v) ? Math.floor(v) : 0;
+    const n = typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : 0;
     return n > 0 ? n : 0;
   }
-
-  function normalize(raw) {
-    var base = { version: 1, skills: {}, daily: {} };
-    if (!raw || typeof raw !== "object") return base;
-    if (raw.skills && typeof raw.skills === "object") {
-      Object.keys(raw.skills).forEach(function (id) {
-        var s = raw.skills[id];
-        if (!s || typeof s !== "object") return;
-        base.skills[id] = {
+  function normalizeLog(raw) {
+    const base = emptyLog();
+    if (typeof raw !== "object" || raw === null) return base;
+    const obj = raw;
+    const skills = {};
+    if (typeof obj.skills === "object" && obj.skills !== null) {
+      for (const [id, v] of Object.entries(obj.skills)) {
+        if (typeof v !== "object" || v === null) continue;
+        const s = v;
+        skills[id] = {
           app: typeof s.app === "string" ? s.app : "unknown",
           c: toCount(s.c),
           w: toCount(s.w),
-          ms: Array.isArray(s.ms)
-            ? s.ms.filter(function (n) { return typeof n === "number" && n >= 0; }).slice(-MS_LIMIT)
-            : [],
-          lastTs: toCount(s.lastTs),
+          ms: Array.isArray(s.ms) ? s.ms.filter((n) => typeof n === "number" && n >= 0).slice(-LEARNING_MS_LIMIT) : [],
+          lastTs: toCount(s.lastTs)
         };
-      });
+      }
     }
-    if (raw.daily && typeof raw.daily === "object") {
-      Object.keys(raw.daily).forEach(function (date) {
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-        var d = raw.daily[date];
-        if (!d || typeof d !== "object") return;
-        base.daily[date] = { c: toCount(d.c), w: toCount(d.w) };
-      });
+    const daily = {};
+    if (typeof obj.daily === "object" && obj.daily !== null) {
+      for (const [date, v] of Object.entries(obj.daily)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+        if (typeof v !== "object" || v === null) continue;
+        const d = v;
+        daily[date] = { c: toCount(d.c), w: toCount(d.w) };
+      }
     }
-    return base;
+    return { version: 1, skills, daily };
   }
-
+  function loadLearning(profileId) {
+    return normalizeLog(readJSON(key(profileId)));
+  }
+  function removeLearning(profileId) {
+    removeKey(key(profileId));
+  }
   function dateKey(ts) {
-    var d = new Date(ts);
-    var m = String(d.getMonth() + 1);
-    var day = String(d.getDate());
-    if (m.length < 2) m = "0" + m;
-    if (day.length < 2) day = "0" + day;
-    return d.getFullYear() + "-" + m + "-" + day;
+    const d = new Date(ts);
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${m}-${day}`;
   }
-
   function trimDaily(daily) {
-    var dates = Object.keys(daily).sort();
-    if (dates.length <= DAILY_LIMIT) return daily;
-    var out = {};
-    dates.slice(-DAILY_LIMIT).forEach(function (d) { out[d] = daily[d]; });
+    const dates = Object.keys(daily).sort();
+    if (dates.length <= LEARNING_DAILY_LIMIT) return daily;
+    const keep = new Set(dates.slice(-LEARNING_DAILY_LIMIT));
+    const out = {};
+    for (const d of dates) if (keep.has(d)) out[d] = daily[d];
+    return out;
+  }
+  function recordLearning(profileId, app, skillId, correct, elapsedMs, now = Date.now()) {
+    const log = loadLearning(profileId);
+    const prev = log.skills[skillId] ?? { app, c: 0, w: 0, ms: [], lastTs: 0 };
+    const ms = elapsedMs > 0 ? [...prev.ms, Math.round(elapsedMs)].slice(-LEARNING_MS_LIMIT) : prev.ms;
+    const skills = {
+      ...log.skills,
+      [skillId]: {
+        app,
+        c: prev.c + (correct ? 1 : 0),
+        w: prev.w + (correct ? 0 : 1),
+        ms,
+        lastTs: now
+      }
+    };
+    const dk = dateKey(now);
+    const day = log.daily[dk] ?? { c: 0, w: 0 };
+    const daily = trimDaily({
+      ...log.daily,
+      [dk]: { c: day.c + (correct ? 1 : 0), w: day.w + (correct ? 0 : 1) }
+    });
+    const next = { version: 1, skills, daily };
+    writeJSON(key(profileId), next);
+    return next;
+  }
+  function skillReports(log) {
+    return Object.entries(log.skills).map(([skillId, s]) => {
+      const attempts = s.c + s.w;
+      const timed = s.ms.filter((n) => n > 0);
+      const avgMs = timed.length ? Math.round(timed.reduce((a, b) => a + b, 0) / timed.length) : 0;
+      let trendMs = 0;
+      if (timed.length >= 6) {
+        const half = Math.floor(timed.length / 2);
+        const first = timed.slice(0, half);
+        const second = timed.slice(half);
+        const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+        trendMs = Math.round(avg(second) - avg(first));
+      }
+      return {
+        skillId,
+        app: s.app,
+        attempts,
+        accuracy: attempts ? Math.round(s.c / attempts * 100) : 0,
+        avgMs,
+        trendMs
+      };
+    });
+  }
+  function weakSkills(log, minAttempts = 5, limit = 3) {
+    return skillReports(log).filter((r) => r.attempts >= minAttempts).sort((a, b) => a.accuracy - b.accuracy || b.attempts - a.attempts).slice(0, limit);
+  }
+  function recentDaily(log, days, now = Date.now()) {
+    const out = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const dk = dateKey(now - i * 864e5);
+      const d = log.daily[dk] ?? { c: 0, w: 0 };
+      out.push({ date: dk, c: d.c, w: d.w });
+    }
     return out;
   }
 
-  function load(profileId) {
-    return normalize(readJSON(key(profileId)));
-  }
-
-  function record(profileId, app, skillId, correct, elapsedMs) {
-    if (!profileId) return null;
-    var log = load(profileId);
-    var now = Date.now();
-    var prev = log.skills[skillId] || { app: app, c: 0, w: 0, ms: [], lastTs: 0 };
-    var ms = prev.ms;
-    if (elapsedMs > 0) ms = prev.ms.concat([Math.round(elapsedMs)]).slice(-MS_LIMIT);
-    log.skills[skillId] = {
-      app: app,
-      c: prev.c + (correct ? 1 : 0),
-      w: prev.w + (correct ? 0 : 1),
-      ms: ms,
-      lastTs: now,
-    };
-    var dk = dateKey(now);
-    var day = log.daily[dk] || { c: 0, w: 0 };
-    log.daily[dk] = { c: day.c + (correct ? 1 : 0), w: day.w + (correct ? 0 : 1) };
-    log.daily = trimDaily(log.daily);
-    writeJSON(key(profileId), log);
-    return log;
-  }
-
-  global.KidsLearning = {
-    load: load,
-    record: record,
+  // ../../shared/learning-core/vanilla-entry.ts
+  globalThis.KidsLearning = {
+    /* 既存API (keisan-shooter 互換) */
+    load: (profileId) => loadLearning(profileId),
+    record: (profileId, app, skillId, correct, elapsedMs) => recordLearning(profileId, app, skillId, correct, elapsedMs),
+    remove: (profileId) => removeLearning(profileId),
+    /* 分析ヘルパ (静的アプリでも成績表示を作れるように公開) */
+    skillReports,
+    weakSkills,
+    recentDaily
   };
-})(typeof window !== "undefined" ? window : globalThis);
+})();
