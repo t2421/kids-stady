@@ -11,6 +11,7 @@ import {
   recordAnswer,
 } from "@/lib/save";
 import type { MathSave } from "@/lib/save";
+import { bgm } from "../bgm";
 import { BossController } from "../boss";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
@@ -140,6 +141,8 @@ export class FlightScene extends Scene {
       this.elapsedSec = this.output.durationSec;
       this.midBossDone = true;
     }
+
+    bgm.play(this.bossOnly ? "boss" : "flight");
 
     this.scene.launch("Hud", { flight: this });
     /* Hud は非同期に起動するため、準備完了通知を受けて初期状態を再送する */
@@ -711,6 +714,7 @@ export class FlightScene extends Scene {
 
   /* 中ボス: 飛行パートの中間で登場。倒すと飛行が再開する */
   private enterMidBossPhase() {
+    bgm.play("boss");
     this.midBossPhase = true;
     this.droneAccum = 6; // 最初のドローンを早めに
     this.showBossWarning(this.output.midBoss.name, this.output.midBoss.aggression ?? 1);
@@ -722,6 +726,7 @@ export class FlightScene extends Scene {
   }
 
   private onMidBossDefeated() {
+    bgm.play("flight");
     this.bossAura?.destroy();
     this.bossAura = null;
     const b = this.boss;
@@ -740,6 +745,7 @@ export class FlightScene extends Scene {
   }
 
   private enterBossPhase() {
+    bgm.play("boss");
     this.bossPhase = true;
     this.showBossWarning(this.output.boss.name, this.output.boss.aggression ?? 1);
     this.boss = this.spawnBossController(this.output.boss, {
@@ -780,6 +786,7 @@ export class FlightScene extends Scene {
   private stageClear() {
     if (this.ended) return;
     this.ended = true;
+    bgm.stop();
     this.bossAura?.destroy();
     this.bossAura = null;
     sfx.fanfare();
@@ -839,6 +846,7 @@ export class FlightScene extends Scene {
   private gameOver() {
     if (this.ended) return;
     this.ended = true;
+    bgm.stop();
     this.physics.world.pause();
     sfx.bad();
 

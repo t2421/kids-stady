@@ -10,6 +10,7 @@ import {
   setLessonMedal,
 } from "@/lib/save";
 import type { MathSave } from "@/lib/save";
+import { bgm } from "../bgm";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
@@ -51,6 +52,7 @@ export class HangarScene extends Scene {
     this.pieces = [];
     this.profileId = getActiveProfileId() ?? "";
     this.save = loadSave(this.profileId);
+    bgm.play("menu");
 
     /* 格納庫の背景 */
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x101c33);

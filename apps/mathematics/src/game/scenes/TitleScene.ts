@@ -1,5 +1,6 @@
 import Phaser, { Scene } from "phaser";
 import { addVoidBackdrop, scrollBackdrop } from "../backdrop";
+import { bgm } from "../bgm";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
@@ -14,6 +15,8 @@ export class TitleScene extends Scene {
   }
 
   create() {
+    bgm.play("menu");
+
     /* ゲーム本編と同じ Void の宇宙 */
     this.layers = addVoidBackdrop(this);
 

@@ -1,5 +1,6 @@
 import Phaser, { Scene } from "phaser";
 import { addVoidBackdrop } from "../backdrop";
+import { bgm } from "../bgm";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { getActiveProfileId } from "../session";
@@ -19,6 +20,7 @@ export class GradeMapScene extends Scene {
   }
 
   create() {
+    bgm.play("menu");
     addVoidBackdrop(this);
     /* カードの可読性を上げる薄い暗幕 */
     this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x171225, 0.4);

@@ -8,6 +8,18 @@ type OscType = OscillatorType;
 
 let ctx: AudioContext | null = null;
 
+/* BGMエンジンなど、AudioContext 解放後に動き出したいものの登録先 */
+const readyCallbacks: Array<() => void> = [];
+
+export function onAudioReady(cb: () => void): void {
+  if (ctx && ctx.state === "running") cb();
+  else readyCallbacks.push(cb);
+}
+
+export function getAudioContext(): AudioContext | null {
+  return ctx;
+}
+
 export function initAudio(): void {
   try {
     if (!ctx) {
@@ -19,6 +31,7 @@ export function initAudio(): void {
       ctx = new AC();
     }
     if (ctx.state === "suspended") void ctx.resume();
+    while (readyCallbacks.length > 0) readyCallbacks.shift()!();
   } catch {
     ctx = null;
   }
