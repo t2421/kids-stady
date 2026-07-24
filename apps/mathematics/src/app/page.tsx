@@ -15,12 +15,17 @@ const ProblemPanel = dynamic(
   () => import("@/components/ProblemPanel").then((m) => m.ProblemPanel),
   { ssr: false },
 );
+const StatsScreen = dynamic(
+  () => import("@/components/StatsScreen").then((m) => m.StatsScreen),
+  { ssr: false },
+);
 
 export default function Home() {
   return (
     <>
       <PhaserGame />
       <ProblemPanel />
+      <StatsScreen />
       <ProfileGate />
     </>
   );

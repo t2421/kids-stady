@@ -105,6 +105,7 @@ export class TitleScene extends Scene {
     });
 
     this.addProfileChip();
+    this.addStatsChip();
     this.addDebugShortcut();
 
     this.input.on("pointerdown", () => {
@@ -119,6 +120,29 @@ export class TitleScene extends Scene {
     });
 
     EventBus.emit("current-scene-ready", this);
+  }
+
+  /* 「せいせき」画面 (React) を開くチップ */
+  private addStatsChip() {
+    const chip = this.add
+      .text(18, 56, "📊 せいせき", {
+        fontFamily: "sans-serif",
+        fontSize: "17px",
+        fontStyle: "bold",
+        color: "#b8cdea",
+        backgroundColor: "#13264a",
+        padding: { x: 12, y: 7 },
+      })
+      .setInteractive({ useHandCursor: true });
+    chip.on("pointerdown", (
+      _pointer: Phaser.Input.Pointer,
+      _x: number,
+      _y: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      EventBus.emit("stats-open");
+    });
   }
 
   /* ?debug=1: タイトルから1タップでボス戦へ (調整用) */

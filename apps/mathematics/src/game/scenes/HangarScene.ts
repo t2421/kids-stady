@@ -10,6 +10,7 @@ import {
   setLessonMedal,
 } from "@/lib/save";
 import type { MathSave } from "@/lib/save";
+import { recordLearning } from "@/lib/learning";
 import { bgm } from "../bgm";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
@@ -130,6 +131,7 @@ export class HangarScene extends Scene {
     const skillId = this.data.get("currentSkill") as string;
     this.save = recordAnswer(this.save, skillId, r.correct, r.elapsedMs);
     persistSave(this.profileId, this.save);
+    if (this.profileId) recordLearning(this.profileId, "mathematics", skillId, r.correct, r.elapsedMs);
     this.answerMs.push(r.elapsedMs);
     this.questionIndex++;
 

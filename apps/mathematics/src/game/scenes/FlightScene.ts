@@ -3,6 +3,7 @@ import { generate, pickSkill } from "@/lib/curriculum";
 import type { Problem } from "@/lib/curriculum";
 import { getGrade } from "@/lib/grades";
 import type { GradeDef, OutputDef } from "@/lib/grades";
+import { recordLearning } from "@/lib/learning";
 import {
   addHistory,
   loadSave,
@@ -557,6 +558,8 @@ export class FlightScene extends Scene {
     this.run.answerMs.push(r.elapsedMs);
     this.save = recordAnswer(this.save, skillId, r.correct, r.elapsedMs);
     persistSave(this.profileId, this.save);
+    /* ゲーム横断の共有学習ログにも記録 (せいせき画面のソース) */
+    if (this.profileId) recordLearning(this.profileId, "mathematics", skillId, r.correct, r.elapsedMs);
   }
 
   private freeze(v: boolean) {

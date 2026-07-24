@@ -11,6 +11,7 @@ import {
   setActiveId,
   type Profile,
 } from "@/lib/profiles";
+import { removeLearning } from "@/lib/learning";
 import { removeSave } from "@/lib/save";
 
 type View = "select" | "create" | "hidden";
@@ -54,6 +55,7 @@ export function ProfileGate() {
     if (deleteArmedId === id) {
       deleteProfile(id);
       removeSave(id);
+      removeLearning(id);
       setDeleteArmedId(null);
       setProfiles(listProfiles());
     } else {

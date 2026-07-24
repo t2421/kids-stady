@@ -44,3 +44,27 @@
   書けない場合はメモリ上の値で続行
 - JSON.parse 失敗は `null` 扱い
 - TypeScript 実装ではサーバーサイド (SSR) から触らない — client-only で使う
+
+## 4. 共有学習ログ (全アプリ共通)
+
+| キー | 所有者 |
+|---|---|
+| `kidsStudy.learning.v1.<id>` | 全アプリ共有 (書き込みは各アプリ、閲覧はせいせき画面) |
+
+スキーマ:
+
+```json
+{
+  "version": 1,
+  "skills": {
+    "<skillId>": { "app": "mathematics", "c": 12, "w": 3, "ms": [2400, 1800], "lastTs": 1784.. }
+  },
+  "daily": { "2026-07-24": { "c": 20, "w": 4 } }
+}
+```
+
+- `skillId` はアプリ側で一意になる接頭辞を付ける (mathematics: `g1_add_carry` 等 / keisan-shooter: `ks_add_carry` 等)
+- `ms` は直近の解答時間 (cap 20)。**計測できない場合は記録しない** (0 を渡すと ms には積まれず正誤だけ記録)
+- `daily` は日別の正誤集計 (cap 60日、古い日から削除)
+- 実装: TS `apps/mathematics/src/lib/learning.ts` / vanilla `shared/js/learning.js` (`KidsLearning.record(profileId, app, skillId, correct, elapsedMs)`)
+- プロフィール削除時はこのキーも削除してよい (削除実行アプリの責務)

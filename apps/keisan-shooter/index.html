@@ -272,6 +272,7 @@
 <script src="assets/models-data.js"></script>
 <script src="../../shared/js/audio.js"></script>
 <script src="../../shared/js/profiles.js"></script>
+<script src="../../shared/js/learning.js"></script>
 <script src="progression.js"></script>
 <script>
 (function(){
@@ -774,7 +775,22 @@ function updateHUD(){
 
 /* ================= HIT / MISS / DAMAGE ================= */
 const cheers = ["やったね!","すごい!","かんぺき!","ナイス!","てんさい!","その調子!"];
+/* 共有学習ログ (docs/save-data.md): 現在の問題のスキルIDを keisan 名前空間で決める */
+function learningSkillId(){
+  const carry = S.stage && S.stage.carry;
+  if(S.op === "+") return carry ? "ks_add_carry" : "ks_add_nc";
+  return carry ? "ks_sub_borrow" : "ks_sub_nc";
+}
+function recordSharedLearning(correct){
+  try {
+    if(window.KidsLearning && activeProfileId){
+      KidsLearning.record(activeProfileId, "keisan-shooter", learningSkillId(), correct, 0);
+    }
+  } catch(e) { /* 記録失敗でゲームは止めない */ }
+}
+
 function hitCorrect(monster){
+  recordSharedLearning(true);
   monster.userData.alive = false;
   laserTo(monster);
   sfx.shoot();
@@ -865,6 +881,7 @@ function renderMistakeExplanation(){
 }
 
 function hitWrong(monster){
+  recordSharedLearning(false);
   sfx.bad();
   S.combo = 0;
   S.runWrong++;
