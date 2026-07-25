@@ -71,7 +71,7 @@
 }
 ```
 
-- `skillId` はアプリ側で一意になる接頭辞を付ける (mathematics: `g1_add_carry` 等 / keisan-shooter: `ks_add_carry` 等)
+- `skillId` はアプリ側で一意になる接頭辞を付ける (mathematics: `g1_add_carry` 等 / keisan-shooter: `ks_add_carry` 等 / kazu-quest: 内部ID `g3_div` 等に `kq_` を前置して `kq_g3_div`)
 - `ms` は直近の解答時間 (cap 20)。**計測できない場合は記録しない** (0 を渡すと ms には積まれず正誤だけ記録)
 - `daily` は日別の正誤集計 (cap 60日、古い日から削除)
 - **実装は単一ソース**: `shared/learning-core/learning.ts` が正典。

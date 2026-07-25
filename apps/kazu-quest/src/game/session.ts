@@ -40,6 +40,10 @@ export function ensureSession(): void {
   }
 }
 
+export function getProfileId(): string | null {
+  return state.profileId;
+}
+
 export function getSave(): SaveData {
   return state.save;
 }
