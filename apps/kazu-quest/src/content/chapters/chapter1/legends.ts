@@ -2,6 +2,7 @@
  * 第1章のマップで共有するタイル凡例。文字の意味を章内で統一する。
  *
  * 屋外共通: T=木 .=草 *=しげみ ~=水 ==道 f/y=花 x=柵 u=井戸 F=噴水
+ * ワールド: M=山 B=橋 V/v=村 C=王都 F=森の入口 O=洞くつ入口
  * 建物:     [=屋根左 R=屋根 ]=屋根右 {=軒左 _=軒 }=軒右
  *           W=家壁 o=窓 I=宿看板 S=店看板 D=扉
  * 城:       M=胸壁 #=城壁 +=城窓 B=旗 G/H=大門(歩ける)
@@ -52,6 +53,25 @@ export const VILLAGE_LEGEND: MapDef["legend"] = {
   B: { art: "banner", walkable: false },
   G: { art: "cgateL", walkable: true },
   H: { art: "cgateR", walkable: true },
+};
+
+/*
+ * ワールドマップ (ドラクエ式の全体マップ)。町・城の外はどこでも
+ * エンカウントし、拠点は1タイルのアイコンを踏むとシーン遷移で中に入る。
+ */
+export const WORLD_LEGEND: MapDef["legend"] = {
+  "~": { art: "water", walkable: false },
+  ".": { art: "grass", variants: GRASS_VARIANTS, walkable: true, encounter: true },
+  "*": { art: "bush", walkable: true, encounter: true },
+  "=": { art: "path", variants: PATH_VARIANTS, walkable: true, encounter: true },
+  T: { art: "tree", walkable: false },
+  M: { art: "mountain", walkable: false },
+  B: { art: "bridge", walkable: true },
+  V: { art: "locVillage", walkable: true },
+  v: { art: "locVillage", walkable: true },
+  C: { art: "locCastle", walkable: true },
+  F: { art: "forestMouth", walkable: true },
+  O: { art: "caveMouth", walkable: true },
 };
 
 export const FIELD_LEGEND: MapDef["legend"] = {

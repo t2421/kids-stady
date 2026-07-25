@@ -16,7 +16,12 @@ export default defineConfig({
   webServer: {
     command: "npm run build && python3 -m http.server 3012 --directory out",
     url: "http://localhost:3012/",
-    reuseExistingServer: false,
+    /*
+     * ローカルでは既存サーバーを再利用できるようにする (標準パターン)。
+     * 並行ビルドとの競合で next build の型検査が数分止まることがあり、
+     * 「先に build → 手動 serve → テスト」で回避できる。CI は常にフルビルド。
+     */
+    reuseExistingServer: !process.env.CI,
     timeout: 300_000,
   },
 });

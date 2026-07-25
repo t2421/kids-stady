@@ -1,4 +1,7 @@
-/* モリカゲ村 — くりさがり呪文のストーリーゲート。まなびや・宿は扉から中へ */
+/*
+ * モリカゲ村 — くりさがり呪文のストーリーゲート。まなびや・宿は扉から中へ。
+ * 洞くつへの橋と番人はワールドマップ側 (ch1-world) にある。
+ */
 
 import type { MapDef } from "../../../types";
 import { VILLAGE_LEGEND } from "../legends";
@@ -17,7 +20,7 @@ export const CH1_MORIKAGE: MapDef = {
     "T...=....=....=....T",
     "T...======....=....T",
     "T...y....==========T",
-    "T.~~.....=.......x.=",
+    "T.~~.....=.......x.T",
     "T.~~.....=.y.......T",
     "T..f.....=....T..u.T",
     "T........=..y......T",
@@ -25,23 +28,6 @@ export const CH1_MORIKAGE: MapDef = {
   ],
   encounterTableId: null,
   npcs: [
-    {
-      id: "bridge-guard",
-      x: 19,
-      y: 8,
-      art: "villager",
-      movement: "static",
-      hideIf: { flag: "learned.hikidaman", op: "set" },
-      dialog: [
-        {
-          pages: [
-            "この さきは かぞえの どうくつ。",
-            "くりさがりの じゅもん ヒキダマンが ないと きけんだ!",
-            "まなびやで テストに ごうかく してきな。",
-          ],
-        },
-      ],
-    },
     {
       id: "villager2",
       x: 6,
@@ -51,7 +37,10 @@ export const CH1_MORIKAGE: MapDef = {
       dialog: [
         {
           if: { flag: "learned.hikidaman", op: "set" },
-          pages: ["ヒキダマンを おぼえたんだね! どうくつは ひがしだよ。"],
+          pages: [
+            "ヒキダマンを おぼえたんだね!",
+            "どうくつは むらを でて ひがしの はしを わたった さきだよ。",
+          ],
         },
         {
           pages: ["どうくつの モンスターは かたいから じゅもんが ひつようだよ。"],
@@ -79,23 +68,17 @@ export const CH1_MORIKAGE: MapDef = {
       ],
     },
     {
-      id: "to-forest",
+      id: "to-world",
       x: 9,
       y: 0,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch1-forest", spawn: "south" }],
-    },
-    {
-      id: "to-cave-1",
-      x: 19,
-      y: 8,
-      trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch1-cave", spawn: "west" }],
+      commands: [
+        { type: "transfer", mapId: "ch1-world", spawn: "from-morikage" },
+      ],
     },
   ],
   spawns: {
-    north: { x: 9, y: 1, facing: "down" },
-    "from-cave": { x: 18, y: 8, facing: "left" },
+    entrance: { x: 9, y: 1, facing: "down" },
     "from-manabiya": { x: 4, y: 5, facing: "down" },
     "from-inn": { x: 14, y: 5, facing: "down" },
   },

@@ -2,7 +2,7 @@
 
 import type { ChapterDef } from "../../types";
 import { CH1_HAJIMARI } from "./maps/hajimari";
-import { CH1_KAIDO } from "./maps/kaido";
+import { CH1_WORLD } from "./maps/world";
 import { CH1_CAPITAL } from "./maps/capital";
 import { CH1_FOREST } from "./maps/forest";
 import { CH1_MORIKAGE } from "./maps/morikage";
@@ -26,10 +26,10 @@ export const CHAPTER1: ChapterDef = {
   startMap: "ch1-hajimari",
   startSpawn: "start",
   maps: [
+    CH1_WORLD,
     CH1_HAJIMARI,
     CH1_HAJIMARI_HOME,
     CH1_HAJIMARI_NEIGHBOR,
-    CH1_KAIDO,
     CH1_CAPITAL,
     CH1_CAPITAL_CASTLE,
     CH1_CAPITAL_INN,

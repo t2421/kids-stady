@@ -264,10 +264,10 @@ test("random encounter: fight on the road and win with math attacks", async ({
 }) => {
   test.setTimeout(240_000);
   await startGame(page);
-  await warp(page, "ch1-kaido", "west");
-  await teleport(page, 5, 7, "right");
+  await warp(page, "ch1-world", "from-hajimari");
+  await teleport(page, 8, 4, "right");
 
-  /* 街道 (エンカウント床) を行き来して戦闘を起こす */
+  /* ワールドマップの道 (エンカウント床) を行き来して戦闘を起こす */
   let inBattle = false;
   for (let i = 0; i < 100 && !inBattle; i++) {
     await stepOnce(page, i % 2 === 0 ? "ArrowRight" : "ArrowLeft");
@@ -291,9 +291,9 @@ test("spell casting: learn ヒキダマ at the scholar, then cast it in battle",
   test.setTimeout(300_000);
   await startGame(page);
 
-  /* ユーザー報告の再現経路: まなびやで習得 → 戦闘で使用 */
+  /* ユーザー報告の再現経路: まなびやで習得 → 戦闘で使用 (賢者は (2,4)) */
   await warp(page, "ch1-capital-castle", "start");
-  await teleport(page, 3, 3, "left");
+  await teleport(page, 3, 4, "left");
   await takeSpellTestAllCorrect(page);
   await page.waitForFunction(
     () =>
@@ -305,8 +305,8 @@ test("spell casting: learn ヒキダマ at the scholar, then cast it in battle",
   );
   await advanceDialog(page);
 
-  await warp(page, "ch1-kaido", "west");
-  await teleport(page, 5, 7, "right");
+  await warp(page, "ch1-world", "from-hajimari");
+  await teleport(page, 8, 4, "right");
 
   let inBattle = false;
   for (let i = 0; i < 100 && !inBattle; i++) {
@@ -382,9 +382,9 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.started"] === true,
   );
 
-  /* 王都: 謁見 (クエスト + 50G) */
+  /* 王都: 謁見 (クエスト + 50G)。王は (6,2) なので (6,3) から話す */
   await warp(page, "ch1-capital-castle", "start");
-  await teleport(page, 6, 2, "up");
+  await teleport(page, 6, 3, "up");
   await interactAndAdvance(page);
   const afterKing = await page.evaluate(() =>
     window.__KAZUQUEST_DEBUG__!.getSave(),
@@ -392,8 +392,8 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
   expect(afterKing.flags["c1.metKing"]).toBe(true);
   expect(afterKing.inventory.gold).toBe(50);
 
-  /* まなびや: ヒキダマ習得テスト */
-  await teleport(page, 3, 3, "left");
+  /* まなびや: ヒキダマ習得テスト (賢者は (2,4)) */
+  await teleport(page, 3, 4, "left");
   await takeSpellTestAllCorrect(page);
   await page.waitForFunction(
     () =>
@@ -458,27 +458,29 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
 
   /* 王様に報告して第1章クリア */
   await warp(page, "ch1-capital-castle", "start");
-  await teleport(page, 6, 2, "up");
+  await teleport(page, 6, 3, "up");
   await interactAndAdvance(page);
   await page.waitForFunction(
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.clear"] === true,
   );
 });
 
-test("map transfer: walk from ハジマリ村 to 街道 and back", async ({ page }) => {
+test("map transfer: walk from ハジマリ村 to ワールドマップ and back", async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   await startGame(page);
 
-  /* 東出口 (19,8) へ向かって実際に歩いて遷移する */
+  /* 東出口 (19,8) へ向かって実際に歩いてワールドマップへ遷移する */
   await teleport(page, 17, 8, "right");
   await walkUntil(page, "ArrowRight", () =>
     page.evaluate(
-      () => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === "ch1-kaido",
+      () => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === "ch1-world",
     ),
   );
   await page.waitForTimeout(600);
 
-  /* 西出口から村へ戻る */
+  /* ワールドマップの村アイコンを踏んで村へ戻る */
   await walkUntil(page, "ArrowLeft", () =>
     page.evaluate(
       () =>

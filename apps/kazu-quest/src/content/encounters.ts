@@ -18,8 +18,9 @@ export const ENCOUNTER_TABLES: Record<string, EncounterTable> = {
   },
 };
 
-ENCOUNTER_TABLES["ch1-kaido"] = {
-  id: "ch1-kaido",
+/* ワールドマップ (町・城の外) の雑魚テーブル */
+ENCOUNTER_TABLES["ch1-world"] = {
+  id: "ch1-world",
   stepRange: [12, 24],
   groups: [
     { monsterIds: ["keshigomun"], weight: 3 },

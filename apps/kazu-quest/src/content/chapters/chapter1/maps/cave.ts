@@ -27,11 +27,11 @@ export const CH1_CAVE: MapDef = {
   npcs: [],
   events: [
     {
-      id: "to-morikage",
+      id: "to-world",
       x: 0,
       y: 8,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch1-morikage", spawn: "from-cave" }],
+      commands: [{ type: "transfer", mapId: "ch1-world", spawn: "from-cave" }],
     },
     {
       id: "cave-chest",

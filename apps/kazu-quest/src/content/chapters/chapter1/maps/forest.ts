@@ -1,4 +1,7 @@
-/* どんぐりの森 — 中ボス でかインクぐも と宝箱 (設計 A7 ビート5) */
+/*
+ * どんぐりの森 — 中ボス でかインクぐも と宝箱 (設計 A7 ビート5)。
+ * 山脈をつらぬく唯一の通り道: 北口・南口ともワールドマップへ出る。
+ */
 
 import type { MapDef } from "../../../types";
 import { FIELD_LEGEND } from "../legends";
@@ -27,11 +30,13 @@ export const CH1_FOREST: MapDef = {
   npcs: [],
   events: [
     {
-      id: "to-capital",
+      id: "to-world-north",
       x: 9,
       y: 0,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch1-capital", spawn: "from-forest" }],
+      commands: [
+        { type: "transfer", mapId: "ch1-world", spawn: "forest-north" },
+      ],
     },
     {
       id: "midboss",
@@ -61,11 +66,13 @@ export const CH1_FOREST: MapDef = {
       ],
     },
     {
-      id: "to-morikage",
+      id: "to-world-south",
       x: 9,
       y: 12,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch1-morikage", spawn: "north" }],
+      commands: [
+        { type: "transfer", mapId: "ch1-world", spawn: "forest-south" },
+      ],
     },
   ],
   spawns: {
