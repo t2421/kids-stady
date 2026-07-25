@@ -4,16 +4,18 @@
   "private": true,
   "description": "マスマティクス — グラディウス風・算数シューティング (Phaser 4 + Next.js)",
   "scripts": {
-    "predev": "npm run gen:sprites && npm run gen:learning",
+    "predev": "npm run gen:sprites && npm run gen:shared",
     "dev": "next dev -p 3010",
-    "prebuild": "npm run gen:sprites && npm run gen:learning",
+    "prebuild": "npm run gen:sprites && npm run gen:shared",
     "build": "next build",
     "start": "next start",
     "gen:sprites": "node scripts/gen-sprites.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
-    "gen:learning": "esbuild ../../shared/learning-core/vanilla-entry.ts --bundle --format=iife --outfile=../../shared/js/learning.js --banner:js=\"/* 自動生成: shared/learning-core から npm run gen:learning で生成。直接編集しない */\""
+    "gen:shared": "npm run gen:learning && npm run gen:profiles",
+    "gen:learning": "esbuild ../../shared/learning-core/vanilla-learning-entry.ts --bundle --format=iife --outfile=../../shared/js/learning.js --banner:js=\"/* 自動生成: shared/learning-core から npm run gen:learning で生成。直接編集しない */\"",
+    "gen:profiles": "esbuild ../../shared/learning-core/vanilla-profiles-entry.ts --bundle --format=iife --outfile=../../shared/js/profiles.js --banner:js=\"/* 自動生成: shared/learning-core から npm run gen:profiles で生成。直接編集しない */\""
   },
   "dependencies": {
     "next": "^16.2.10",

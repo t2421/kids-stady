@@ -145,7 +145,7 @@
     return out;
   }
 
-  // ../../shared/learning-core/vanilla-entry.ts
+  // ../../shared/learning-core/vanilla-learning-entry.ts
   globalThis.KidsLearning = {
     /* 既存API (keisan-shooter 互換) */
     load: (profileId) => loadLearning(profileId),

@@ -1,3 +1,4 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 
 /*
@@ -13,8 +14,9 @@ const nextConfig: NextConfig = {
   assetPrefix: basePath,
   images: { unoptimized: true },
   trailingSlash: true,
-  /* ~/ に別のロックファイルがあると workspace root を誤検出するため明示する */
-  turbopack: { root: __dirname },
+  /* shared/ (リポジトリ共通コード) を import できるよう、ワークスペースルートを明示。
+     既定だと ~/ の別ロックファイルを拾って誤検出するため、必ず指定する */
+  turbopack: { root: path.join(__dirname, "../..") },
 };
 
 export default nextConfig;

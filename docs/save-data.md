@@ -1,8 +1,12 @@
 # セーブデータ (localStorage) 契約
 
-きっずスタディの全アプリが従うストレージ契約。実装が複数ある
-(vanilla JS: `shared/js/profiles.js` / TypeScript: `apps/mathematics/src/lib/profiles.ts`)
-ため、**この文書を正典とし、挙動を変えるときは両実装と本書を同時に更新する**。
+きっずスタディの全アプリが従うストレージ契約。**この文書を正典**とし、
+挙動を変えるときは本書と実装を同時に更新する。
+
+実装は `shared/learning-core/` に単一ソース化されている
+(`profiles.ts` = §1 / `learning.ts` = §4)。vanilla 版 (`shared/js/*.js`) は
+そこからの生成物なので直接編集しない — 詳細は
+[shared/learning-core/README.md](../shared/learning-core/README.md)。
 
 ## 1. 共通プロフィール索引 (全アプリ共有)
 
@@ -13,6 +17,10 @@
 - `id` は `"p" + ランダム36進7文字` (例 `p3f8k2q1`)。**全アプリ横断の主キー**
 - `activeId` は最後に選択されたプロフィール。`profiles` に存在しない id を指していたら `null` 扱いに正規化する
 - アバター一覧: `🦊 🐱 🐶 🐰 🐻 🐼 🦁 🐸 🐵 🐧` (先頭がデフォルト)
+- **実装は単一ソース**: `shared/learning-core/profiles.ts` が正典。
+  - Next系アプリは `src/lib/profiles.ts` の再エクスポート経由で使う
+  - 静的アプリは `shared/js/profiles.js` (`KidsProfiles.*`) を `<script>` で読む。
+    **このファイルは自動生成** (`cd apps/mathematics && npm run gen:profiles`)。直接編集しない
 
 ### 旧データからの引き継ぎ (一度だけ)
 
@@ -70,4 +78,5 @@
   - Next系アプリはこれを直接 import する (mathematics は `src/lib/learning.ts` が再エクスポート)
   - 静的アプリは `shared/js/learning.js` (`KidsLearning.record/load/remove` + 分析ヘルパ) を `<script>` で読む。
     **このファイルは自動生成** (`cd apps/mathematics && npm run gen:learning`)。直接編集しない
+    (§1 とまとめて再生成するなら `npm run gen:shared`)
 - プロフィール削除時はこのキーも削除してよい (削除実行アプリの責務)
