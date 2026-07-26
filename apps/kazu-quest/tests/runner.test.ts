@@ -157,6 +157,18 @@ describe("event runner", () => {
     });
   });
 
+  it("openDrillBoard surfaces as a UI effect then continues", () => {
+    const commands: EventCommand[] = [
+      { type: "openDrillBoard" },
+      { type: "setFlag", flag: "after" },
+    ];
+    let r = step(startRun(commands, defaultSave()));
+    expect(r.effect).toEqual({ kind: "openDrillBoard" });
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
   it("transfer aborts remaining commands", () => {
     const commands: EventCommand[] = [
       { type: "transfer", mapId: "dev-field", spawn: "from-village" },

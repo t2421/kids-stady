@@ -200,7 +200,23 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
       ],
     },
   ],
-  events: exitEvents("capital-castle", "ch1-capital", "from-castle", 6, 7),
+  events: [
+    ...exitEvents("capital-castle", "ch1-capital", "from-castle", 6, 7),
+    {
+      id: "capital-drill-board",
+      x: 2,
+      y: 6,
+      trigger: "inspect",
+      art: "questBoard",
+      commands: [
+        {
+          type: "message",
+          pages: ["おだいの けいじばん だ。", "もんだいを といて ゴールドを かせごう!"],
+        },
+        { type: "openDrillBoard" },
+      ],
+    },
+  ],
   spawns: { start: { x: 6, y: 6, facing: "up" } },
 };
 
@@ -374,7 +390,23 @@ export const CH1_MORIKAGE_MANABIYA: MapDef = {
       ],
     },
   ],
-  events: exitEvents("morikage-manabiya", "ch1-morikage", "from-manabiya", 4, 5),
+  events: [
+    ...exitEvents("morikage-manabiya", "ch1-morikage", "from-manabiya", 4, 5),
+    {
+      id: "morikage-drill-board",
+      x: 1,
+      y: 2,
+      trigger: "inspect",
+      art: "questBoard",
+      commands: [
+        {
+          type: "message",
+          pages: ["おだいの けいじばん だ。", "もんだいを といて ゴールドを かせごう!"],
+        },
+        { type: "openDrillBoard" },
+      ],
+    },
+  ],
   spawns: { start: { x: 4, y: 4, facing: "up" } },
 };
 

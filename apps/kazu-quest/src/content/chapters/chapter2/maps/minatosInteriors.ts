@@ -146,7 +146,23 @@ export const CH2_MINATOS_MANABIYA: MapDef = {
       ],
     },
   ],
-  events: exitEvents("ch2-minatos-manabiya", "from-manabiya", 4, 5),
+  events: [
+    ...exitEvents("ch2-minatos-manabiya", "from-manabiya", 4, 5),
+    {
+      id: "minatos-drill-board",
+      x: 8,
+      y: 1,
+      trigger: "inspect",
+      art: "questBoard",
+      commands: [
+        {
+          type: "message",
+          pages: ["おだいの けいじばん だ。", "もんだいを といて ゴールドを かせごう!"],
+        },
+        { type: "openDrillBoard" },
+      ],
+    },
+  ],
   spawns: { start: { x: 4, y: 4, facing: "up" } },
 };
 

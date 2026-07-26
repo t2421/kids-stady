@@ -82,20 +82,31 @@ describe("monsters & encounter tables", () => {
   });
 });
 
-function collectCommands(map: MapDef): EventCommand[] {
+/* 入れ子 (choice / quiz) も含めてコマンドを平坦化する */
+function flattenCommands(commands: readonly EventCommand[]): EventCommand[] {
   const out: EventCommand[] = [];
-  const walk = (commands: readonly EventCommand[]) => {
-    for (const cmd of commands) {
+  const walk = (cmds: readonly EventCommand[]) => {
+    for (const cmd of cmds) {
       out.push(cmd);
       if (cmd.type === "choice") {
         walk(cmd.yes);
         walk(cmd.no);
       }
+      if (cmd.type === "quiz") {
+        walk(cmd.onCorrect);
+        walk(cmd.onWrong);
+      }
     }
   };
-  for (const ev of map.events) walk(ev.commands);
+  walk(commands);
+  return out;
+}
+
+function collectCommands(map: MapDef): EventCommand[] {
+  const out: EventCommand[] = [];
+  for (const ev of map.events) out.push(...flattenCommands(ev.commands));
   for (const npc of map.npcs) {
-    for (const entry of npc.dialog) walk(entry.then ?? []);
+    for (const entry of npc.dialog) out.push(...flattenCommands(entry.then ?? []));
   }
   return out;
 }
@@ -169,10 +180,23 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
       expect(inBounds(map, ev.x, ev.y), `イベント "${ev.id}" が盤外`).toBe(true);
       if (ev.art) {
         expect(TILE_ART[ev.art], `イベント "${ev.id}" の art`).toBeDefined();
-        expect(
-          ev.onceFlag,
-          `art つきイベント "${ev.id}" には onceFlag が必要 (開けた宝箱が戻る)`,
-        ).toBeDefined();
+        /*
+         * 報酬 (giveItem/giveGold/learnSpell) を配る art つきイベントは
+         * onceFlag 必須 (開けた宝箱が戻ると無限取得になる)。
+         * けいじばんのような常設の置き物は onceFlag なしでよい。
+         */
+        const givesLoot = flattenCommands(ev.commands).some(
+          (c) =>
+            c.type === "giveItem" ||
+            c.type === "giveGold" ||
+            c.type === "learnSpell",
+        );
+        if (givesLoot) {
+          expect(
+            ev.onceFlag,
+            `報酬つき art イベント "${ev.id}" には onceFlag が必要 (開けた宝箱が戻る)`,
+          ).toBeDefined();
+        }
       }
       if (ev.trigger === "step") {
         expect(

@@ -369,6 +369,48 @@ test("spell casting: learn ヒキダマ at the scholar, then cast it in battle",
   await grindBattleUntilField(page);
 });
 
+test("drill quest: solve 10 problems at the おだい board and earn gold", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await startGame(page);
+
+  /* 王都まなびやの けいじばん (2,6) を右 (3,6) から調べる */
+  await warp(page, "ch1-capital-castle", "start");
+  const before = await page.evaluate(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().inventory.gold,
+  );
+  await teleport(page, 3, 6, "left");
+
+  /* 説明メッセージを送ると おだいリストが開く。先頭の ★1 おだいを z で受注 */
+  await page.keyboard.press("z");
+  await page.waitForFunction(
+    () => !!window.__KAZUQUEST_GAME__?.scene.getScene("Ui")?.isBusy?.(),
+    undefined,
+    { timeout: 5_000 },
+  );
+  await advanceDialog(page);
+
+  /* 10問すべて正解する (ドリルは時間無制限・3択) */
+  const btn = correctChoice(page);
+  for (let i = 0; i < 10; i++) {
+    await btn.waitFor({ state: "visible", timeout: 15_000 });
+    await btn.click();
+    await page.waitForTimeout(900);
+  }
+
+  /* 全問正解 = 10問 × 1G + パーフェクトボーナス 5G (★1 × 小1) */
+  await page.waitForFunction(
+    (prev) => window.__KAZUQUEST_DEBUG__!.getSave().inventory.gold > prev,
+    before,
+    { timeout: 15_000 },
+  );
+  await advanceDialog(page);
+  const save = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave());
+  expect(save.inventory.gold - before).toBe(15);
+  expect(save.totalCorrect).toBeGreaterThanOrEqual(10);
+});
+
 test("chapter 1 golden path: mother → king → learn → gates → boss → clear", async ({
   page,
 }) => {

@@ -81,6 +81,19 @@ export const INTERIOR_TILES: Record<string, PixelArt> = {
       "kttttttttttttttk", "kttttttttttttttk", "kkkkkkkkkkkkkkkk", "kkkkkkkkkkkkkkkk",
     ],
   },
+  /* おだいの けいじばん (はり紙とピン)。背景透過で床の上に置く */
+  questBoard: {
+    palette: {
+      k: "#402c1c", t: "#8b5429", T: "#b57736", c: "#6e4a26",
+      w: "#f2eee1", r: "#c9503a",
+    },
+    rows: [
+      "................", ".kkkkkkkkkkkkkk.", "kTTTTTTTTTTTTTTk", "kTccccccccccccTk",
+      "kTcwwrwcwwrwwcTk", "kTcwwwwcwwwwwcTk", "kTcwwwwcwwwwwcTk", "kTcwwwwcccccccTk",
+      "kTcwwwwccwrwwcTk", "kTcwwwwccwwwwcTk", "kTccccccccccccTk", "kTTTTTTTTTTTTTTk",
+      ".kkkkkkkkkkkkkk.", "..ktk......ktk..", ".kttk......kttk.", "................",
+    ],
+  },
   /* 玉座 (金の飾りと赤いクッション) */
   throne: {
     palette: {

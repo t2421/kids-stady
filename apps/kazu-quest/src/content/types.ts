@@ -42,6 +42,8 @@ export type EventCommand =
   | { type: "openShop"; shopId: string }
   | { type: "healInn"; price: number }
   | { type: "openSpellTest"; spellId: string }
+  /* おだいの けいじばん: 学年のドリルに挑戦してゴールドを稼ぐ */
+  | { type: "openDrillBoard" }
   | { type: "savePoint" }
   | { type: "choice"; prompt: string; yes: EventCommand[]; no: EventCommand[] }
   /* 算数クイズの扉 (九九の塔など)。正解/不正解で分岐する。時間無制限 */

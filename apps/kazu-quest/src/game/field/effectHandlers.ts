@@ -10,6 +10,7 @@ import { memberStats } from "../../lib/battle/members";
 import { equipItem } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem, SHOPS } from "../../content/items";
+import { questsForGrade } from "../../lib/curriculum/drills";
 import type { UiScene } from "../scenes/UiScene";
 
 /* めがみのほこら: checkpoint を更新して「きろくした!」 */
@@ -98,6 +99,63 @@ export function handleSpellTest(
   };
   EventBus.on("spell-test-finished", onFinished);
   EventBus.emit("open-spell-test", { spellId });
+}
+
+/*
+ * おだいの けいじばん: その学年 (= 現在の章) のドリルに挑戦して
+ * ゴールドを稼ぐ。★が多い単元ほど 1問あたりの報酬が高い。
+ */
+export function handleDrillBoard(ui: UiScene, advance: () => void): void {
+  const grade = getSave().chapter.current;
+  const quests = questsForGrade(grade);
+  if (quests.length === 0) {
+    ui.showMessage(["いまは おだいが ないみたい。"], advance);
+    return;
+  }
+  const options = [
+    ...quests.map(
+      (q) => `${"★".repeat(q.stars)}${"　".repeat(3 - q.stars)} ${q.label}  1もん${q.goldPerCorrect}G`,
+    ),
+    "やめる",
+  ];
+  ui.showList("どの おだいに ちょうせんする?", options, (index) => {
+    if (index === null || index >= quests.length) {
+      ui.showMessage(["また ちょうせん してね!"], advance);
+      return;
+    }
+    const quest = quests[index];
+    const onFinished = (result: {
+      skillId: string;
+      correct: number;
+      total: number;
+      gold: number;
+      perfect: boolean;
+    }) => {
+      if (result.skillId !== quest.skillId) return;
+      EventBus.off("drill-quest-finished", onFinished);
+      if (result.gold > 0) {
+        updateSave((s) => ({
+          ...s,
+          inventory: { ...s.inventory, gold: s.inventory.gold + result.gold },
+        }));
+        autosave();
+      }
+      const pages = result.perfect
+        ? [
+            "ぜんもん せいかい! おみごと!",
+            `ボーナスこみで ${result.gold}ゴールドを うけとった!`,
+          ]
+        : result.gold > 0
+          ? [
+              `${result.total}もん中 ${result.correct}もん せいかい!`,
+              `ほうびに ${result.gold}ゴールドを うけとった!`,
+            ]
+          : ["ざんねん…。また ちょうせん してね!"];
+      ui.showMessage(pages, advance);
+    };
+    EventBus.on("drill-quest-finished", onFinished);
+    EventBus.emit("open-drill-quest", { skillId: quest.skillId });
+  });
 }
 
 /* 道具屋: 品物リストから選んで買う (一覧選択式 — 設計変更 2026-07-22) */

@@ -22,6 +22,7 @@ import { buildStatusSections } from "../field/statusSections";
 import {
   handleHealInn,
   handleSavePoint,
+  handleDrillBoard,
   handleShop,
   handleSpellTest,
 } from "../field/effectHandlers";
@@ -595,6 +596,9 @@ export class FieldScene extends Scene {
           break;
         case "openSpellTest":
           handleSpellTest(this.ui, effect.spellId, () => advance());
+          break;
+        case "openDrillBoard":
+          handleDrillBoard(this.ui, () => advance());
           break;
         case "openShop":
           handleShop(this.ui, effect.shopId, () => advance());

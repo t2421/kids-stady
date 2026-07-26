@@ -144,6 +144,20 @@ export const CH2_KUKURI_MANABIYA: MapDef = {
         { type: "transfer", mapId: "ch2-kukuri", spawn: "from-manabiya" },
       ],
     },
+    {
+      id: "kukuri-drill-board",
+      x: 8,
+      y: 1,
+      trigger: "inspect",
+      art: "questBoard",
+      commands: [
+        {
+          type: "message",
+          pages: ["おだいの けいじばん だ。", "もんだいを といて ゴールドを かせごう!"],
+        },
+        { type: "openDrillBoard" },
+      ],
+    },
   ],
   spawns: { start: { x: 4, y: 4, facing: "up" } },
 };

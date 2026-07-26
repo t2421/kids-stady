@@ -23,6 +23,7 @@ export type RunnerEffect =
   | { kind: "openShop"; shopId: string }
   | { kind: "healInn"; price: number }
   | { kind: "openSpellTest"; spellId: string }
+  | { kind: "openDrillBoard" }
   | { kind: "savePoint" }
   | { kind: "choice"; prompt: string }
   | { kind: "quiz"; skillId: string };
@@ -239,6 +240,12 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
         return {
           state: { stack, save, pending: cmd },
           effect: { kind: "openSpellTest", spellId: cmd.spellId },
+          done: false,
+        };
+      case "openDrillBoard":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openDrillBoard" },
           done: false,
         };
       case "savePoint":
