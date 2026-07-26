@@ -5,6 +5,18 @@
  */
 
 import { readJSON, writeJSON } from "./profiles";
+import type { AnswerTelemetry, HistoryEntryBase, SkillStat } from "./telemetry";
+import { normalizeHistory, normalizeSkillStats, toCount } from "./telemetry";
+
+/* 集計の作法は全アプリ共通 (docs/save-data.md §2) — 再エクスポートして
+   アプリ内からは save.ts 経由で使えるようにする */
+export type { SkillStat };
+export {
+  HISTORY_CAP,
+  RECENT_MS_CAP,
+  addHistory,
+  recordAnswer,
+} from "./telemetry";
 
 export type Dir = "up" | "down" | "left" | "right";
 
@@ -26,22 +38,13 @@ export interface PartyMember {
   equipment: Equipment;
 }
 
-export interface HistoryEntry {
-  ts: number;
+/* 共通項目 (ts/correct/wrong/avgAnswerMs) + カズクエ固有の文脈 */
+export interface HistoryEntry extends HistoryEntryBase {
   kind: "battle" | "test";
   chapter: number;
-  correct: number;
-  wrong: number;
-  avgAnswerMs: number;
 }
 
-export interface SkillStat {
-  c: number;
-  w: number;
-  recentMs: number[];
-}
-
-export interface SaveData {
+export interface SaveData extends AnswerTelemetry {
   version: 1;
   chapter: { current: number; cleared: number[] };
   flags: Record<string, number | boolean>;
@@ -56,9 +59,6 @@ export interface SaveData {
   history: HistoryEntry[];
   updatedAt: number;
 }
-
-export const HISTORY_CAP = 50;
-export const RECENT_MS_CAP = 20;
 
 /* 章1の開始位置 (ハジマリ村) */
 export const START_LOCATION = {
@@ -137,38 +137,13 @@ function normalizeParty(raw: unknown, fallback: PartyMember[]): PartyMember[] {
   return members.length > 0 ? members : fallback;
 }
 
-function normalizeSkillStats(raw: unknown): Record<string, SkillStat> {
-  if (typeof raw !== "object" || raw === null) return {};
-  const out: Record<string, SkillStat> = {};
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof value !== "object" || value === null) continue;
-    const v = value as Record<string, unknown>;
-    out[key] = {
-      c: Math.max(0, asNumber(v.c, 0)),
-      w: Math.max(0, asNumber(v.w, 0)),
-      recentMs: (Array.isArray(v.recentMs) ? v.recentMs : [])
-        .filter((n): n is number => typeof n === "number" && Number.isFinite(n))
-        .slice(-RECENT_MS_CAP),
-    };
-  }
-  return out;
-}
-
-function normalizeHistory(raw: unknown): HistoryEntry[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter(
-      (h): h is Record<string, unknown> => typeof h === "object" && h !== null,
-    )
-    .map((h) => ({
-      ts: asNumber(h.ts, 0),
-      kind: h.kind === "test" ? ("test" as const) : ("battle" as const),
-      chapter: Math.max(1, asNumber(h.chapter, 1)),
-      correct: Math.max(0, asNumber(h.correct, 0)),
-      wrong: Math.max(0, asNumber(h.wrong, 0)),
-      avgAnswerMs: Math.max(0, asNumber(h.avgAnswerMs, 0)),
-    }))
-    .slice(-HISTORY_CAP);
+/* 共通 normalizeHistory にアプリ固有項目 (kind/chapter) を足すアダプタ */
+function normalizeKazuHistory(raw: unknown): HistoryEntry[] {
+  return normalizeHistory<HistoryEntry>(raw, (row, base) => ({
+    ...base,
+    kind: row.kind === "test" ? "test" : "battle",
+    chapter: Math.max(1, toCount(row.chapter)),
+  }));
 }
 
 function normalizeFlags(raw: unknown): Record<string, number | boolean> {
@@ -255,7 +230,7 @@ export function normalizeSave(raw: unknown): SaveData {
     totalCorrect: Math.max(0, asNumber(r.totalCorrect, 0)),
     totalWrong: Math.max(0, asNumber(r.totalWrong, 0)),
     skillStats: normalizeSkillStats(r.skillStats),
-    history: normalizeHistory(r.history),
+    history: normalizeKazuHistory(r.history),
     updatedAt: Math.max(0, asNumber(r.updatedAt, 0)),
   };
 }
@@ -280,35 +255,3 @@ export function deleteSave(profileId: string): void {
   }
 }
 
-/*
- * 全解答箇所 (戦闘呪文 / 習得テスト / とっくん / 宝箱 / おつり) から呼ぶ。
- * 兄弟アプリ (マスマティクス設計) と同型のテレメトリ。
- */
-export function recordAnswer(
-  data: SaveData,
-  skillId: string,
-  correct: boolean,
-  ms: number,
-): SaveData {
-  const prev = data.skillStats[skillId] ?? { c: 0, w: 0, recentMs: [] };
-  return {
-    ...data,
-    totalCorrect: data.totalCorrect + (correct ? 1 : 0),
-    totalWrong: data.totalWrong + (correct ? 0 : 1),
-    skillStats: {
-      ...data.skillStats,
-      [skillId]: {
-        c: prev.c + (correct ? 1 : 0),
-        w: prev.w + (correct ? 0 : 1),
-        recentMs: [...prev.recentMs, ms].slice(-RECENT_MS_CAP),
-      },
-    },
-  };
-}
-
-export function addHistory(data: SaveData, entry: HistoryEntry): SaveData {
-  return {
-    ...data,
-    history: [...data.history, entry].slice(-HISTORY_CAP),
-  };
-}

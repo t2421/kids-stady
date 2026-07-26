@@ -1,5 +1,5 @@
 import Phaser, { Scene } from "phaser";
-import type { BattleEvent, BattleState, PlayerCommand } from "../../lib/battle/battle";
+import type { BattleEvent, BattleState, Combatant, PlayerCommand } from "../../lib/battle/battle";
 import { applyVictory, createBattle, submitRound } from "../../lib/battle/battle";
 import { getMonster } from "../../content/monsters";
 import { getItem } from "../../content/items";
@@ -18,6 +18,9 @@ import { requestBattleMath } from "../battle/mathRequest";
  * DQ式一人称ターン制バトル。FieldScene を sleep したまま起動し、
  * 終了時に wake して結果 (won/lost/fled) を渡す。
  * 戦闘ロジックは src/lib/battle (純関数)。ここは演出だけ。
+ *
+ * パーティ戦 (第2章〜): 生存メンバー全員のコマンドを順番に集めてから
+ * 1ラウンドを一括解決する (DQと同じ)。問題に答えるのは常にプレイヤー。
  */
 
 export interface BattleLaunchData {
@@ -48,10 +51,12 @@ export class BattleScene extends Scene {
   private menu!: BattleMenu;
   private menuKind: MenuKind = "root";
   private busy = false;
-  /* 演出用の表示HP/MP。ラウンドは一括計算されるため、実際の値 (battle.members)
-     を直接出すと「自分の攻撃で自分のHPが減って見える」— イベントごとに増分更新する */
-  private displayHp = 0;
-  private displayMp = 0;
+  /* このラウンドで集めたコマンド (生存メンバー1人につき1つ) */
+  private roundCommands: PlayerCommand[] = [];
+  private commandIndex = 0;
+  /* 演出用の表示HP/MP (メンバー別)。ラウンドは一括計算されるため、実際の値を
+     直接出すと「自分の攻撃で自分のHPが減って見える」— イベントごとに増分更新する */
+  private display = new Map<string, { hp: number; mp: number }>();
 
   constructor() {
     super("Battle");
@@ -70,8 +75,11 @@ export class BattleScene extends Scene {
     this.battle = createBattle(getSave().party, monsters, data.boss);
     this.menuKind = "root";
     this.busy = false;
-    this.displayHp = this.battle.members[0]?.hp ?? 0;
-    this.displayMp = this.battle.members[0]?.mp ?? 0;
+    this.roundCommands = [];
+    this.commandIndex = 0;
+    this.display = new Map(
+      this.battle.members.map((m) => [m.id, { hp: m.hp, mp: m.mp }]),
+    );
     this.enemySprites.clear();
   }
 
@@ -92,6 +100,34 @@ export class BattleScene extends Scene {
     this.updateStatus();
     this.showIntro();
     EventBus.emit("current-scene-ready", this);
+  }
+
+  /* ---------- パーティ ---------- */
+
+  private livingMembers(): Combatant[] {
+    return this.battle.members.filter((m) => m.hp > 0);
+  }
+
+  private currentMember(): Combatant {
+    const living = this.livingMembers();
+    return living[Math.min(this.commandIndex, living.length - 1)] ?? this.battle.members[0];
+  }
+
+  private learnedSpells(memberId: string): SpellDef[] {
+    const member = getSave().party.find((m) => m.memberId === memberId);
+    return (member?.learnedSpells ?? [])
+      .map((id) => getSpell(id))
+      .filter((s): s is SpellDef => !!s);
+  }
+
+  /* 単体回復の相手: いちばん弱っている生存メンバー (子供向けに自動選択) */
+  private weakestMemberId(): string {
+    const living = this.livingMembers();
+    let best = living[0];
+    for (const m of living) {
+      if (m.hp / m.maxHp < best.hp / best.maxHp) best = m;
+    }
+    return best?.id ?? "hero";
   }
 
   /* ---------- 舞台とステータス ---------- */
@@ -129,24 +165,31 @@ export class BattleScene extends Scene {
       fontSize: "24px",
       color: "#ffffff",
       lineSpacing: 8,
-      wordWrap: { width: GAME_WIDTH - 420 },
+      wordWrap: { width: GAME_WIDTH - 460 },
     });
-    this.statusText = this.add.text(GAME_WIDTH - 240, GAME_HEIGHT - 148, "", {
+    this.statusText = this.add.text(GAME_WIDTH - 250, GAME_HEIGHT - 150, "", {
       fontFamily: "sans-serif",
-      fontSize: "22px",
+      fontSize: "19px",
       color: "#7cfc9a",
-      lineSpacing: 8,
+      lineSpacing: 4,
     });
   }
 
   private updateStatus() {
-    const hero = this.battle.members[0];
-    this.statusText.setText(
-      `ゆうしゃ\nHP ${this.displayHp}/${hero.maxHp}\nMP ${this.displayMp}/${hero.maxMp}`,
-    );
+    const lines: string[] = [];
+    for (const member of this.battle.members) {
+      const d = this.display.get(member.id) ?? { hp: member.hp, mp: member.mp };
+      const marker =
+        !this.busy && this.menuKind === "root" && this.currentMember().id === member.id
+          ? "▶"
+          : "　";
+      lines.push(`${marker}${member.name}`);
+      lines.push(`　HP ${d.hp}/${member.maxHp}  MP ${d.mp}/${member.maxMp}`);
+    }
+    this.statusText.setText(lines.join("\n"));
   }
 
-  /* ---------- メニュー ---------- */
+  /* ---------- メニュー (メンバーごとにコマンドを集める) ---------- */
 
   private showIntro() {
     this.busy = true;
@@ -154,21 +197,43 @@ export class BattleScene extends Scene {
     this.msgText.setText(`${names}が あらわれた!`);
     this.time.delayedCall(900, () => {
       this.busy = false;
-      this.showRootMenu();
+      this.startCommandPhase();
     });
+  }
+
+  /* 新しいラウンドのコマンド収集を最初のメンバーから始める */
+  private startCommandPhase() {
+    this.roundCommands = [];
+    this.commandIndex = 0;
+    this.showRootMenu();
   }
 
   private showRootMenu() {
     this.menuKind = "root";
-    this.msgText.setText("どうする?");
+    this.msgText.setText(`${this.currentMember().name}は どうする?`);
     this.menu.show([...COMMANDS]);
+    this.updateStatus();
+  }
+
+  /* コマンド確定 → 次のメンバーへ。全員そろったらラウンド解決 */
+  private queueCommand(command: PlayerCommand) {
+    this.roundCommands.push(command);
+    this.commandIndex += 1;
+    if (this.commandIndex < this.livingMembers().length) {
+      this.busy = false;
+      this.showRootMenu();
+      return;
+    }
+    this.runRound(this.roundCommands);
   }
 
   private showSpellMenu() {
     this.menuKind = "spell";
-    this.msgText.setText("どの じゅもんを つかう?");
+    this.msgText.setText(`${this.currentMember().name}は どの じゅもんを つかう?`);
     this.menu.show(
-      this.learnedSpells().map((s) => `${s.name} (MP${s.mpCost})`),
+      this.learnedSpells(this.currentMember().id).map(
+        (s) => `${s.name} (MP${s.mpCost})`,
+      ),
     );
   }
 
@@ -182,13 +247,6 @@ export class BattleScene extends Scene {
     return Object.entries(getSave().inventory.items)
       .filter(([, count]) => count > 0)
       .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
-  }
-
-  private learnedSpells(): SpellDef[] {
-    const hero = getSave().party.find((m) => m.memberId === "hero");
-    return (hero?.learnedSpells ?? [])
-      .map((id) => getSpell(id))
-      .filter((s): s is SpellDef => !!s);
   }
 
   private moveCursor(delta: number) {
@@ -220,7 +278,7 @@ export class BattleScene extends Scene {
     if (this.menuKind === "root") {
       this.onRootCommand(COMMANDS[index]);
     } else if (this.menuKind === "spell") {
-      const spell = this.learnedSpells()[index];
+      const spell = this.learnedSpells(this.currentMember().id)[index];
       if (spell) this.castSpell(spell);
     } else {
       this.useItem(index);
@@ -228,10 +286,11 @@ export class BattleScene extends Scene {
   }
 
   private onRootCommand(command: (typeof COMMANDS)[number]) {
+    const memberId = this.currentMember().id;
     if (command === "たたかう") {
       this.attack();
     } else if (command === "じゅもん") {
-      if (this.learnedSpells().length === 0) {
+      if (this.learnedSpells(memberId).length === 0) {
         this.flashMessage("まだ じゅもんを おぼえていない!");
         return;
       }
@@ -243,9 +302,10 @@ export class BattleScene extends Scene {
       }
       this.showItemMenu();
     } else if (command === "ぼうぎょ") {
-      this.runRound({ kind: "defend", memberId: "hero" });
+      this.queueCommand({ kind: "defend", memberId });
     } else if (command === "にげる") {
-      this.runRound({ kind: "flee", memberId: "hero" });
+      /* にげるはその場でラウンド解決 (残りメンバーの入力は不要) */
+      this.runRound([...this.roundCommands, { kind: "flee", memberId }]);
     }
   }
 
@@ -253,15 +313,16 @@ export class BattleScene extends Scene {
 
   /* 通常攻撃も基礎問題を出題。正解=命中、素早い正解=かいしん、不正解=外す */
   private attack() {
+    const memberId = this.currentMember().id;
     this.busy = true;
     this.menu.clear();
-    this.msgText.setText("こうげき!");
+    this.msgText.setText(`${this.currentMember().name}の こうげき!`);
     const chapter = getChapter(getSave().chapter.current);
     const skillIds = chapter?.attackSkillIds ?? ["g1_add_nc", "g1_sub_nc"];
     requestBattleMath("attack", skillIds, ATTACK_TIME_LIMIT_MS, (outcome) => {
-      this.runRound({
+      this.queueCommand({
         kind: "attack",
-        memberId: "hero",
+        memberId,
         targetId: this.firstEnemyId(),
         outcome,
       });
@@ -270,8 +331,8 @@ export class BattleScene extends Scene {
 
   /* 呪文: 単元問題に正解で発動 (設計 A3) */
   private castSpell(spell: SpellDef) {
-    const hero = this.battle.members[0];
-    if (hero.mp < spell.mpCost) {
+    const member = this.currentMember();
+    if (member.mp < spell.mpCost) {
       this.flashMessage("MPが たりない!");
       return;
     }
@@ -279,17 +340,24 @@ export class BattleScene extends Scene {
     this.menu.clear();
     this.msgText.setText(`${spell.name}の じゅもんを となえる…`);
     requestBattleMath("spell", spell.skillIds, spell.battleTimeLimitMs, (outcome) => {
-      this.runRound({
+      const targetId =
+        spell.kind === "attack" || spell.kind === "debuff"
+          ? this.firstEnemyId()
+          : spell.kind === "heal"
+            ? this.weakestMemberId()
+            : member.id;
+      this.queueCommand({
         kind: "spell",
-        memberId: "hero",
+        memberId: member.id,
         spell,
-        targetId: spell.kind === "attack" ? this.firstEnemyId() : "hero",
+        targetId,
         outcome,
       });
     });
   }
 
   private useItem(index: number) {
+    const memberId = this.currentMember().id;
     const usable = Object.entries(getSave().inventory.items).filter(
       ([, c]) => c > 0,
     );
@@ -307,7 +375,9 @@ export class BattleScene extends Scene {
         items: { ...s.inventory.items, [itemId]: s.inventory.items[itemId] - 1 },
       },
     }));
-    this.runRound({ kind: "item", memberId: "hero", itemId, heal: item.power ?? 0 });
+    this.busy = true;
+    this.menu.clear();
+    this.queueCommand({ kind: "item", memberId, itemId, heal: item.power ?? 0 });
   }
 
   private firstEnemyId(): string {
@@ -316,10 +386,10 @@ export class BattleScene extends Scene {
 
   /* ---------- ラウンド解決と演出 ---------- */
 
-  private runRound(command: PlayerCommand) {
+  private runRound(commands: PlayerCommand[]) {
     this.busy = true;
     this.menu.clear();
-    const { state, events } = submitRound(this.battle, [command], this.rng);
+    const { state, events } = submitRound(this.battle, commands, this.rng);
     this.battle = state;
     this.playEvents(events, 0);
   }
@@ -327,13 +397,13 @@ export class BattleScene extends Scene {
   private playEvents(events: BattleEvent[], index: number) {
     if (index >= events.length) {
       /* 演出終了: 表示を実際の値に同期してからコマンドへ戻す */
-      const hero = this.battle.members[0];
-      this.displayHp = hero.hp;
-      this.displayMp = hero.mp;
+      for (const member of this.battle.members) {
+        this.display.set(member.id, { hp: member.hp, mp: member.mp });
+      }
       this.updateStatus();
       if (this.battle.phase === "command") {
         this.busy = false;
-        this.showRootMenu();
+        this.startCommandPhase();
       }
       return;
     }
@@ -348,30 +418,36 @@ export class BattleScene extends Scene {
       case "attack":
         this.playAttack(event, next);
         break;
-      case "spellSuccess":
+      case "spellSuccess": {
         this.msgText.setText(
           event.critical
             ? `${event.actorName}は ${event.spellName}を となえた! かいしん!`
             : `${event.actorName}は ${event.spellName}を となえた!`,
         );
-        this.displayMp = event.mpLeft;
+        const d = this.display.get(event.actorId);
+        if (d) d.mp = event.mpLeft;
         this.updateStatus();
         this.cameras.main.flash(200, 255, 255, 180);
         this.time.delayedCall(800, next);
         break;
+      }
       case "spellFizzle":
         this.msgText.setText(`${event.actorName}は ${event.spellName}を となえた…`);
         this.time.delayedCall(700, next);
         break;
-      case "heal":
-        if (event.onParty && event.targetId === "hero") {
-          const hero = this.battle.members[0];
-          this.displayHp = Math.min(hero.maxHp, this.displayHp + event.amount);
+      case "heal": {
+        if (event.onParty) {
+          const member = this.battle.members.find((m) => m.id === event.targetId);
+          const d = this.display.get(event.targetId);
+          if (member && d) {
+            d.hp = Math.min(member.maxHp, d.hp + event.amount);
+          }
         }
         this.msgText.setText(`HPが ${event.amount} かいふくした!`);
         this.updateStatus();
         this.time.delayedCall(700, next);
         break;
+      }
       case "fleeFailed":
         this.time.delayedCall(100, next);
         break;
@@ -401,10 +477,9 @@ export class BattleScene extends Scene {
       }
     } else {
       this.cameras.main.shake(180, 0.008);
-      /* 味方が受けたダメージだけ表示HPを減らす (このイベントの分のみ) */
-      if (event.targetId === "hero") {
-        this.displayHp = Math.max(0, this.displayHp - event.damage);
-      }
+      /* 受けたメンバーの表示HPだけを、このイベントの分だけ減らす */
+      const d = this.display.get(event.targetId);
+      if (d) d.hp = Math.max(0, d.hp - event.damage);
     }
     this.msgText.setText(`${event.damage} の ダメージ!`);
     this.updateStatus();
@@ -425,10 +500,8 @@ export class BattleScene extends Scene {
       lines.push(`レベルが ${up.to} に あがった! げんきも かいふくした!`);
     }
     /* レベルアップの全回復を表示にも反映する */
-    const heroAfter = result.party.find((m) => m.memberId === "hero");
-    if (heroAfter) {
-      this.displayHp = heroAfter.hp;
-      this.displayMp = heroAfter.mp;
+    for (const member of result.party) {
+      this.display.set(member.memberId, { hp: member.hp, mp: member.mp });
     }
     this.showLinesThen(lines, () =>
       this.endBattle({ outcome: "won", winFlag: this.launch.winFlag }),

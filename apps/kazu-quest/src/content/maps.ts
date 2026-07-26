@@ -6,9 +6,15 @@
 import type { MapDef } from "./types";
 import { DEV_FIELD, DEV_VILLAGE } from "./dev/maps";
 import { CHAPTER1 } from "./chapters/chapter1";
+import { CHAPTER2 } from "./chapters/chapter2";
 
 /* dev マップはエンジンの E2E テスト用に登録し続ける (通常プレイでは到達不能) */
-const ALL_MAPS: MapDef[] = [...CHAPTER1.maps, DEV_VILLAGE, DEV_FIELD];
+const ALL_MAPS: MapDef[] = [
+  ...CHAPTER1.maps,
+  ...CHAPTER2.maps,
+  DEV_VILLAGE,
+  DEV_FIELD,
+];
 
 const BY_ID = new Map(ALL_MAPS.map((m) => [m.id, m]));
 

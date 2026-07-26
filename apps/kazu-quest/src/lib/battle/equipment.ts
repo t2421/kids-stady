@@ -7,7 +7,7 @@
 import type { Equipment, EquipSlot, PartyMember, SaveData } from "../save";
 import { getItem } from "../../content/items";
 import type { DerivedStats } from "./stats";
-import { heroStats } from "./stats";
+import { memberStats } from "./members";
 
 export const SLOT_LABELS: Record<EquipSlot, string> = {
   weapon: "ぶき",
@@ -30,7 +30,7 @@ export function equipmentBonus(equipment: Equipment): { atk: number; def: number
 
 /* レベル由来の基礎値 + 装備補正 (戦闘・ステータス表示はこちらを使う) */
 export function equippedStats(member: PartyMember): DerivedStats {
-  const base = heroStats(member.level);
+  const base = memberStats(member.memberId, member.level);
   const bonus = equipmentBonus(member.equipment);
   return { ...base, atk: base.atk + bonus.atk, def: base.def + bonus.def };
 }

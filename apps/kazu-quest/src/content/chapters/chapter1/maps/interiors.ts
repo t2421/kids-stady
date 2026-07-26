@@ -133,9 +133,13 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
           pages: [
             "おお ゆうしゃよ! すうしょうを とりもどしたか!",
             "みごとじゃ! これで まちの かずが もとに もどる。",
-            "つぎは みなとまち ミナトスへ… それは また こんどの おはなし。",
+            "つぎの すうしょうは 海のむこう、みなとまち ミナトスに あるらしい。",
+            "みなみの かいがんに 船を よういさせた。船のりに こえを かけるのじゃ!",
           ],
-          then: [{ type: "setFlag", flag: "c1.clear" }],
+          then: [
+            { type: "setFlag", flag: "c1.clear" },
+            { type: "advanceChapter", chapter: 2 },
+          ],
         },
         {
           if: { flag: "c1.metKing", op: "set" },

@@ -54,6 +54,36 @@ export const CH1_WORLD: MapDef = {
       ],
     },
     {
+      id: "sailor",
+      x: 20,
+      y: 13,
+      art: "villager",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c1.clear", op: "set" },
+          pages: ["やあ ゆうしゃ! おうさまの めいれいで 船を よういしたぜ。"],
+          then: [
+            {
+              type: "choice",
+              prompt: "うみかぜの しまへ 船を だす?",
+              yes: [
+                { type: "message", pages: ["それじゃ しゅっぱーつ!"] },
+                { type: "transfer", mapId: "ch2-world", spawn: "from-ship" },
+              ],
+              no: [{ type: "message", pages: ["いつでも こえを かけてくれ。"] }],
+            },
+          ],
+        },
+        {
+          pages: [
+            "おれは 船のりさ。この 海の むこうには べつの しまが あるんだ。",
+            "「すうしょう・壱」が もどったら 船を だせるんだけどなあ…",
+          ],
+        },
+      ],
+    },
+    {
       id: "bridge-guard",
       x: 21,
       y: 12,
@@ -122,5 +152,7 @@ export const CH1_WORLD: MapDef = {
     "forest-south": { x: 18, y: 11, facing: "down" },
     "from-morikage": { x: 11, y: 12, facing: "right" },
     "from-cave": { x: 23, y: 12, facing: "left" },
+    /* 第2章の船で帰ってくる場所 (船のりのとなり) */
+    port: { x: 19, y: 13, facing: "right" },
   },
 };

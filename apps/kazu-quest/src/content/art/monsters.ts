@@ -62,4 +62,40 @@ export const MONSTER_ART: Record<string, PixelArt> = {
       "kgggykygggggkpp.", ".kggyyygggggkp..", "..kkggkkggkk....", "....kk..kk......",
     ],
   },
+  /* シュウセイエキン — 修正液のおばけ (第2章・塔) */
+  shuseiekin: {
+    palette: { k: "#1b1d24", w: "#f4f1e6", W: "#d5d1c2", l: "#ffffff", g: "#8a9aa8", p: "#7ec3d8", d: "#5a6a78" },
+    rows: [
+      "......kkkk......", ".....kggggk.....", ".....kgddgk.....", "....kkkkkkkk....",
+      "....kwwwwwwk....", "...kwwlwwlwwk...", "..kwwwwwwwwwwk..", "..kwwkwwwwkwwk..",
+      "..kwwkwwwwkwwk..", "..kwwwwwwwwwwk..", "..kwwwkkkkwwwk..", "..kWwwwwwwwwWk..",
+      "..kWwpwwwwpwWk..", "...kWwwwwwwWk...", "....kWWWWWWk....", ".....kkkkkk.....",
+    ],
+  },
+  /* インクガニ — 海のインクいきもの (第2章・海辺) */
+  inkgani: {
+    palette: { k: "#161a26", i: "#2a3a7b", I: "#3d54ab", l: "#7186d5", w: "#f7f4e8", r: "#d55a6b" },
+    rows: [
+      "kk....kkkk....kk", "kikk.kIIIIk.kkik", ".kiikIIIIIIkiik.", "..kkIIIIIIIIkk..",
+      "...kIwkIIkwIk...", "...kIwkIIkwIk...", "..kIIIIrrIIIIk..", "..kIIIIIIIIIIk..",
+      ".kiIIIIIIIIIIik.", ".kiIkIIIIIIkIik.", "..kkiIIIIIIikk..", "...kIIkkkkIIk...",
+      "..kiIk....kIik..", ".kiik......kiik.", ".kkk........kkk.", "................",
+    ],
+  },
+  /* インクの魔女ブロッタ — 第2章ボス */
+  blotta: {
+    palette: { k: "#140f1e", h: "#3a2a5e", H: "#54408a", s: "#e8c9e0", i: "#2a2a6b", I: "#3a3a9b", l: "#8a6bd5", w: "#f4f1e6", y: "#f0c95a", p: "#c04a7e" },
+    rows: [
+      "......kkkkk.....", ".....khhhhhk....", "....khHHHHHhk...", "...khHHHHHHHhk..",
+      "..kkkkkkkkkkkkk.", "...khhhhhhhhhk..", "...ksskssksssk..", "...ksskssksssk..",
+      "...kssssssssk...", "....kspssspk....", "...kiiiiiiiiik..", "..kiIIlIIlIIiik.",
+      ".kiIIIIIIIIIIik.", ".kiIIyIIIyIIIik.", "..kiIIIIIIIIik..", "...kkkkkkkkkk...",
+    ],
+  },
+};
+
+/* あわケシゴムン — ケシゴムンの海バージョン (色違い) */
+MONSTER_ART.awaKeshigomun = {
+  palette: { k: "#18202b", w: "#d8f0ee", W: "#a8d5d0", l: "#ffffff", b: "#2a9aa5", B: "#1d6d78", c: "#69d5dc", p: "#7ec3d8" },
+  rows: MONSTER_ART.keshigomun.rows,
 };

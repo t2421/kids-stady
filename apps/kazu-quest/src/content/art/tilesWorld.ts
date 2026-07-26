@@ -6,6 +6,81 @@
 import type { PixelArt } from "./format";
 
 export const WORLD_TILES: Record<string, PixelArt> = {
+  /* 港 (第2章: 船つき場) — 桟橋と帆かけ舟のアイコン */
+  locPort: {
+    palette: {
+      g: "#398447", b: "#2364a7", B: "#2f7bc2", k: "#241d26",
+      t: "#9a6335", T: "#bd8047", w: "#f4f1e6", r: "#b84529",
+    },
+    rows: [
+      "gggggggggggggggg",
+      "ggggggggkwgggggg",
+      "gggggggkwwwggggg",
+      "ggggggkwwwwwgggg",
+      "gggggkwwwwwwwggg",
+      "ggggggkkkwkkgggg",
+      "bbbbbbbbkwbbbbbb",
+      "bkrrrrrrkrrrrkbb",
+      "bbkrrrrrrrrrkbbb",
+      "bbbkkkkkkkkkbbbb",
+      "bBbbbbbbbbbbbBbb",
+      "ttTttTttTttTttTt",
+      "kkkkkkkkkkkkkkkk",
+      "bbbBBBbbbbbbbBBB",
+      "bbbbbbbbbbbbbbbb",
+      "BBbbbbbbBBbbbbbb",
+    ],
+  },
+  /* しおかぜ灯台 — 赤白しまの塔 */
+  locLighthouse: {
+    palette: {
+      g: "#398447", k: "#241d26", r: "#c24a32", w: "#f2efe2",
+      y: "#f5c84b", d: "#8a776a",
+    },
+    rows: [
+      "ggggggkyykgggggg",
+      "gggggkyyyykggggg",
+      "gggggkkkkkkggggg",
+      "gggggkwwwwkggggg",
+      "gggggkrrrrkggggg",
+      "gggggkwwwwkggggg",
+      "gggggkrrrrkggggg",
+      "ggggkwwwwwwkgggg",
+      "ggggkrrrrrrkgggg",
+      "ggggkwwwwwwkgggg",
+      "ggggkrrrrrrkgggg",
+      "gggkwwwwwwwwkggg",
+      "gggkddddddddkggg",
+      "ggkkkkkkkkkkkkgg",
+      "gggggggggggggggg",
+      "gggggggggggggggg",
+    ],
+  },
+  /* 九九の塔 — 石造りの高い塔 */
+  locTower: {
+    palette: {
+      g: "#398447", k: "#241d26", s: "#989ea8", S: "#b7bdc5",
+      d: "#6b7078", p: "#9b59b6", y: "#f5c84b",
+    },
+    rows: [
+      "gggggggpgggggggg",
+      "ggggggkppggggggg",
+      "ggggggkkkggggggg",
+      "gggggkSSSkgggggg",
+      "gggggkSdSkgggggg",
+      "gggggkSSSkgggggg",
+      "ggggkSSSSSkggggg",
+      "ggggkSdSdSkggggg",
+      "ggggkSSSSSkggggg",
+      "ggggkSySSSkggggg",
+      "gggkSSSSSSSkgggg",
+      "gggkSdSSSdSkgggg",
+      "gggkSSSSSSSkgggg",
+      "ggkkkkkkkkkkkggg",
+      "gggggggggggggggg",
+      "gggggggggggggggg",
+    ],
+  },
   /* 山脈 — 北と南の地方を隔てる通行不能タイル */
   mountain: {
     palette: {

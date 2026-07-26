@@ -10,7 +10,8 @@
 import type { MonsterDef, SpellDef } from "../../content/types";
 import type { PartyMember } from "../save";
 import type { Rng } from "../curriculum/types";
-import { heroStats, levelForExp } from "./stats";
+import { levelForExp } from "./stats";
+import { memberName, memberStats } from "./members";
 import { equippedStats } from "./equipment";
 
 export interface Combatant {
@@ -66,6 +67,7 @@ export type BattleEvent =
   | { type: "attack"; actorName: string; targetId: string; damage: number; killed: boolean; onParty: boolean }
   | {
       type: "spellSuccess";
+      actorId: string;
       actorName: string;
       spellName: string;
       critical: boolean;
@@ -89,7 +91,7 @@ export function makeMemberCombatant(member: PartyMember): Combatant {
   const stats = equippedStats(member);
   return {
     id: member.memberId,
-    name: member.memberId === "hero" ? "ゆうしゃ" : member.memberId,
+    name: memberName(member.memberId),
     hp: Math.min(member.hp, stats.maxHp),
     maxHp: stats.maxHp,
     mp: Math.min(member.mp, stats.maxMp),
@@ -267,34 +269,91 @@ export function submitRound(
         actor.mp -= cmd.spell.mpCost;
         events.push({
           type: "spellSuccess",
+          actorId: actor.id,
           actorName: actor.name,
           spellName: cmd.spell.name,
           critical: outcome.critical,
           mpLeft: actor.mp,
         });
-        const amount = spellAmount(cmd.spell.power, outcome.critical, rng);
-        if (cmd.spell.kind === "attack") {
-          let target = findEnemy(cmd.targetId);
-          if (!target || target.hp <= 0) target = livingEnemies(next)[0];
-          if (!target) continue;
+        const spell = cmd.spell;
+        const dealDamage = (target: EnemyCombatant, amount: number) => {
           target.hp = Math.max(0, target.hp - amount);
           const killed = target.hp === 0;
           events.push({ type: "attack", actorName: actor.name, targetId: target.id, damage: amount, killed, onParty: false });
           if (killed) {
             events.push({ type: "message", text: `${target.name}を やっつけた!` });
           }
-        } else if (cmd.spell.kind === "heal") {
+        };
+
+        if (spell.kind === "attack") {
+          if (spell.target === "allEnemies") {
+            /* 全体攻撃 (ククダマ): 1体あたり威力 80% */
+            for (const target of livingEnemies(next)) {
+              dealDamage(target, spellAmount(spell.power * 0.8, outcome.critical, rng));
+            }
+          } else {
+            const hits = Math.max(1, spell.hits ?? 1);
+            for (let h = 0; h < hits; h++) {
+              const living = livingEnemies(next);
+              if (living.length === 0) break;
+              /* 連撃は毎撃ランダムな敵、単発は選択した敵 */
+              let target =
+                hits > 1
+                  ? living[Math.floor(rng() * living.length)]
+                  : (findEnemy(cmd.targetId) ?? living[0]);
+              if (target.hp <= 0) target = living[0];
+              dealDamage(target, spellAmount(spell.power, outcome.critical, rng));
+            }
+          }
+        } else if (spell.kind === "heal") {
+          const targets =
+            spell.target === "party"
+              ? livingMembers(next)
+              : [findMember(cmd.targetId) ?? actor];
+          for (const target of targets) {
+            const healed = Math.min(
+              target.maxHp - target.hp,
+              spellAmount(spell.power, outcome.critical, rng),
+            );
+            target.hp += healed;
+            events.push({ type: "heal", targetId: target.id, amount: healed, onParty: true });
+          }
+        } else if (spell.kind === "buff") {
           const target = findMember(cmd.targetId) ?? actor;
-          const healed = Math.min(target.maxHp - target.hp, amount);
-          target.hp += healed;
-          events.push({ type: "heal", targetId: target.id, amount: healed, onParty: true });
-        } else if (cmd.spell.kind === "buff") {
-          const target = findMember(cmd.targetId) ?? actor;
-          target.defending = true;
-          events.push({
-            type: "message",
-            text: `${target.name}は まもりの ちからに つつまれた!`,
-          });
+          if (spell.effect === "agiUp") {
+            /* トキシフト: 戦闘中ずっと すばやさ 1.5倍 (次ラウンドから行動順に効く) */
+            target.agi = Math.round(target.agi * 1.5);
+            events.push({
+              type: "message",
+              text: `${target.name}の うごきが はやくなった!`,
+            });
+          } else {
+            target.defending = true;
+            events.push({
+              type: "message",
+              text: `${target.name}は まもりの ちからに つつまれた!`,
+            });
+          }
+        } else if (spell.kind === "debuff") {
+          /* カサミスト: 敵のこうげきを下げる (全体/単体) */
+          const targets =
+            spell.target === "allEnemies"
+              ? livingEnemies(next)
+              : [findEnemy(cmd.targetId) ?? livingEnemies(next)[0]].filter(
+                  (t): t is EnemyCombatant => !!t,
+                );
+          for (const target of targets) {
+            target.atk = Math.max(1, Math.round(target.atk * 0.7));
+          }
+          if (targets.length > 0) {
+            events.push({
+              type: "message",
+              text:
+                targets.length > 1
+                  ? "てきたちの こうげきが よわまった!"
+                  : `${targets[0].name}の こうげきが よわまった!`,
+            });
+          }
         }
       } else if (cmd.kind === "item") {
         const healed = Math.min(actor.maxHp - actor.hp, cmd.heal);
@@ -365,7 +424,7 @@ export function applyVictory(
     const combatant = battle.members.find((c) => c.id === member.memberId);
     const newExp = member.exp + exp;
     const newLevel = levelForExp(newExp);
-    const stats = heroStats(newLevel);
+    const stats = memberStats(member.memberId, newLevel);
     if (newLevel > member.level) {
       levelUps.push({ memberId: member.memberId, from: member.level, to: newLevel });
       return {

@@ -52,6 +52,40 @@ ENCOUNTER_TABLES["ch1-cave"] = {
   ],
 };
 
+/* ---------- 第2章 ---------- */
+
+ENCOUNTER_TABLES["ch2-world"] = {
+  id: "ch2-world",
+  stepRange: [12, 24],
+  groups: [
+    { monsterIds: ["awaKeshigomun"], weight: 3 },
+    { monsterIds: ["awaKeshigomun", "awaKeshigomun"], weight: 2 },
+    { monsterIds: ["inkgani"], weight: 3 },
+    { monsterIds: ["inkgani", "awaKeshigomun"], weight: 2 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch2-lighthouse"] = {
+  id: "ch2-lighthouse",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["inkgani"], weight: 3 },
+    { monsterIds: ["mojibakeBat", "awaKeshigomun"], weight: 2 },
+    { monsterIds: ["inkgani", "inkgani"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch2-tower"] = {
+  id: "ch2-tower",
+  stepRange: [9, 18],
+  groups: [
+    { monsterIds: ["shuseiekin"], weight: 3 },
+    { monsterIds: ["awaKeshigomun", "shuseiekin"], weight: 2 },
+    { monsterIds: ["mojibakeBat", "mojibakeBat"], weight: 2 },
+    { monsterIds: ["shuseiekin", "shuseiekin"], weight: 1 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }

@@ -62,6 +62,16 @@ export const ACTOR_ART: Record<string, PixelArt> = {
       "...kGGggggGGk...", "...kkGkkkkGkk...", "....kGk..kGk....", "....kkk..kkk....",
     ],
   },
+  /* 僧侶タスク (第2章で加入する仲間 — 白いローブに青いライン、十字ならぬ「+」の印) */
+  tasuku: {
+    palette: { k: "#1a1c22", h: "#8a5a30", H: "#b57a42", s: "#e8ae80", S: "#ffd0a2", w: "#f4f1e6", W: "#d8d3c2", b: "#3d6fb0", y: "#f0c95a" },
+    rows: [
+      ".....kkkkkk.....", "....kHHHHHHk....", "...kHhhhhhhHk...", "...kHkSSSSkHk...",
+      "...kSSSSSSSSk...", "...kSksSSskSk...", "...kSSssssSSk...", "....kssssssk....",
+      "...kkkwwwwkkk...", "..kskwwbywwksk..", "..kskwbbbywwksk.", "...kWwwbywwWk...",
+      "..kWWwwwwwwWWk..", ".kWWWwwwwwwWWWk.", ".kWWWWWWWWWWWWk.", "..kkkkkkkkkkkk..",
+    ],
+  },
   scholar: {
     palette: { k: "#1b1920", h: "#d7d5cf", H: "#ffffff", s: "#dfaa82", S: "#f5c9a0", b: "#4c4d72", B: "#30304d", l: "#7379a0", y: "#e6bd43", d: "#9b9b9b" },
     rows: [

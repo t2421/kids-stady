@@ -69,6 +69,38 @@ export const ITEMS: Record<string, ItemDef> = {
   },
 };
 
+/* ---------- 第2章の装備 ---------- */
+
+ITEMS.tetsuNoTsurugi = {
+  id: "tetsuNoTsurugi",
+  name: "てつのつるぎ",
+  kind: "equip",
+  slot: "weapon",
+  atk: 9,
+  price: 140,
+  description: "こうげき +9。かじやの じまんの いっぴん",
+};
+
+ITEMS.kusariKatabira = {
+  id: "kusariKatabira",
+  name: "くさりかたびら",
+  kind: "equip",
+  slot: "armor",
+  def: 7,
+  price: 110,
+  description: "しゅび +7。くさりを あんだ よろい",
+};
+
+ITEMS.tetsuNoTate = {
+  id: "tetsuNoTate",
+  name: "てつのたて",
+  kind: "equip",
+  slot: "shield",
+  def: 5,
+  price: 90,
+  description: "しゅび +5。がんじょうな てつの たて",
+};
+
 export const SHOPS: Record<string, ShopDef> = {
   "ch1-capital-shop": {
     id: "ch1-capital-shop",
@@ -88,6 +120,18 @@ export const SHOPS: Record<string, ShopDef> = {
     name: "モリカゲの どうぐや",
     itemIds: ["yakusou", "douNoTsurugi", "kawaNoYoroi", "kawaNoTate"],
   },
+};
+
+SHOPS["ch2-minatos-shop"] = {
+  id: "ch2-minatos-shop",
+  name: "ミナトスの どうぐや",
+  itemIds: [
+    "yakusou",
+    "anshinNoSuzu",
+    "tetsuNoTsurugi",
+    "kusariKatabira",
+    "tetsuNoTate",
+  ],
 };
 
 export function getItem(id: string): ItemDef | undefined {

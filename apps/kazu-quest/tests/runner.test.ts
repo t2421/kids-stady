@@ -63,6 +63,37 @@ describe("event runner", () => {
     expect(r.state.save.party[0].learnedSpells).toEqual(["hikidama"]);
   });
 
+  it("joinParty appends a member with initial spells (idempotent)", () => {
+    const commands: EventCommand[] = [
+      { type: "joinParty", memberId: "tasuku", level: 3 },
+      { type: "joinParty", memberId: "tasuku", level: 5 },
+    ];
+    const r = step(startRun(commands, defaultSave()));
+    expect(r.done).toBe(true);
+    expect(r.state.save.party).toHaveLength(2);
+    const tasuku = r.state.save.party[1];
+    expect(tasuku.memberId).toBe("tasuku");
+    expect(tasuku.level).toBe(3);
+    expect(tasuku.learnedSpells).toContain("tashiria");
+    /* 勇者は先頭のまま (E2E/表示の前提) */
+    expect(r.state.save.party[0].memberId).toBe("hero");
+  });
+
+  it("advanceChapter raises current and records cleared", () => {
+    const commands: EventCommand[] = [{ type: "advanceChapter", chapter: 2 }];
+    const r = step(startRun(commands, defaultSave()));
+    expect(r.state.save.chapter.current).toBe(2);
+    expect(r.state.save.chapter.cleared).toContain(1);
+    /* すでに章3なら下げない */
+    const r2 = step(
+      startRun(commands, {
+        ...defaultSave(),
+        chapter: { current: 3, cleared: [1, 2] },
+      }),
+    );
+    expect(r2.state.save.chapter.current).toBe(3);
+  });
+
   it("giveItem accumulates", () => {
     const commands: EventCommand[] = [
       { type: "giveItem", itemId: "yakusou" },

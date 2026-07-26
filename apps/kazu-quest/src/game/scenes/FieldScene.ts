@@ -8,7 +8,7 @@ import type { RunnerInput, RunnerState } from "../../lib/events/runner";
 import { evalCond, startRun, step } from "../../lib/events/runner";
 import { pickEncounterGroup, rollEncounterSteps } from "../../lib/encounter";
 import { mulberry32 } from "../../lib/curriculum/types";
-import { heroStats } from "../../lib/battle/stats";
+import { memberStats } from "../../lib/battle/members";
 import { actorTextureKey } from "../textures";
 import { autosave, getSave, updateSave } from "../session";
 import { EventBus } from "../EventBus";
@@ -16,6 +16,7 @@ import { fadeIn, fadeOutThen } from "../transition";
 import { addFootShadow, MapView, tileCenter } from "../field/MapView";
 import { createCaveDarkness } from "../field/atmosphere";
 import { openEquipMenu } from "../field/equipMenu";
+import { requestFieldQuiz } from "../battle/mathRequest";
 import { consumeDebugBattle } from "../debugBoot";
 import { buildStatusSections } from "../field/statusSections";
 import {
@@ -402,7 +403,7 @@ export class FieldScene extends Scene {
     updateSave((s) => ({
       ...s,
       party: s.party.map((m) => {
-        const stats = heroStats(m.level);
+        const stats = memberStats(m.memberId, m.level);
         return { ...m, hp: stats.maxHp, mp: stats.maxMp };
       }),
     }));
@@ -597,6 +598,12 @@ export class FieldScene extends Scene {
           break;
         case "openShop":
           handleShop(this.ui, effect.shopId, () => advance());
+          break;
+        case "quiz":
+          /* クイズ扉: React の問題パネルに出題し、正誤で分岐 (時間無制限) */
+          requestFieldQuiz(effect.skillId, (correct) =>
+            advance({ quizCorrect: correct }),
+          );
           break;
       }
     };

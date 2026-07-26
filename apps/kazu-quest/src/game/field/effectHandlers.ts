@@ -6,7 +6,7 @@
 
 import { EventBus } from "../EventBus";
 import { autosave, getSave, updateSave } from "../session";
-import { heroStats } from "../../lib/battle/stats";
+import { memberStats } from "../../lib/battle/members";
 import { equipItem } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem, SHOPS } from "../../content/items";
@@ -37,7 +37,7 @@ export function handleHealInn(
     ...s,
     inventory: { ...s.inventory, gold: s.inventory.gold - price },
     party: s.party.map((m) => {
-      const stats = heroStats(m.level);
+      const stats = memberStats(m.memberId, m.level);
       return { ...m, hp: stats.maxHp, mp: stats.maxMp };
     }),
   }));

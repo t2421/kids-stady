@@ -7,37 +7,44 @@ import {
   pickSkill,
 } from "../src/lib/curriculum";
 
-const IMPLEMENTED = SKILLS.filter((s) => s.implemented).map((s) => s.id);
 const RUNS = 500;
 
+const implementedByGrade = (grade: number) =>
+  SKILLS.filter((s) => s.implemented && s.grade === grade).map((s) => s.id);
+
+/* 全学年共通の整形チェック (答えの値域は学年別テストで確認する) */
+function expectWellFormed(skillId: string, maxAnswer: number) {
+  const rng = mulberry32(42);
+  for (let i = 0; i < RUNS; i++) {
+    const p = generate(skillId, rng);
+    expect(p.skillId).toBe(skillId);
+
+    /* 3択: 重複なし・正解を含む */
+    expect(new Set(p.choices).size).toBe(3);
+    expect(p.choices).toContain(p.answer);
+
+    const n = Number(p.answer);
+    expect(Number.isInteger(n)).toBe(true);
+    expect(n).toBeGreaterThanOrEqual(0);
+    expect(n).toBeLessThanOrEqual(maxAnswer);
+
+    /* 選択肢も非負整数 */
+    for (const c of p.choices) {
+      const cn = Number(c);
+      expect(Number.isInteger(cn)).toBe(true);
+      expect(cn).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(p.explain.length).toBeGreaterThan(0);
+    expect(p.text.length).toBeGreaterThan(0);
+  }
+}
+
 describe("curriculum property tests (grade 1)", () => {
-  for (const skillId of IMPLEMENTED) {
+  for (const skillId of implementedByGrade(1)) {
     it(`${skillId}: ${RUNS} problems are well-formed`, () => {
-      const rng = mulberry32(42);
-      for (let i = 0; i < RUNS; i++) {
-        const p = generate(skillId, rng);
-        expect(p.skillId).toBe(skillId);
-
-        /* 3択: 重複なし・正解を含む */
-        expect(new Set(p.choices).size).toBe(3);
-        expect(p.choices).toContain(p.answer);
-
-        /* 小1: 答えは 0〜20 の整数 */
-        const n = Number(p.answer);
-        expect(Number.isInteger(n)).toBe(true);
-        expect(n).toBeGreaterThanOrEqual(0);
-        expect(n).toBeLessThanOrEqual(20);
-
-        /* 選択肢も非負整数 */
-        for (const c of p.choices) {
-          const cn = Number(c);
-          expect(Number.isInteger(cn)).toBe(true);
-          expect(cn).toBeGreaterThanOrEqual(0);
-        }
-
-        expect(p.explain.length).toBeGreaterThan(0);
-        expect(p.text.length).toBeGreaterThan(0);
-      }
+      /* 小1: 答えは 0〜20 */
+      expectWellFormed(skillId, 20);
     });
   }
 
@@ -97,10 +104,70 @@ describe("curriculum property tests (grade 1)", () => {
   });
 });
 
+describe("curriculum property tests (grade 2)", () => {
+  for (const skillId of implementedByGrade(2)) {
+    it(`${skillId}: ${RUNS} problems are well-formed`, () => {
+      /* 小2: 九九≤81・2桁ひっ算≤178・換算≤180 の範囲内 */
+      expectWellFormed(skillId, 200);
+    });
+  }
+
+  it("g2_kuku: answers are products within the times table", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g2_kuku", rng);
+      expect(p.a).toBeGreaterThanOrEqual(1);
+      expect(p.a).toBeLessThanOrEqual(9);
+      expect(p.b).toBeGreaterThanOrEqual(1);
+      expect(p.b).toBeLessThanOrEqual(9);
+      expect(Number(p.answer)).toBe(p.a! * p.b!);
+    }
+  });
+
+  it("g2_add_column: two-digit operands and correct sums", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g2_add_column", rng);
+      expect(p.a).toBeGreaterThanOrEqual(10);
+      expect(p.b).toBeGreaterThanOrEqual(10);
+      expect(Number(p.answer)).toBe(p.a! + p.b!);
+    }
+  });
+
+  it("g2_sub_column: positive differences", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g2_sub_column", rng);
+      expect(Number(p.answer)).toBe(p.a! - p.b!);
+      expect(Number(p.answer)).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("g2_length / g2_volume: conversions are ×10 based", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const len = generate("g2_length", rng);
+      expect(Number(len.answer)).toBe(len.a! * 10 + (len.b ?? 0));
+      const vol = generate("g2_volume", rng);
+      expect(Number(vol.answer)).toBe(vol.a! * 10 + (vol.b ?? 0));
+    }
+  });
+
+  it("g2_time: answers stay in sensible clock ranges", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g2_time", rng);
+      const n = Number(p.answer);
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(180);
+    }
+  });
+});
+
 describe("skill registry", () => {
   it("future skills are registered but not implemented", () => {
-    expect(isImplemented("g2_kuku")).toBe(false);
-    expect(() => generate("g2_kuku")).toThrow();
+    expect(isImplemented("g3_div")).toBe(false);
+    expect(() => generate("g3_div")).toThrow();
     expect(SKILLS.some((s) => s.id === "g6_speed")).toBe(true);
   });
 });
@@ -109,7 +176,7 @@ describe("pickSkill", () => {
   it("only returns implemented skills", () => {
     const rng = mulberry32(1);
     for (let i = 0; i < 100; i++) {
-      const id = pickSkill(["g1_add_nc", "g2_kuku"], {}, rng);
+      const id = pickSkill(["g1_add_nc", "g3_div"], {}, rng);
       expect(id).toBe("g1_add_nc");
     }
   });
@@ -132,6 +199,6 @@ describe("pickSkill", () => {
   });
 
   it("throws when nothing is implemented", () => {
-    expect(() => pickSkill(["g2_kuku"], {})).toThrow();
+    expect(() => pickSkill(["g3_div"], {})).toThrow();
   });
 });

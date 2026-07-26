@@ -35,13 +35,22 @@ export type EventCommand =
   | { type: "giveItem"; itemId: string; count?: number }
   | { type: "giveGold"; amount: number }
   | { type: "learnSpell"; memberId: string; spellId: string }
+  | { type: "joinParty"; memberId: string; level?: number }
+  | { type: "advanceChapter"; chapter: number }
   | { type: "transfer"; mapId: string; spawn: string }
   | { type: "battle"; monsterIds: string[]; boss?: boolean; winFlag?: string }
   | { type: "openShop"; shopId: string }
   | { type: "healInn"; price: number }
   | { type: "openSpellTest"; spellId: string }
   | { type: "savePoint" }
-  | { type: "choice"; prompt: string; yes: EventCommand[]; no: EventCommand[] };
+  | { type: "choice"; prompt: string; yes: EventCommand[]; no: EventCommand[] }
+  /* 算数クイズの扉 (九九の塔など)。正解/不正解で分岐する。時間無制限 */
+  | {
+      type: "quiz";
+      skillId: string;
+      onCorrect: EventCommand[];
+      onWrong: EventCommand[];
+    };
 
 export interface DialogEntry {
   /* 先頭から評価し、最初に条件が成立した entry を表示する。if 省略 = 常に成立 */
@@ -125,11 +134,16 @@ export interface EncounterTable {
 export interface SpellDef {
   id: string;
   name: string;
-  kind: "attack" | "heal" | "buff";
+  kind: "attack" | "heal" | "buff" | "debuff";
   mpCost: number;
-  /* attack: 与ダメージ基準値 / heal: 回復基準値 / buff: 効果量 */
+  /* attack: 与ダメージ基準値 / heal: 回復基準値 (buff/debuff は未使用で 0) */
   power: number;
-  target: "enemy" | "ally";
+  /* allEnemies=敵全体 / party=味方全体 (九九=全体攻撃 など単元と効果を対応させる) */
+  target: "enemy" | "ally" | "allEnemies" | "party";
+  /* 連撃回数 (ダンダンづき)。省略 = 1回。2以上は毎撃ランダムな敵に当たる */
+  hits?: number;
+  /* buff/debuff の中身。省略時: buff=みをまもる(guard), debuff=こうげきダウン(atkDown) */
+  effect?: "guard" | "agiUp" | "atkDown";
   /* curriculum への唯一の接続点。戦闘発動時の出題プール */
   skillIds: string[];
   battleTimeLimitMs: number;

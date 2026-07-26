@@ -13,6 +13,8 @@
 
 import type { EventCommand, FlagCond } from "../../content/types";
 import type { SaveData } from "../save";
+import { MEMBERS, memberStats } from "../battle/members";
+import { expForLevel } from "../battle/stats";
 
 export type RunnerEffect =
   | { kind: "message"; pages: string[] }
@@ -22,10 +24,12 @@ export type RunnerEffect =
   | { kind: "healInn"; price: number }
   | { kind: "openSpellTest"; spellId: string }
   | { kind: "savePoint" }
-  | { kind: "choice"; prompt: string };
+  | { kind: "choice"; prompt: string }
+  | { kind: "quiz"; skillId: string };
 
 export interface RunnerInput {
   choice?: "yes" | "no";
+  quizCorrect?: boolean;
 }
 
 interface Frame {
@@ -101,12 +105,50 @@ function applyData(save: SaveData, cmd: EventCommand): SaveData {
             : m,
         ),
       };
+    case "joinParty": {
+      if (save.party.some((m) => m.memberId === cmd.memberId)) return save;
+      const def = MEMBERS[cmd.memberId];
+      const level = Math.max(1, cmd.level ?? 1);
+      const stats = memberStats(cmd.memberId, level);
+      return {
+        ...save,
+        party: [
+          ...save.party,
+          {
+            memberId: cmd.memberId,
+            level,
+            exp: expForLevel(level),
+            hp: stats.maxHp,
+            mp: stats.maxMp,
+            learnedSpells: [...(def?.initialSpells ?? [])],
+            equipment: {},
+          },
+        ],
+      };
+    }
+    case "advanceChapter":
+      return {
+        ...save,
+        chapter: {
+          current: Math.max(save.chapter.current, cmd.chapter),
+          cleared: save.chapter.cleared.includes(cmd.chapter - 1)
+            ? save.chapter.cleared
+            : [...save.chapter.cleared, cmd.chapter - 1],
+        },
+      };
     default:
       return save;
   }
 }
 
-const DATA_COMMANDS = new Set(["setFlag", "giveItem", "giveGold", "learnSpell"]);
+const DATA_COMMANDS = new Set([
+  "setFlag",
+  "giveItem",
+  "giveGold",
+  "learnSpell",
+  "joinParty",
+  "advanceChapter",
+]);
 
 export function step(state: RunnerState, input?: RunnerInput): StepResult {
   let { stack, save, pending } = state;
@@ -115,6 +157,13 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
   /* choice の解決: 選ばれた側の枝をスタックに積む */
   if (pending?.type === "choice" && input?.choice) {
     const branch = input.choice === "yes" ? pending.yes : pending.no;
+    stack.push({ commands: branch, index: 0 });
+    pending = null;
+  }
+
+  /* quiz の解決: 正解/不正解の枝を積む */
+  if (pending?.type === "quiz" && input?.quizCorrect !== undefined) {
+    const branch = input.quizCorrect ? pending.onCorrect : pending.onWrong;
     stack.push({ commands: branch, index: 0 });
     pending = null;
   }
@@ -148,6 +197,12 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
         return {
           state: { stack, save, pending: cmd },
           effect: { kind: "choice", prompt: cmd.prompt },
+          done: false,
+        };
+      case "quiz":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "quiz", skillId: cmd.skillId },
           done: false,
         };
       case "battle":

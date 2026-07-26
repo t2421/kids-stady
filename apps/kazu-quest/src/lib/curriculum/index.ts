@@ -6,15 +6,10 @@
 import type { Problem, Rng, SkillInfo } from "./types";
 import { mulberry32 } from "./types";
 import { GRADE1_GENERATORS, GRADE1_LABELS } from "./grade1";
+import { GRADE2_GENERATORS, GRADE2_LABELS } from "./grade2";
 import type { SkillStat } from "../save";
 
 const FUTURE_SKILLS: SkillInfo[] = [
-  { id: "g2_kuku", grade: 2, label: "九九", implemented: false },
-  { id: "g2_add_column", grade: 2, label: "たしざんの ひっさん", implemented: false },
-  { id: "g2_sub_column", grade: 2, label: "ひきざんの ひっさん", implemented: false },
-  { id: "g2_length", grade: 2, label: "ながさ (cm/mm)", implemented: false },
-  { id: "g2_volume", grade: 2, label: "かさ (L/dL/mL)", implemented: false },
-  { id: "g2_time", grade: 2, label: "とけいと じかん", implemented: false },
   { id: "g3_div", grade: 3, label: "わり算", implemented: false },
   { id: "g3_div_remainder", grade: 3, label: "あまりのある わり算", implemented: false },
   { id: "g3_mul_column", grade: 3, label: "かけ算の ひっ算", implemented: false },
@@ -29,6 +24,12 @@ const FUTURE_SKILLS: SkillInfo[] = [
 ];
 
 export const SKILLS: SkillInfo[] = [
+  ...Object.keys(GRADE2_GENERATORS).map((id) => ({
+    id,
+    grade: 2,
+    label: GRADE2_LABELS[id],
+    implemented: true,
+  })),
   ...Object.keys(GRADE1_GENERATORS).map((id) => ({
     id,
     grade: 1,
@@ -40,6 +41,7 @@ export const SKILLS: SkillInfo[] = [
 
 const GENERATORS: Record<string, (rng: Rng) => Problem> = {
   ...GRADE1_GENERATORS,
+  ...GRADE2_GENERATORS,
 };
 
 export function isImplemented(skillId: string): boolean {

@@ -32,6 +32,9 @@ export function PhaserGame() {
             | null;
           field?.debugTeleport?.(x, y, facing);
         },
+        setFlag: (flag: string, value: number | boolean = true) => {
+          updateSave((s) => ({ ...s, flags: { ...s.flags, [flag]: value } }));
+        },
         learnSpell: (spellId: string) => {
           updateSave((s) => ({
             ...s,

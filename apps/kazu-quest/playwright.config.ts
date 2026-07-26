@@ -9,6 +9,8 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 90_000,
   retries: 1,
+  /* Phaser ページは重く、並列実行すると RAF/入力タイミングがフレークする */
+  workers: 1,
   use: {
     baseURL: "http://localhost:3012",
     viewport: { width: 1280, height: 720 },

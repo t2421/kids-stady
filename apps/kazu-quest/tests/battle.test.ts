@@ -227,6 +227,113 @@ describe("battle rounds", () => {
   });
 });
 
+describe("grade-2 spell mechanics", () => {
+  const KUKUDAMA: SpellDef = {
+    id: "kukudama",
+    name: "ククダマ",
+    kind: "attack",
+    mpCost: 4,
+    power: 13,
+    target: "allEnemies",
+    skillIds: ["g2_kuku"],
+    battleTimeLimitMs: 20000,
+    learnTest: { skillIds: ["g2_kuku"], questions: 10, passCount: 8 },
+    description: "",
+  };
+  const DANDAN: SpellDef = {
+    ...KUKUDAMA,
+    id: "dandanZuki",
+    name: "ダンダンづき",
+    target: "enemy",
+    hits: 3,
+    power: 6,
+    mpCost: 3,
+  };
+  const KASA_MIST: SpellDef = {
+    ...KUKUDAMA,
+    id: "kasaMist",
+    name: "カサミスト",
+    kind: "debuff",
+    effect: "atkDown",
+    power: 0,
+    mpCost: 3,
+  };
+  const TOKI_SHIFT: SpellDef = {
+    ...KUKUDAMA,
+    id: "tokiShift",
+    name: "トキシフト",
+    kind: "buff",
+    effect: "agiUp",
+    target: "ally",
+    power: 0,
+    mpCost: 2,
+  };
+  const TASHIRIADA: SpellDef = {
+    ...KUKUDAMA,
+    id: "tashiriada",
+    name: "タシリアーダ",
+    kind: "heal",
+    target: "party",
+    power: 14,
+    mpCost: 5,
+  };
+
+  const cast = (spell: SpellDef, state = createBattle([HERO], [{ ...KESHIGOMUN, hp: 50 }, { ...KESHIGOMUN, hp: 50 }], false)) =>
+    submitRound(
+      state,
+      [
+        {
+          kind: "spell",
+          memberId: "hero",
+          spell,
+          targetId: state.enemies[0].id,
+          outcome: { correct: true, critical: false },
+        },
+      ],
+      mulberry32(3),
+    );
+
+  it("allEnemies attack damages every living enemy", () => {
+    const { state } = cast(KUKUDAMA);
+    expect(state.enemies[0].hp).toBeLessThan(50);
+    expect(state.enemies[1].hp).toBeLessThan(50);
+  });
+
+  it("multi-hit attack lands `hits` strikes", () => {
+    const { events } = cast(DANDAN);
+    const strikes = events.filter((e) => e.type === "attack" && !e.onParty);
+    expect(strikes).toHaveLength(3);
+  });
+
+  it("atkDown debuff weakens all enemies", () => {
+    const { state } = cast(KASA_MIST);
+    for (const enemy of state.enemies) {
+      expect(enemy.atk).toBe(Math.max(1, Math.round(KESHIGOMUN.atk * 0.7)));
+    }
+  });
+
+  it("agiUp buff raises the member's agility for later rounds", () => {
+    const before = createBattle([HERO], [{ ...KESHIGOMUN, hp: 50 }], false);
+    const agiBefore = before.members[0].agi;
+    const { state } = cast(TOKI_SHIFT, before);
+    expect(state.members[0].agi).toBe(Math.round(agiBefore * 1.5));
+  });
+
+  it("party heal restores every member", () => {
+    const base = createBattle(
+      [
+        { ...HERO, hp: 10 },
+        { ...HERO, memberId: "tasuku", hp: 5, mp: 20 },
+      ],
+      [{ ...KESHIGOMUN, hp: 50 }],
+      false,
+    );
+    const { events } = cast(TASHIRIADA, base);
+    const heals = events.filter((e) => e.type === "heal");
+    expect(heals).toHaveLength(2);
+  });
+});
+
 describe("applyVictory", () => {
   it("levels up with full heal and records the level-up", () => {
     const member: PartyMember = {
