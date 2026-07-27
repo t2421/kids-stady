@@ -26,14 +26,15 @@ export interface MemberStatus {
   nextNeed: number;
   /* そうびタブ用: 部位ラベル → 装備名 ("なし" を含む) */
   equipment: { label: string; name: string }[];
+  /* じゅもんタブ用: 1行 = 1呪文 ("タシリア MP2") */
+  spells: string[];
 }
 
 export interface StatusData {
   gold: number;
+  /* なかまボタンで1人ずつ切り替えて表示する */
   members: MemberStatus[];
-  /* 1行 = 1呪文 ("タシリア MP2 (ゆうしゃ)") */
-  spells: string[];
-  /* 1行 = 1アイテム ("やくそう ×5") */
+  /* もちものは パーティ共有。1行 = 1アイテム ("やくそう ×5") */
   items: string[];
 }
 
@@ -59,23 +60,16 @@ export function buildStatusData(save: SaveData): StatusData | null {
         label: SLOT_LABELS[slot],
         name: getItem(m.equipment[slot] ?? "")?.name ?? "なし",
       })),
+      spells: m.learnedSpells
+        .map((id) => getSpell(id))
+        .filter((s): s is NonNullable<typeof s> => !!s)
+        .map((s) => `${s.name} MP${s.mpCost}`),
     };
   });
-
-  const spells = save.party.flatMap((m) =>
-    m.learnedSpells
-      .map((id) => getSpell(id))
-      .filter((s): s is NonNullable<typeof s> => !!s)
-      .map((s) =>
-        save.party.length > 1
-          ? `${s.name} MP${s.mpCost} (${memberName(m.memberId)})`
-          : `${s.name} MP${s.mpCost}`,
-      ),
-  );
 
   const items = Object.entries(save.inventory.items)
     .filter(([, count]) => count > 0)
     .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
 
-  return { gold: save.inventory.gold, members, spells, items };
+  return { gold: save.inventory.gold, members, items };
 }

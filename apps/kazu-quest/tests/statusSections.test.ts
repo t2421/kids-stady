@@ -12,7 +12,7 @@ describe("buildStatusData", () => {
     expect(hero.maxHp).toBe(25);
     expect(hero.equipment.map((e) => e.label)).toEqual(["ぶき", "よろい", "たて"]);
     expect(hero.equipment.every((e) => e.name === "なし")).toBe(true);
-    expect(data.spells).toEqual([]);
+    expect(hero.spells).toEqual([]);
     expect(data.items).toEqual([]);
   });
 
@@ -37,13 +37,13 @@ describe("buildStatusData", () => {
       label: "ぶき",
       name: "どうのつるぎ",
     });
-    /* 1人パーティでは呪文に もちぬしを付けない */
-    expect(data.spells.some((s) => s.startsWith("ヒキダマ MP"))).toBe(true);
-    expect(data.spells.some((s) => s.includes("("))).toBe(false);
+    expect(data.members[0].spells.some((s) => s.startsWith("ヒキダマ MP"))).toBe(
+      true,
+    );
     expect(data.items).toEqual(["やくそう ×2"]);
   });
 
-  it("labels spell owners in a multi-member party", () => {
+  it("keeps spells per member in a multi-member party", () => {
     const save = defaultSave();
     const party = {
       ...save,
@@ -58,8 +58,10 @@ describe("buildStatusData", () => {
     };
     const data = buildStatusData(party)!;
     expect(data.members).toHaveLength(2);
-    expect(data.spells.some((s) => s.includes("(ゆうしゃ)"))).toBe(true);
-    expect(data.spells.some((s) => s.includes("(タスク)"))).toBe(true);
+    expect(data.members[0].name).toBe("ゆうしゃ");
+    expect(data.members[0].spells).toEqual(["ヒキダマ MP2"]);
+    expect(data.members[1].name).toBe("タスク");
+    expect(data.members[1].spells).toEqual(["タシリア MP2"]);
   });
 
   it("returns null without a hero", () => {

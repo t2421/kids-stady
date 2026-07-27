@@ -50,6 +50,7 @@ export class UiScene extends Scene {
   private statusOnClose: (() => void) | null = null;
   private statusData: StatusData | null = null;
   private statusTab = 0;
+  private statusMember = 0;
   private statusTabObjs: {
     box: Phaser.GameObjects.Rectangle;
     label: Phaser.GameObjects.Text;
@@ -146,6 +147,7 @@ export class UiScene extends Scene {
     this.statusOnClose = onClose;
     this.statusData = data;
     this.statusTab = 0;
+    this.statusMember = 0;
 
     const w = STATUS_W;
     const h = STATUS_H;
@@ -328,7 +330,7 @@ export class UiScene extends Scene {
 
     const data = this.statusData;
     const w = STATUS_W;
-    const top = -STATUS_H / 2 + 88;
+    let top = -STATUS_H / 2 + 88;
 
     const text = (
       x: number,
@@ -345,76 +347,114 @@ export class UiScene extends Scene {
         color,
       });
 
-    if (this.statusTab === 0 || this.statusTab === 1) {
-      /* つよさ / そうび: なかまごとの カード */
-      const cols = Math.max(1, data.members.length);
-      const colW = Math.min(368, (w - 48 - (cols - 1) * 16) / cols);
-      const startX = -((colW + 16) * cols - 16) / 2;
+    /* もちもの (パーティ共有) 以外は、なかまボタンで1人ずつ切り替える */
+    if (this.statusMember >= data.members.length) this.statusMember = 0;
+    if (this.statusTab !== 3 && data.members.length > 1) {
+      const bw = 196;
+      const bh = 52;
+      const totalW = data.members.length * (bw + 12) - 12;
       data.members.forEach((m, i) => {
-        const x = startX + i * (colW + 16);
-        const cardH = this.statusTab === 0 ? 290 : 200;
-        const card = this.add
-          .rectangle(x + colW / 2, top + cardH / 2, colW, cardH)
-          .setStrokeStyle(2, 0x8aa5d5, 0.7);
-        content.add(card);
-        content.add(
-          text(x + 16, top + 10, `${m.name}  Lv ${m.level}`, 22, "#ffd93d", true),
+        const bx = -totalW / 2 + i * (bw + 12) + bw / 2;
+        const by = top + bh / 2;
+        const selected = i === this.statusMember;
+        const bFrame = this.add.rectangle(bx, by, bw, bh, 0xffffff, selected ? 1 : 0.5);
+        const bBox = this.add.rectangle(
+          bx,
+          by,
+          bw - 6,
+          bh - 6,
+          selected ? 0xffd93d : 0x1a2f55,
+          0.95,
         );
-        if (this.statusTab === 0) {
-          /* HP/MP は バーで残りを見せる */
-          const barW = colW - 32;
-          const bar = (
-            y: number,
-            label: string,
-            value: number,
-            max: number,
-            color: number,
-          ) => {
-            content.add(text(x + 16, y, `${label} ${value}/${max}`, 20, "#ffffff"));
-            content.add(
-              this.add
-                .rectangle(x + 16, y + 30, barW, 10, 0x2a2a34)
-                .setOrigin(0, 0.5),
-            );
-            content.add(
-              this.add
-                .rectangle(
-                  x + 16,
-                  y + 30,
-                  Math.round(barW * Math.min(1, max > 0 ? value / max : 0)),
-                  10,
-                  color,
-                )
-                .setOrigin(0, 0.5),
-            );
-          };
-          bar(top + 48, "HP", m.hp, m.maxHp, 0x3ec46d);
-          bar(top + 96, "MP", m.mp, m.maxMp, 0x4a9dea);
-          content.add(text(x + 16, top + 148, `こうげき ${m.atk}`, 20, "#ffffff"));
-          content.add(text(x + 16, top + 180, `しゅび ${m.def}`, 20, "#ffffff"));
-          content.add(text(x + 16, top + 212, `すばやさ ${m.agi}`, 20, "#ffffff"));
-          content.add(
-            text(
-              x + 16,
-              top + 250,
-              `つぎのレベルまで あと ${m.nextNeed}`,
-              16,
-              "#b9c2d0",
-            ),
+        const bText = this.add
+          .text(bx, by, m.name, {
+            fontFamily: "sans-serif",
+            fontSize: "20px",
+            fontStyle: "bold",
+            color: selected ? "#1a2f55" : "#ffffff",
+          })
+          .setOrigin(0.5);
+        bFrame
+          .setInteractive()
+          .on(
+            "pointerdown",
+            (
+              _p: Phaser.Input.Pointer,
+              _lx: number,
+              _ly: number,
+              ev: Phaser.Types.Input.EventData,
+            ) => {
+              ev.stopPropagation();
+              this.statusMember = i;
+              this.renderStatusTab();
+            },
           );
-        } else {
-          m.equipment.forEach((eq, j) => {
-            content.add(
-              text(x + 16, top + 52 + j * 44, `${eq.label}: ${eq.name}`, 20, "#ffffff"),
-            );
-          });
-        }
+        content.add(bFrame);
+        content.add(bBox);
+        content.add(bText);
       });
+      top += bh + 16;
+    }
+    const member = data.members[this.statusMember];
+
+    if (this.statusTab === 0 || this.statusTab === 1) {
+      /* つよさ / そうび: 選択中のなかま1人を ゆったり表示 */
+      const cardW = 560;
+      const x = -cardW / 2;
+      const cardH = this.statusTab === 0 ? 224 : 190;
+      const card = this.add
+        .rectangle(0, top + cardH / 2, cardW, cardH)
+        .setStrokeStyle(2, 0x8aa5d5, 0.7);
+      content.add(card);
+      content.add(
+        text(x + 20, top + 12, `${member.name}  Lv ${member.level}`, 24, "#ffd93d", true),
+      );
+      if (this.statusTab === 0) {
+        /* HP/MP は バーで残りを見せる */
+        const barW = cardW - 40;
+        const bar = (
+          y: number,
+          label: string,
+          value: number,
+          max: number,
+          color: number,
+        ) => {
+          content.add(text(x + 20, y, `${label} ${value}/${max}`, 20, "#ffffff"));
+          content.add(
+            this.add.rectangle(x + 20, y + 32, barW, 12, 0x2a2a34).setOrigin(0, 0.5),
+          );
+          content.add(
+            this.add
+              .rectangle(
+                x + 20,
+                y + 32,
+                Math.round(barW * Math.min(1, max > 0 ? value / max : 0)),
+                12,
+                color,
+              )
+              .setOrigin(0, 0.5),
+          );
+        };
+        bar(top + 52, "HP", member.hp, member.maxHp, 0x3ec46d);
+        bar(top + 102, "MP", member.mp, member.maxMp, 0x4a9dea);
+        content.add(text(x + 20, top + 152, `こうげき ${member.atk}`, 20, "#ffffff"));
+        content.add(text(x + 220, top + 152, `しゅび ${member.def}`, 20, "#ffffff"));
+        content.add(text(x + 400, top + 152, `すばやさ ${member.agi}`, 20, "#ffffff"));
+        content.add(
+          text(x + 20, top + 190, `つぎのレベルまで あと ${member.nextNeed}`, 16, "#b9c2d0"),
+        );
+      } else {
+        member.equipment.forEach((eq, j) => {
+          content.add(
+            text(x + 20, top + 60 + j * 42, `${eq.label}: ${eq.name}`, 20, "#ffffff"),
+          );
+        });
+      }
       return;
     }
 
-    /* じゅもん / もちもの: 2列のリスト */
-    const lines = this.statusTab === 2 ? data.spells : data.items;
+    /* じゅもん (選択中のなかま) / もちもの (パーティ共有): 2列のリスト */
+    const lines = this.statusTab === 2 ? member.spells : data.items;
     if (lines.length === 0) {
       const empty =
         this.statusTab === 2
@@ -425,7 +465,7 @@ export class UiScene extends Scene {
       content.add(t);
       return;
     }
-    const perCol = 8;
+    const perCol = this.statusTab === 2 && data.members.length > 1 ? 6 : 8;
     lines.slice(0, perCol * 2).forEach((line, i) => {
       const col = Math.floor(i / perCol);
       const row = i % perCol;
