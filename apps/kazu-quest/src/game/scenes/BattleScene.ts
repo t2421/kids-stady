@@ -13,6 +13,14 @@ import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { EventBus } from "../EventBus";
 import { BattleMenu } from "../battle/BattleMenu";
 import { requestBattleMath } from "../battle/mathRequest";
+import { getMapDef, hasMap } from "../../content/maps";
+import {
+  addEnemyShadow,
+  buildBattleBackdrop,
+  spawnDamagePopup,
+  spawnImpactBurst,
+  spawnVictorySparkles,
+} from "../battle/battleFx";
 
 /*
  * DQ式一人称ターン制バトル。FieldScene を sleep したまま起動し、
@@ -133,25 +141,40 @@ export class BattleScene extends Scene {
   /* ---------- 舞台とステータス ---------- */
 
   private buildStage() {
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT, 0x0b1e3a, 1);
-    this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 90, GAME_WIDTH, 180, 0x11305a, 1);
+    /* 戦闘に入ったフィールドのテーマで背景を描き分ける */
+    const mapId = getSave().location.mapId;
+    const theme = hasMap(mapId) ? getMapDef(mapId).theme : "grass";
+    buildBattleBackdrop(this, theme);
 
     const enemies = this.battle.enemies;
     const spacing = Math.min(220, (GAME_WIDTH - 200) / Math.max(1, enemies.length));
     const startX = GAME_WIDTH / 2 - (spacing * (enemies.length - 1)) / 2;
     enemies.forEach((enemy, i) => {
       const monster = getMonster(enemy.monsterId)!;
+      const x = startX + i * spacing;
+      const y = GAME_HEIGHT * 0.42;
+      addEnemyShadow(this, x, y + 62);
       const sprite = this.add
-        .image(startX + i * spacing, GAME_HEIGHT * 0.42, monsterTextureKey(monster.art))
-        .setScale(7);
+        .image(x, y, monsterTextureKey(monster.art))
+        .setScale(0);
       this.enemySprites.set(enemy.id, sprite);
+      /* 登場ポップ → ゆらゆら待機 */
       this.tweens.add({
         targets: sprite,
-        y: sprite.y - 6,
-        duration: 900 + i * 120,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
+        scale: 7,
+        duration: 320,
+        delay: 120 + i * 110,
+        ease: "Back.easeOut",
+        onComplete: () => {
+          this.tweens.add({
+            targets: sprite,
+            y: y - 6,
+            duration: 900 + i * 120,
+            yoyo: true,
+            repeat: -1,
+            ease: "Sine.easeInOut",
+          });
+        },
       });
     });
 
@@ -442,6 +465,13 @@ export class BattleScene extends Scene {
           if (member && d) {
             d.hp = Math.min(member.maxHp, d.hp + event.amount);
           }
+          spawnDamagePopup(
+            this,
+            GAME_WIDTH / 2,
+            GAME_HEIGHT - 200,
+            `+${event.amount}`,
+            "#8cf5a2",
+          );
         }
         this.msgText.setText(`HPが ${event.amount} かいふくした!`);
         this.updateStatus();
@@ -470,13 +500,30 @@ export class BattleScene extends Scene {
     if (!event.onParty) {
       const sprite = this.enemySprites.get(event.targetId);
       if (sprite) {
+        spawnImpactBurst(this, sprite.x, sprite.y);
+        spawnDamagePopup(this, sprite.x, sprite.y - 50, `${event.damage}`);
         this.tweens.add({ targets: sprite, alpha: 0.2, duration: 70, yoyo: true, repeat: 2 });
+        this.tweens.add({
+          targets: sprite,
+          x: sprite.x + 14,
+          duration: 60,
+          yoyo: true,
+          repeat: 1,
+        });
         if (event.killed) {
           this.tweens.add({ targets: sprite, alpha: 0, scale: 0, duration: 350, delay: 250 });
         }
       }
     } else {
       this.cameras.main.shake(180, 0.008);
+      this.cameras.main.flash(160, 200, 40, 40);
+      spawnDamagePopup(
+        this,
+        GAME_WIDTH / 2,
+        GAME_HEIGHT - 200,
+        `-${event.damage}`,
+        "#ff9c9c",
+      );
       /* 受けたメンバーの表示HPだけを、このイベントの分だけ減らす */
       const d = this.display.get(event.targetId);
       if (d) d.hp = Math.max(0, d.hp - event.damage);
@@ -487,6 +534,7 @@ export class BattleScene extends Scene {
   }
 
   private playVictory(event: Extract<BattleEvent, { type: "victory" }>) {
+    spawnVictorySparkles(this);
     const save = getSave();
     const result = applyVictory(save.party, this.battle, event.exp, event.gold);
     updateSave((s) => ({
