@@ -1,6 +1,7 @@
 /*
  * ステータスパネルの表示内容を組み立てる (純関数 — Vitest 対象)。
- * 表示は UiScene.showStatusPanel が行う。
+ * 表示は UiScene.showStatusPanel が行う。タブ (つよさ・そうび・
+ * じゅもん・もちもの) ごとに収まる構造化データを返す。
  */
 
 import type { SaveData } from "../../lib/save";
@@ -11,58 +12,70 @@ import { equippedStats, SLOT_LABELS } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem } from "../../content/items";
 
-export interface StatusSection {
-  title: string;
-  body: string;
+export interface MemberStatus {
+  name: string;
+  level: number;
+  hp: number;
+  maxHp: number;
+  mp: number;
+  maxMp: number;
+  atk: number;
+  def: number;
+  agi: number;
+  /* つぎのレベルまでに必要な のこり経験値 */
+  nextNeed: number;
+  /* そうびタブ用: 部位ラベル → 装備名 ("なし" を含む) */
+  equipment: { label: string; name: string }[];
 }
 
-export function buildStatusSections(save: SaveData): StatusSection[] | null {
+export interface StatusData {
+  gold: number;
+  members: MemberStatus[];
+  /* 1行 = 1呪文 ("タシリア MP2 (ゆうしゃ)") */
+  spells: string[];
+  /* 1行 = 1アイテム ("やくそう ×5") */
+  items: string[];
+}
+
+export function buildStatusData(save: SaveData): StatusData | null {
   const hero = save.party.find((m) => m.memberId === "hero");
   if (!hero) return null;
 
-  /* パーティ全員のつよさ (2章以降は仲間が増える) */
-  const memberBlocks = save.party.map((m) => {
+  const members = save.party.map((m) => {
     const base = memberStats(m.memberId, m.level);
     const stats = equippedStats(m);
-    const nextNeed = Math.max(0, expForLevel(m.level + 1) - m.exp);
-    const equipLine = EQUIP_SLOTS.map(
-      (slot) =>
-        `${SLOT_LABELS[slot]}: ${getItem(m.equipment[slot] ?? "")?.name ?? "なし"}`,
-    ).join("   ");
-    return [
-      `${memberName(m.memberId)}  レベル ${m.level}`,
-      `HP ${Math.min(m.hp, base.maxHp)}/${base.maxHp}   MP ${Math.min(m.mp, base.maxMp)}/${base.maxMp}`,
-      `こうげき ${stats.atk}   しゅび ${stats.def}   すばやさ ${stats.agi}`,
-      equipLine,
-      `つぎのレベルまで あと ${nextNeed}`,
-    ].join("\n");
+    return {
+      name: memberName(m.memberId),
+      level: m.level,
+      hp: Math.min(m.hp, base.maxHp),
+      maxHp: base.maxHp,
+      mp: Math.min(m.mp, base.maxMp),
+      maxMp: base.maxMp,
+      atk: stats.atk,
+      def: stats.def,
+      agi: stats.agi,
+      nextNeed: Math.max(0, expForLevel(m.level + 1) - m.exp),
+      equipment: EQUIP_SLOTS.map((slot) => ({
+        label: SLOT_LABELS[slot],
+        name: getItem(m.equipment[slot] ?? "")?.name ?? "なし",
+      })),
+    };
   });
 
-  const spellNames = save.party.flatMap((m) =>
+  const spells = save.party.flatMap((m) =>
     m.learnedSpells
-      .map((id) => getSpell(id)?.name)
-      .filter((n): n is string => !!n)
-      .map((n) => (save.party.length > 1 ? `${n} (${memberName(m.memberId)})` : n)),
+      .map((id) => getSpell(id))
+      .filter((s): s is NonNullable<typeof s> => !!s)
+      .map((s) =>
+        save.party.length > 1
+          ? `${s.name} MP${s.mpCost} (${memberName(m.memberId)})`
+          : `${s.name} MP${s.mpCost}`,
+      ),
   );
-  const itemLines = Object.entries(save.inventory.items)
+
+  const items = Object.entries(save.inventory.items)
     .filter(([, count]) => count > 0)
     .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
 
-  return [
-    {
-      title: "つよさ",
-      body: [`ゴールド ${save.inventory.gold}G`, ...memberBlocks].join("\n\n"),
-    },
-    {
-      title: "じゅもん・とくぎ",
-      body:
-        spellNames.length > 0
-          ? spellNames.join("、")
-          : "まだ おぼえていない。まなびやで テストに ちょうせん しよう!",
-    },
-    {
-      title: "もちもの",
-      body: itemLines.length > 0 ? itemLines.join("、") : "なにも もっていない。",
-    },
-  ];
+  return { gold: save.inventory.gold, members, spells, items };
 }

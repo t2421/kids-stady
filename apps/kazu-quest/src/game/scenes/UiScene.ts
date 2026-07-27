@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { EventBus } from "../EventBus";
+import type { StatusData } from "../field/statusSections";
 
 /*
  * 常駐オーバーレイシーン。DQ風のメッセージウィンドウと はい/いいえ 選択を描く。
@@ -9,6 +10,16 @@ import { EventBus } from "../EventBus";
  */
 
 const TYPE_MS = 28; /* 1文字あたりの表示間隔 */
+
+/*
+ * ステータスパネル: タブで1画面1トピックにして はみ出しを防ぐ。
+ * iPad メイン利用のため、タブ・ボタンは指で押しやすい高さ (≥56px) にする。
+ */
+const STATUS_W = 880;
+const STATUS_H = 480;
+const STATUS_TABS = ["つよさ", "そうび", "じゅもん", "もちもの"] as const;
+const TAB_W = 168;
+const TAB_H = 56;
 
 interface MessageJob {
   pages: string[];
@@ -37,6 +48,14 @@ export class UiScene extends Scene {
   private mapLabel?: Phaser.GameObjects.Text;
   private statusPanel?: Phaser.GameObjects.Container;
   private statusOnClose: (() => void) | null = null;
+  private statusData: StatusData | null = null;
+  private statusTab = 0;
+  private statusTabObjs: {
+    box: Phaser.GameObjects.Rectangle;
+    label: Phaser.GameObjects.Text;
+  }[] = [];
+  private statusContent?: Phaser.GameObjects.Container;
+  private menuButton?: Phaser.GameObjects.Container;
 
   constructor() {
     super({ key: "Ui", active: false });
@@ -59,6 +78,13 @@ export class UiScene extends Scene {
       this.cancelList();
       this.closeStatusPanel();
     });
+    /* ステータスパネルのタブ切替 */
+    this.input.keyboard?.on("keydown-LEFT", () => {
+      if (this.statusPanel) this.setStatusTab(this.statusTab - 1);
+    });
+    this.input.keyboard?.on("keydown-RIGHT", () => {
+      if (this.statusPanel) this.setStatusTab(this.statusTab + 1);
+    });
 
     this.buildMenuButton();
   }
@@ -75,8 +101,9 @@ export class UiScene extends Scene {
   /* ---------- 常設メニューボタン ---------- */
 
   private buildMenuButton() {
-    const w = 132;
-    const h = 48;
+    /* iPad の指でも押しやすいサイズ */
+    const w = 150;
+    const h = 56;
     const x = GAME_WIDTH - w / 2 - 16;
     const y = h / 2 + 14;
     const frame = this.add.rectangle(0, 0, w, h, 0xffffff, 1);
@@ -90,6 +117,7 @@ export class UiScene extends Scene {
       })
       .setOrigin(0.5);
     const button = this.add.container(x, y, [frame, box, label]).setDepth(18);
+    this.menuButton = button;
     frame
       .setInteractive()
       .on(
@@ -113,49 +141,83 @@ export class UiScene extends Scene {
 
   /* ---------- ステータスパネル (いつでも開ける全体表示) ---------- */
 
-  showStatusPanel(
-    sections: { title: string; body: string }[],
-    onClose: () => void,
-  ): void {
+  showStatusPanel(data: StatusData, onClose: () => void): void {
     this.closeStatusPanel();
     this.statusOnClose = onClose;
+    this.statusData = data;
+    this.statusTab = 0;
 
-    const w = GAME_WIDTH - 260;
-    const h = GAME_HEIGHT - 120;
+    const w = STATUS_W;
+    const h = STATUS_H;
     const frame = this.add.rectangle(0, 0, w + 8, h + 8, 0xffffff, 1);
     const box = this.add.rectangle(0, 0, w, h, 0x000000, 0.94);
+    /* パネル内の何もない所を タップしても閉じない (iPad の誤タップ対策) */
+    box
+      .setInteractive()
+      .on(
+        "pointerdown",
+        (
+          _p: Phaser.Input.Pointer,
+          _lx: number,
+          _ly: number,
+          ev: Phaser.Types.Input.EventData,
+        ) => ev.stopPropagation(),
+      );
     const inner = this.add
       .rectangle(0, 0, w - 10, h - 10)
       .setStrokeStyle(2, 0x8aa5d5, 0.9);
     const children: Phaser.GameObjects.GameObject[] = [frame, box, inner];
 
-    let cursorY = -h / 2 + 24;
-    for (const section of sections) {
-      const title = this.add.text(-w / 2 + 28, cursorY, section.title, {
+    /* 右上: ゴールド */
+    const gold = this.add
+      .text(w / 2 - 24, -h / 2 + 40, `${data.gold} G`, {
         fontFamily: "sans-serif",
         fontSize: "24px",
         fontStyle: "bold",
         color: "#ffd93d",
-      });
-      children.push(title);
-      cursorY += 36;
-      const body = this.add.text(-w / 2 + 44, cursorY, section.body, {
-        fontFamily: "sans-serif",
-        fontSize: "22px",
-        color: "#ffffff",
-        lineSpacing: 8,
-        wordWrap: { width: w - 88 },
-      });
-      children.push(body);
-      cursorY += body.height + 22;
-    }
+      })
+      .setOrigin(1, 0.5);
+    children.push(gold);
+
+    /* 上段: タブ (タップ / ←→ キーで切替) */
+    this.statusTabObjs = [];
+    STATUS_TABS.forEach((tabLabel, i) => {
+      const tx = -w / 2 + 24 + i * (TAB_W + 12) + TAB_W / 2;
+      const ty = -h / 2 + 40;
+      const tabFrame = this.add.rectangle(tx, ty, TAB_W, TAB_H, 0xffffff, 1);
+      const tabBox = this.add.rectangle(tx, ty, TAB_W - 6, TAB_H - 6, 0x1a2f55, 0.95);
+      const text = this.add
+        .text(tx, ty, tabLabel, {
+          fontFamily: "sans-serif",
+          fontSize: "22px",
+          fontStyle: "bold",
+          color: "#ffffff",
+        })
+        .setOrigin(0.5);
+      tabFrame
+        .setInteractive()
+        .on(
+          "pointerdown",
+          (
+            _p: Phaser.Input.Pointer,
+            _lx: number,
+            _ly: number,
+            ev: Phaser.Types.Input.EventData,
+          ) => {
+            ev.stopPropagation();
+            this.setStatusTab(i);
+          },
+        );
+      this.statusTabObjs.push({ box: tabBox, label: text });
+      children.push(tabFrame, tabBox, text);
+    });
 
     /* プレイヤー切替 (左下) — ProfileGate を開く */
-    const switchX = -w / 2 + 150;
-    const switchFrame = this.add.rectangle(switchX, h / 2 - 40, 240, 52, 0xffffff, 1);
-    const switchBox = this.add.rectangle(switchX, h / 2 - 40, 234, 46, 0x1a4a72, 0.95);
+    const switchX = -w / 2 + 160;
+    const switchFrame = this.add.rectangle(switchX, h / 2 - 46, 264, 60, 0xffffff, 1);
+    const switchBox = this.add.rectangle(switchX, h / 2 - 46, 258, 54, 0x1a4a72, 0.95);
     const switchLabel = this.add
-      .text(switchX, h / 2 - 40, "ちがう ひとが あそぶ", {
+      .text(switchX, h / 2 - 46, "ちがう ひとが あそぶ", {
         fontFamily: "sans-serif",
         fontSize: "20px",
         fontStyle: "bold",
@@ -180,11 +242,11 @@ export class UiScene extends Scene {
     children.push(switchFrame, switchBox, switchLabel);
 
     /* そうび変更 (下中央) — パネルを閉じてから装備メニューを開いてもらう */
-    const equipX = -w / 2 + 380;
-    const equipFrame = this.add.rectangle(equipX, h / 2 - 40, 200, 52, 0xffffff, 1);
-    const equipBox = this.add.rectangle(equipX, h / 2 - 40, 194, 46, 0x2f6b3a, 0.95);
+    const equipX = -w / 2 + 430;
+    const equipFrame = this.add.rectangle(equipX, h / 2 - 46, 220, 60, 0xffffff, 1);
+    const equipBox = this.add.rectangle(equipX, h / 2 - 46, 214, 54, 0x2f6b3a, 0.95);
     const equipLabel = this.add
-      .text(equipX, h / 2 - 40, "そうびを かえる", {
+      .text(equipX, h / 2 - 46, "そうびを かえる", {
         fontFamily: "sans-serif",
         fontSize: "20px",
         fontStyle: "bold",
@@ -209,11 +271,11 @@ export class UiScene extends Scene {
     children.push(equipFrame, equipBox, equipLabel);
 
     /* 右下に置いて本文との重なりを避ける */
-    const closeX = w / 2 - 110;
-    const closeFrame = this.add.rectangle(closeX, h / 2 - 40, 180, 52, 0xffffff, 1);
-    const closeBox = this.add.rectangle(closeX, h / 2 - 40, 174, 46, 0x8a2f1c, 0.95);
+    const closeX = w / 2 - 120;
+    const closeFrame = this.add.rectangle(closeX, h / 2 - 46, 200, 60, 0xffffff, 1);
+    const closeBox = this.add.rectangle(closeX, h / 2 - 46, 194, 54, 0x8a2f1c, 0.95);
     const closeLabel = this.add
-      .text(closeX, h / 2 - 40, "とじる", {
+      .text(closeX, h / 2 - 46, "とじる", {
         fontFamily: "sans-serif",
         fontSize: "24px",
         fontStyle: "bold",
@@ -239,12 +301,157 @@ export class UiScene extends Scene {
     this.statusPanel = this.add
       .container(GAME_WIDTH / 2, GAME_HEIGHT / 2, children)
       .setDepth(16);
+    /* パネル右上のゴールド表示と重なるので常設ボタンは隠す (とじるで閉じる) */
+    this.menuButton?.setVisible(false);
+    this.setStatusTab(0);
+  }
+
+  private setStatusTab(index: number) {
+    if (!this.statusPanel || !this.statusData) return;
+    const count = STATUS_TABS.length;
+    this.statusTab = ((index % count) + count) % count;
+    this.statusTabObjs.forEach(({ box, label }, i) => {
+      const selected = i === this.statusTab;
+      box.setFillStyle(selected ? 0xffd93d : 0x1a2f55, 0.95);
+      label.setColor(selected ? "#1a2f55" : "#ffffff");
+    });
+    this.renderStatusTab();
+  }
+
+  /* 選択中タブの中身を描き直す */
+  private renderStatusTab() {
+    if (!this.statusPanel || !this.statusData) return;
+    this.statusContent?.destroy();
+    const content = this.add.container(0, 0);
+    this.statusContent = content;
+    this.statusPanel.add(content);
+
+    const data = this.statusData;
+    const w = STATUS_W;
+    const top = -STATUS_H / 2 + 88;
+
+    const text = (
+      x: number,
+      y: number,
+      str: string,
+      size: number,
+      color: string,
+      bold = false,
+    ) =>
+      this.add.text(x, y, str, {
+        fontFamily: "sans-serif",
+        fontSize: `${size}px`,
+        fontStyle: bold ? "bold" : "normal",
+        color,
+      });
+
+    if (this.statusTab === 0 || this.statusTab === 1) {
+      /* つよさ / そうび: なかまごとの カード */
+      const cols = Math.max(1, data.members.length);
+      const colW = Math.min(368, (w - 48 - (cols - 1) * 16) / cols);
+      const startX = -((colW + 16) * cols - 16) / 2;
+      data.members.forEach((m, i) => {
+        const x = startX + i * (colW + 16);
+        const cardH = this.statusTab === 0 ? 290 : 200;
+        const card = this.add
+          .rectangle(x + colW / 2, top + cardH / 2, colW, cardH)
+          .setStrokeStyle(2, 0x8aa5d5, 0.7);
+        content.add(card);
+        content.add(
+          text(x + 16, top + 10, `${m.name}  Lv ${m.level}`, 22, "#ffd93d", true),
+        );
+        if (this.statusTab === 0) {
+          /* HP/MP は バーで残りを見せる */
+          const barW = colW - 32;
+          const bar = (
+            y: number,
+            label: string,
+            value: number,
+            max: number,
+            color: number,
+          ) => {
+            content.add(text(x + 16, y, `${label} ${value}/${max}`, 20, "#ffffff"));
+            content.add(
+              this.add
+                .rectangle(x + 16, y + 30, barW, 10, 0x2a2a34)
+                .setOrigin(0, 0.5),
+            );
+            content.add(
+              this.add
+                .rectangle(
+                  x + 16,
+                  y + 30,
+                  Math.round(barW * Math.min(1, max > 0 ? value / max : 0)),
+                  10,
+                  color,
+                )
+                .setOrigin(0, 0.5),
+            );
+          };
+          bar(top + 48, "HP", m.hp, m.maxHp, 0x3ec46d);
+          bar(top + 96, "MP", m.mp, m.maxMp, 0x4a9dea);
+          content.add(text(x + 16, top + 148, `こうげき ${m.atk}`, 20, "#ffffff"));
+          content.add(text(x + 16, top + 180, `しゅび ${m.def}`, 20, "#ffffff"));
+          content.add(text(x + 16, top + 212, `すばやさ ${m.agi}`, 20, "#ffffff"));
+          content.add(
+            text(
+              x + 16,
+              top + 250,
+              `つぎのレベルまで あと ${m.nextNeed}`,
+              16,
+              "#b9c2d0",
+            ),
+          );
+        } else {
+          m.equipment.forEach((eq, j) => {
+            content.add(
+              text(x + 16, top + 52 + j * 44, `${eq.label}: ${eq.name}`, 20, "#ffffff"),
+            );
+          });
+        }
+      });
+      return;
+    }
+
+    /* じゅもん / もちもの: 2列のリスト */
+    const lines = this.statusTab === 2 ? data.spells : data.items;
+    if (lines.length === 0) {
+      const empty =
+        this.statusTab === 2
+          ? "まだ おぼえていない。\nまなびやで テストに ちょうせん しよう!"
+          : "なにも もっていない。";
+      const t = text(0, top + 60, empty, 22, "#ffffff");
+      t.setOrigin(0.5, 0).setX(0).setAlign("center");
+      content.add(t);
+      return;
+    }
+    const perCol = 8;
+    lines.slice(0, perCol * 2).forEach((line, i) => {
+      const col = Math.floor(i / perCol);
+      const row = i % perCol;
+      content.add(text(-w / 2 + 48 + col * 400, top + 8 + row * 36, line, 20, "#ffffff"));
+    });
+    if (lines.length > perCol * 2) {
+      content.add(
+        text(
+          -w / 2 + 48,
+          top + 8 + perCol * 36,
+          `…ほか ${lines.length - perCol * 2}こ`,
+          18,
+          "#b9c2d0",
+        ),
+      );
+    }
   }
 
   private closeStatusPanel() {
     if (!this.statusPanel) return;
     this.statusPanel.destroy();
     this.statusPanel = undefined;
+    this.statusContent = undefined;
+    this.statusTabObjs = [];
+    this.statusData = null;
+    this.menuButton?.setVisible(true);
     const onClose = this.statusOnClose;
     this.statusOnClose = null;
     onClose?.();

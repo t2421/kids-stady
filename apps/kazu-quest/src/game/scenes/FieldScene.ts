@@ -18,7 +18,7 @@ import { createCaveDarkness } from "../field/atmosphere";
 import { openEquipMenu } from "../field/equipMenu";
 import { requestFieldQuiz } from "../battle/mathRequest";
 import { consumeDebugBattle } from "../debugBoot";
-import { buildStatusSections } from "../field/statusSections";
+import { buildStatusData } from "../field/statusSections";
 import {
   handleHealInn,
   handleSavePoint,
@@ -511,10 +511,10 @@ export class FieldScene extends Scene {
   private openStatusMenu() {
     /* 戦闘中 (sleep) は開かない */
     if (!this.scene.isActive() || !this.canAct()) return;
-    const sections = buildStatusSections(getSave());
-    if (!sections) return;
+    const data = buildStatusData(getSave());
+    if (!data) return;
     this.runActive = true;
-    this.ui.showStatusPanel(sections, () => this.finishRun());
+    this.ui.showStatusPanel(data, () => this.finishRun());
   }
 
   /* パネル閉→装備メニューの連続遷移なので canAct のクールダウンは見ない */
