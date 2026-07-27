@@ -17,10 +17,16 @@ import { getMapDef, hasMap } from "../../content/maps";
 import {
   addEnemyShadow,
   buildBattleBackdrop,
+  playBuffFx,
+  playEnemyAttackFx,
+  playHealFx,
+  playSlashFx,
+  playSpellAttackFx,
   spawnDamagePopup,
   spawnImpactBurst,
   spawnVictorySparkles,
 } from "../battle/battleFx";
+import { SPELLS } from "../../content/spells";
 
 /*
  * DQ式一人称ターン制バトル。FieldScene を sleep したまま起動し、
@@ -65,6 +71,10 @@ export class BattleScene extends Scene {
   /* 演出用の表示HP/MP (メンバー別)。ラウンドは一括計算されるため、実際の値を
      直接出すと「自分の攻撃で自分のHPが減って見える」— イベントごとに増分更新する */
   private display = new Map<string, { hp: number; mp: number }>();
+  /* 直前の spellSuccess で予約した攻撃エフェクト (次の attack イベントで再生) */
+  private pendingSpellFxId: string | null = null;
+  /* かいしん予約 (メッセージ/呪文イベントで立て、次の attack で強調表示) */
+  private pendingCrit = false;
 
   constructor() {
     super("Battle");
@@ -89,6 +99,8 @@ export class BattleScene extends Scene {
       this.battle.members.map((m) => [m.id, { hp: m.hp, mp: m.mp }]),
     );
     this.enemySprites.clear();
+    this.pendingSpellFxId = null;
+    this.pendingCrit = false;
   }
 
   create() {
@@ -435,6 +447,8 @@ export class BattleScene extends Scene {
 
     switch (event.type) {
       case "message":
+        /* 「かいしんの いちげき!」の次の attack を強調表示する */
+        if (event.text.includes("かいしんの いちげき")) this.pendingCrit = true;
         this.msgText.setText(event.text);
         this.time.delayedCall(750, next);
         break;
@@ -450,7 +464,15 @@ export class BattleScene extends Scene {
         const d = this.display.get(event.actorId);
         if (d) d.mp = event.mpLeft;
         this.updateStatus();
-        this.cameras.main.flash(200, 255, 255, 180);
+        /* 呪文の種類でエフェクトを予約/再生する */
+        const spell = Object.values(SPELLS).find((s) => s.name === event.spellName);
+        this.pendingCrit = event.critical;
+        if (spell?.kind === "buff") {
+          playBuffFx(this);
+        } else if (spell?.kind === "attack" || spell?.kind === "debuff") {
+          this.pendingSpellFxId = spell.id;
+        }
+        this.cameras.main.flash(160, 255, 255, 190);
         this.time.delayedCall(800, next);
         break;
       }
@@ -465,6 +487,7 @@ export class BattleScene extends Scene {
           if (member && d) {
             d.hp = Math.min(member.maxHp, d.hp + event.amount);
           }
+          playHealFx(this);
           spawnDamagePopup(
             this,
             GAME_WIDTH / 2,
@@ -497,40 +520,75 @@ export class BattleScene extends Scene {
     event: Extract<BattleEvent, { type: "attack" }>,
     next: () => void,
   ) {
+    const showDamage = () => {
+      this.msgText.setText(`${event.damage} の ダメージ!`);
+      this.updateStatus();
+      this.time.delayedCall(750, next);
+    };
+
     if (!event.onParty) {
       const sprite = this.enemySprites.get(event.targetId);
-      if (sprite) {
-        spawnImpactBurst(this, sprite.x, sprite.y);
-        spawnDamagePopup(this, sprite.x, sprite.y - 50, `${event.damage}`);
-        this.tweens.add({ targets: sprite, alpha: 0.2, duration: 70, yoyo: true, repeat: 2 });
-        this.tweens.add({
-          targets: sprite,
-          x: sprite.x + 14,
-          duration: 60,
-          yoyo: true,
-          repeat: 1,
-        });
-        if (event.killed) {
-          this.tweens.add({ targets: sprite, alpha: 0, scale: 0, duration: 350, delay: 250 });
+      const crit = this.pendingCrit;
+      this.pendingCrit = false;
+      const spellFxId = this.pendingSpellFxId;
+      this.pendingSpellFxId = null;
+
+      /* 着弾の瞬間の表示 (点滅・ノックバック・ダメージ数字) */
+      const impact = (withWhiteBurst: boolean) => {
+        if (sprite) {
+          if (withWhiteBurst) spawnImpactBurst(this, sprite.x, sprite.y);
+          spawnDamagePopup(
+            this,
+            sprite.x,
+            sprite.y - 50,
+            `${event.damage}`,
+            crit ? "#ffe066" : "#ffffff",
+            crit,
+          );
+          if (crit) this.cameras.main.shake(170, 0.007);
+          this.tweens.add({ targets: sprite, alpha: 0.2, duration: 70, yoyo: true, repeat: 2 });
+          this.tweens.add({
+            targets: sprite,
+            x: sprite.x + (crit ? 20 : 14),
+            duration: 60,
+            yoyo: true,
+            repeat: 1,
+          });
+          if (event.killed) {
+            this.tweens.add({ targets: sprite, alpha: 0, scale: 0, duration: 350, delay: 250 });
+          }
         }
+        showDamage();
+      };
+
+      if (sprite && spellFxId) {
+        /* 呪文: 弾や斬撃が届いてからダメージ (バーストはエフェクト側が出す) */
+        playSpellAttackFx(this, spellFxId, sprite.x, sprite.y, () => impact(false));
+      } else if (sprite) {
+        /* 物理: 白い斬撃 → 着弾 */
+        playSlashFx(this, sprite.x, sprite.y);
+        this.time.delayedCall(150, () => impact(true));
+      } else {
+        impact(false);
       }
-    } else {
-      this.cameras.main.shake(180, 0.008);
-      this.cameras.main.flash(160, 200, 40, 40);
-      spawnDamagePopup(
-        this,
-        GAME_WIDTH / 2,
-        GAME_HEIGHT - 200,
-        `-${event.damage}`,
-        "#ff9c9c",
-      );
-      /* 受けたメンバーの表示HPだけを、このイベントの分だけ減らす */
-      const d = this.display.get(event.targetId);
-      if (d) d.hp = Math.max(0, d.hp - event.damage);
+      return;
     }
-    this.msgText.setText(`${event.damage} の ダメージ!`);
-    this.updateStatus();
-    this.time.delayedCall(750, next);
+
+    /* 敵 → 味方: ツメあと + 画面シェイク + 赤フラッシュ */
+    playEnemyAttackFx(this);
+    this.cameras.main.shake(180, 0.008);
+    this.cameras.main.flash(160, 200, 40, 40);
+    spawnDamagePopup(
+      this,
+      GAME_WIDTH / 2,
+      GAME_HEIGHT - 200,
+      `-${event.damage}`,
+      "#ff9c9c",
+    );
+    /* 受けたメンバーの表示HPだけを、このイベントの分だけ減らす */
+    const d = this.display.get(event.targetId);
+    if (d) d.hp = Math.max(0, d.hp - event.damage);
+    showDamage();
   }
 
   private playVictory(event: Extract<BattleEvent, { type: "victory" }>) {
