@@ -238,14 +238,23 @@ test("dialog & treasure: mother's send-off and the forest chest", async ({
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.started"] === true,
   );
 
-  /* X キーでステータスメニュー (3ページ) が開いて閉じられる */
+  /* X キーでステータスメニューが開いて閉じられる (高負荷に備えリトライ) */
   await page.waitForTimeout(400);
-  await page.keyboard.press("x");
-  await page.waitForFunction(
-    () => !!window.__KAZUQUEST_GAME__?.scene.getScene("Ui")?.isBusy?.(),
-    undefined,
-    { timeout: 5_000 },
-  );
+  let menuOpened = false;
+  for (let attempt = 0; attempt < 3 && !menuOpened; attempt++) {
+    await page.keyboard.press("x");
+    try {
+      await page.waitForFunction(
+        () => !!window.__KAZUQUEST_GAME__?.scene.getScene("Ui")?.isBusy?.(),
+        undefined,
+        { timeout: 3_000 },
+      );
+      menuOpened = true;
+    } catch {
+      /* 開かなかった → リトライ */
+    }
+  }
+  expect(menuOpened).toBe(true);
   await advanceDialog(page);
 
   /* 森の宝箱 (14,8) を左 (13,8) から開ける */

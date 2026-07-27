@@ -1,683 +1,67 @@
 import { Scene } from "phaser";
-import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { EventBus } from "../EventBus";
 import type { StatusData } from "../field/statusSections";
 
 /*
- * 常駐オーバーレイシーン。DQ風のメッセージウィンドウと はい/いいえ 選択を描く。
- * FieldScene のカメラズームの影響を受けないよう独立したシーンにしている。
+ * 会話UIブリッジ。Canvas の手動レイアウトは崩れやすいため、描画は
+ * React (GameUiOverlay / StatusPanelOverlay) が DOM で行う (設計変更 2026-07-27)。
+ * このシーンは「シーン側から呼べる同期API + busy 管理」だけを担う:
+ *   showMessage → EventBus "ui-message" {id, pages} → 完了 "ui-message-done"
+ *   showChoice  → "ui-choice"  {id, prompt}         → "ui-choice-done" {yes}
+ *   showList    → "ui-list"    {id, prompt, options} → "ui-list-done" {index}
+ *   showStatusPanel → "ui-status" {id, data}        → "ui-status-closed"
  * ダイアログ表示中は isBusy() が true になり、FieldScene は移動入力を止める。
  */
 
-const TYPE_MS = 28; /* 1文字あたりの表示間隔 */
-
-/*
- * ステータスパネル: タブで1画面1トピックにして はみ出しを防ぐ。
- * iPad メイン利用のため、タブ・ボタンは指で押しやすい高さ (≥56px) にする。
- */
-const STATUS_W = 880;
-const STATUS_H = 480;
-const STATUS_TABS = ["つよさ", "そうび", "じゅもん", "もちもの"] as const;
-const TAB_W = 168;
-const TAB_H = 56;
-
-interface MessageJob {
-  pages: string[];
-  pageIndex: number;
-  onDone: () => void;
-}
-
 export class UiScene extends Scene {
-  private windowBox?: Phaser.GameObjects.Rectangle;
-  private windowFrame?: Phaser.GameObjects.Rectangle;
-  private windowInner?: Phaser.GameObjects.Rectangle;
-  private textObj?: Phaser.GameObjects.Text;
-  private nextArrow?: Phaser.GameObjects.Text;
-  private job: MessageJob | null = null;
-  private typing = false;
-  private charTimer?: Phaser.Time.TimerEvent;
-  private fullPageText = "";
-
-  private choiceBox?: Phaser.GameObjects.Container;
-  private choiceResolve: ((yes: boolean) => void) | null = null;
-  private choiceSelected = true; /* true = はい */
-  private listBox?: Phaser.GameObjects.Container;
-  private listResolve: ((index: number | null) => void) | null = null;
-  private listOptions: string[] = [];
-  private listIndex = 0;
-  private mapLabel?: Phaser.GameObjects.Text;
-  private statusPanel?: Phaser.GameObjects.Container;
-  private statusOnClose: (() => void) | null = null;
-  private statusData: StatusData | null = null;
-  private statusTab = 0;
-  private statusMember = 0;
-  private statusTabObjs: {
-    box: Phaser.GameObjects.Rectangle;
-    label: Phaser.GameObjects.Text;
-  }[] = [];
-  private statusContent?: Phaser.GameObjects.Container;
-  private menuButton?: Phaser.GameObjects.Container;
+  private seq = 0;
+  private activeIds = new Set<number>();
 
   constructor() {
     super({ key: "Ui", active: false });
   }
 
-  create() {
-    this.input.keyboard?.on("keydown-Z", () => this.onAdvance());
-    this.input.keyboard?.on("keydown-ENTER", () => this.onAdvance());
-    this.input.keyboard?.on("keydown-SPACE", () => this.onAdvance());
-    this.input.on("pointerdown", () => this.onAdvance());
-    this.input.keyboard?.on("keydown-UP", () => {
-      this.moveChoice();
-      this.moveList(-1);
-    });
-    this.input.keyboard?.on("keydown-DOWN", () => {
-      this.moveChoice();
-      this.moveList(1);
-    });
-    this.input.keyboard?.on("keydown-X", () => {
-      this.cancelList();
-      this.closeStatusPanel();
-    });
-    /* ステータスパネルのタブ切替 */
-    this.input.keyboard?.on("keydown-LEFT", () => {
-      if (this.statusPanel) this.setStatusTab(this.statusTab - 1);
-    });
-    this.input.keyboard?.on("keydown-RIGHT", () => {
-      if (this.statusPanel) this.setStatusTab(this.statusTab + 1);
-    });
-
-    this.buildMenuButton();
+  isBusy(): boolean {
+    return this.activeIds.size > 0;
   }
 
-  isBusy(): boolean {
-    return (
-      this.job !== null ||
-      this.choiceResolve !== null ||
-      this.listResolve !== null ||
-      this.statusPanel !== undefined
+  /*
+   * リクエストを1件発行し、React からの完了イベントを1回だけ受ける。
+   * id を照合するので、遅れて届いた古い完了イベントでは解決しない。
+   */
+  private request<R extends { id: number }>(
+    emitEvent: string,
+    doneEvent: string,
+    payload: Record<string, unknown>,
+    onDone: (result: R) => void,
+  ): void {
+    const id = ++this.seq;
+    this.activeIds.add(id);
+    const handler = (result: R) => {
+      if (result.id !== id) return;
+      EventBus.off(doneEvent, handler);
+      this.activeIds.delete(id);
+      onDone(result);
+    };
+    EventBus.on(doneEvent, handler);
+    EventBus.emit(emitEvent, { id, ...payload });
+  }
+
+  showMessage(pages: string[], onDone: () => void): void {
+    this.request("ui-message", "ui-message-done", { pages }, () => onDone());
+  }
+
+  showChoice(prompt: string, onResult: (yes: boolean) => void): void {
+    this.request<{ id: number; yes: boolean }>(
+      "ui-choice",
+      "ui-choice-done",
+      { prompt },
+      (r) => onResult(r.yes),
     );
   }
 
-  /* ---------- 常設メニューボタン ---------- */
-
-  private buildMenuButton() {
-    /* iPad の指でも押しやすいサイズ */
-    const w = 150;
-    const h = 56;
-    const x = GAME_WIDTH - w / 2 - 16;
-    const y = h / 2 + 14;
-    const frame = this.add.rectangle(0, 0, w, h, 0xffffff, 1);
-    const box = this.add.rectangle(0, 0, w - 6, h - 6, 0x1a2f55, 0.95);
-    const label = this.add
-      .text(0, 0, "メニュー", {
-        fontFamily: "sans-serif",
-        fontSize: "22px",
-        fontStyle: "bold",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
-    const button = this.add.container(x, y, [frame, box, label]).setDepth(18);
-    this.menuButton = button;
-    frame
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          ev.stopPropagation();
-          if (this.statusPanel) {
-            this.closeStatusPanel();
-          } else {
-            EventBus.emit("menu-button-pressed");
-          }
-        },
-      );
-    button.setAlpha(0.92);
-  }
-
-  /* ---------- ステータスパネル (いつでも開ける全体表示) ---------- */
-
-  showStatusPanel(data: StatusData, onClose: () => void): void {
-    this.closeStatusPanel();
-    this.statusOnClose = onClose;
-    this.statusData = data;
-    this.statusTab = 0;
-    this.statusMember = 0;
-
-    const w = STATUS_W;
-    const h = STATUS_H;
-    const frame = this.add.rectangle(0, 0, w + 8, h + 8, 0xffffff, 1);
-    const box = this.add.rectangle(0, 0, w, h, 0x000000, 0.94);
-    /* パネル内の何もない所を タップしても閉じない (iPad の誤タップ対策) */
-    box
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          ev: Phaser.Types.Input.EventData,
-        ) => ev.stopPropagation(),
-      );
-    const inner = this.add
-      .rectangle(0, 0, w - 10, h - 10)
-      .setStrokeStyle(2, 0x8aa5d5, 0.9);
-    const children: Phaser.GameObjects.GameObject[] = [frame, box, inner];
-
-    /* 右上: ゴールド */
-    const gold = this.add
-      .text(w / 2 - 24, -h / 2 + 40, `${data.gold} G`, {
-        fontFamily: "sans-serif",
-        fontSize: "24px",
-        fontStyle: "bold",
-        color: "#ffd93d",
-      })
-      .setOrigin(1, 0.5);
-    children.push(gold);
-
-    /* 上段: タブ (タップ / ←→ キーで切替) */
-    this.statusTabObjs = [];
-    STATUS_TABS.forEach((tabLabel, i) => {
-      const tx = -w / 2 + 24 + i * (TAB_W + 12) + TAB_W / 2;
-      const ty = -h / 2 + 40;
-      const tabFrame = this.add.rectangle(tx, ty, TAB_W, TAB_H, 0xffffff, 1);
-      const tabBox = this.add.rectangle(tx, ty, TAB_W - 6, TAB_H - 6, 0x1a2f55, 0.95);
-      const text = this.add
-        .text(tx, ty, tabLabel, {
-          fontFamily: "sans-serif",
-          fontSize: "22px",
-          fontStyle: "bold",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5);
-      tabFrame
-        .setInteractive()
-        .on(
-          "pointerdown",
-          (
-            _p: Phaser.Input.Pointer,
-            _lx: number,
-            _ly: number,
-            ev: Phaser.Types.Input.EventData,
-          ) => {
-            ev.stopPropagation();
-            this.setStatusTab(i);
-          },
-        );
-      this.statusTabObjs.push({ box: tabBox, label: text });
-      children.push(tabFrame, tabBox, text);
-    });
-
-    /* プレイヤー切替 (左下) — ProfileGate を開く */
-    const switchX = -w / 2 + 160;
-    const switchFrame = this.add.rectangle(switchX, h / 2 - 46, 264, 60, 0xffffff, 1);
-    const switchBox = this.add.rectangle(switchX, h / 2 - 46, 258, 54, 0x1a4a72, 0.95);
-    const switchLabel = this.add
-      .text(switchX, h / 2 - 46, "ちがう ひとが あそぶ", {
-        fontFamily: "sans-serif",
-        fontSize: "20px",
-        fontStyle: "bold",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
-    switchFrame
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          ev.stopPropagation();
-          this.closeStatusPanel();
-          EventBus.emit("request-profile-gate");
-        },
-      );
-    children.push(switchFrame, switchBox, switchLabel);
-
-    /* そうび変更 (下中央) — パネルを閉じてから装備メニューを開いてもらう */
-    const equipX = -w / 2 + 430;
-    const equipFrame = this.add.rectangle(equipX, h / 2 - 46, 220, 60, 0xffffff, 1);
-    const equipBox = this.add.rectangle(equipX, h / 2 - 46, 214, 54, 0x2f6b3a, 0.95);
-    const equipLabel = this.add
-      .text(equipX, h / 2 - 46, "そうびを かえる", {
-        fontFamily: "sans-serif",
-        fontSize: "20px",
-        fontStyle: "bold",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
-    equipFrame
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          ev.stopPropagation();
-          this.closeStatusPanel();
-          EventBus.emit("request-equip-menu");
-        },
-      );
-    children.push(equipFrame, equipBox, equipLabel);
-
-    /* 右下に置いて本文との重なりを避ける */
-    const closeX = w / 2 - 120;
-    const closeFrame = this.add.rectangle(closeX, h / 2 - 46, 200, 60, 0xffffff, 1);
-    const closeBox = this.add.rectangle(closeX, h / 2 - 46, 194, 54, 0x8a2f1c, 0.95);
-    const closeLabel = this.add
-      .text(closeX, h / 2 - 46, "とじる", {
-        fontFamily: "sans-serif",
-        fontSize: "24px",
-        fontStyle: "bold",
-        color: "#ffffff",
-      })
-      .setOrigin(0.5);
-    closeFrame
-      .setInteractive()
-      .on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          ev.stopPropagation();
-          this.closeStatusPanel();
-        },
-      );
-    children.push(closeFrame, closeBox, closeLabel);
-
-    this.statusPanel = this.add
-      .container(GAME_WIDTH / 2, GAME_HEIGHT / 2, children)
-      .setDepth(16);
-    /* パネル右上のゴールド表示と重なるので常設ボタンは隠す (とじるで閉じる) */
-    this.menuButton?.setVisible(false);
-    this.setStatusTab(0);
-  }
-
-  private setStatusTab(index: number) {
-    if (!this.statusPanel || !this.statusData) return;
-    const count = STATUS_TABS.length;
-    this.statusTab = ((index % count) + count) % count;
-    this.statusTabObjs.forEach(({ box, label }, i) => {
-      const selected = i === this.statusTab;
-      box.setFillStyle(selected ? 0xffd93d : 0x1a2f55, 0.95);
-      label.setColor(selected ? "#1a2f55" : "#ffffff");
-    });
-    this.renderStatusTab();
-  }
-
-  /* 選択中タブの中身を描き直す */
-  private renderStatusTab() {
-    if (!this.statusPanel || !this.statusData) return;
-    this.statusContent?.destroy();
-    const content = this.add.container(0, 0);
-    this.statusContent = content;
-    this.statusPanel.add(content);
-
-    const data = this.statusData;
-    const w = STATUS_W;
-    let top = -STATUS_H / 2 + 88;
-
-    const text = (
-      x: number,
-      y: number,
-      str: string,
-      size: number,
-      color: string,
-      bold = false,
-    ) =>
-      this.add.text(x, y, str, {
-        fontFamily: "sans-serif",
-        fontSize: `${size}px`,
-        fontStyle: bold ? "bold" : "normal",
-        color,
-      });
-
-    /* もちもの (パーティ共有) 以外は、なかまボタンで1人ずつ切り替える */
-    if (this.statusMember >= data.members.length) this.statusMember = 0;
-    if (this.statusTab !== 3 && data.members.length > 1) {
-      const bw = 196;
-      const bh = 52;
-      const totalW = data.members.length * (bw + 12) - 12;
-      data.members.forEach((m, i) => {
-        const bx = -totalW / 2 + i * (bw + 12) + bw / 2;
-        const by = top + bh / 2;
-        const selected = i === this.statusMember;
-        const bFrame = this.add.rectangle(bx, by, bw, bh, 0xffffff, selected ? 1 : 0.5);
-        const bBox = this.add.rectangle(
-          bx,
-          by,
-          bw - 6,
-          bh - 6,
-          selected ? 0xffd93d : 0x1a2f55,
-          0.95,
-        );
-        const bText = this.add
-          .text(bx, by, m.name, {
-            fontFamily: "sans-serif",
-            fontSize: "20px",
-            fontStyle: "bold",
-            color: selected ? "#1a2f55" : "#ffffff",
-          })
-          .setOrigin(0.5);
-        bFrame
-          .setInteractive()
-          .on(
-            "pointerdown",
-            (
-              _p: Phaser.Input.Pointer,
-              _lx: number,
-              _ly: number,
-              ev: Phaser.Types.Input.EventData,
-            ) => {
-              ev.stopPropagation();
-              this.statusMember = i;
-              this.renderStatusTab();
-            },
-          );
-        content.add(bFrame);
-        content.add(bBox);
-        content.add(bText);
-      });
-      top += bh + 16;
-    }
-    const member = data.members[this.statusMember];
-
-    if (this.statusTab === 0 || this.statusTab === 1) {
-      /* つよさ / そうび: 選択中のなかま1人を ゆったり表示 */
-      const cardW = 560;
-      const x = -cardW / 2;
-      const cardH = this.statusTab === 0 ? 224 : 190;
-      const card = this.add
-        .rectangle(0, top + cardH / 2, cardW, cardH)
-        .setStrokeStyle(2, 0x8aa5d5, 0.7);
-      content.add(card);
-      content.add(
-        text(x + 20, top + 12, `${member.name}  Lv ${member.level}`, 24, "#ffd93d", true),
-      );
-      if (this.statusTab === 0) {
-        /* HP/MP は バーで残りを見せる */
-        const barW = cardW - 40;
-        const bar = (
-          y: number,
-          label: string,
-          value: number,
-          max: number,
-          color: number,
-        ) => {
-          content.add(text(x + 20, y, `${label} ${value}/${max}`, 20, "#ffffff"));
-          content.add(
-            this.add.rectangle(x + 20, y + 32, barW, 12, 0x2a2a34).setOrigin(0, 0.5),
-          );
-          content.add(
-            this.add
-              .rectangle(
-                x + 20,
-                y + 32,
-                Math.round(barW * Math.min(1, max > 0 ? value / max : 0)),
-                12,
-                color,
-              )
-              .setOrigin(0, 0.5),
-          );
-        };
-        bar(top + 52, "HP", member.hp, member.maxHp, 0x3ec46d);
-        bar(top + 102, "MP", member.mp, member.maxMp, 0x4a9dea);
-        content.add(text(x + 20, top + 152, `こうげき ${member.atk}`, 20, "#ffffff"));
-        content.add(text(x + 220, top + 152, `しゅび ${member.def}`, 20, "#ffffff"));
-        content.add(text(x + 400, top + 152, `すばやさ ${member.agi}`, 20, "#ffffff"));
-        content.add(
-          text(x + 20, top + 190, `つぎのレベルまで あと ${member.nextNeed}`, 16, "#b9c2d0"),
-        );
-      } else {
-        member.equipment.forEach((eq, j) => {
-          content.add(
-            text(x + 20, top + 60 + j * 42, `${eq.label}: ${eq.name}`, 20, "#ffffff"),
-          );
-        });
-      }
-      return;
-    }
-
-    /* じゅもん (選択中のなかま) / もちもの (パーティ共有): 2列のリスト */
-    const lines = this.statusTab === 2 ? member.spells : data.items;
-    if (lines.length === 0) {
-      const empty =
-        this.statusTab === 2
-          ? "まだ おぼえていない。\nまなびやで テストに ちょうせん しよう!"
-          : "なにも もっていない。";
-      const t = text(0, top + 60, empty, 22, "#ffffff");
-      t.setOrigin(0.5, 0).setX(0).setAlign("center");
-      content.add(t);
-      return;
-    }
-    const perCol = this.statusTab === 2 && data.members.length > 1 ? 6 : 8;
-    lines.slice(0, perCol * 2).forEach((line, i) => {
-      const col = Math.floor(i / perCol);
-      const row = i % perCol;
-      content.add(text(-w / 2 + 48 + col * 400, top + 8 + row * 36, line, 20, "#ffffff"));
-    });
-    if (lines.length > perCol * 2) {
-      content.add(
-        text(
-          -w / 2 + 48,
-          top + 8 + perCol * 36,
-          `…ほか ${lines.length - perCol * 2}こ`,
-          18,
-          "#b9c2d0",
-        ),
-      );
-    }
-  }
-
-  private closeStatusPanel() {
-    if (!this.statusPanel) return;
-    this.statusPanel.destroy();
-    this.statusPanel = undefined;
-    this.statusContent = undefined;
-    this.statusTabObjs = [];
-    this.statusData = null;
-    this.menuButton?.setVisible(true);
-    const onClose = this.statusOnClose;
-    this.statusOnClose = null;
-    onClose?.();
-  }
-
-  /* ---------- メッセージウィンドウ ---------- */
-
-  showMessage(pages: string[], onDone: () => void): void {
-    this.job = { pages, pageIndex: 0, onDone };
-    this.ensureWindow();
-    this.startPage();
-  }
-
-  private ensureWindow() {
-    if (this.windowBox) return;
-    const w = GAME_WIDTH - 120;
-    const h = 150;
-    const x = GAME_WIDTH / 2;
-    const y = GAME_HEIGHT - h / 2 - 24;
-    this.windowFrame = this.add
-      .rectangle(x, y, w + 8, h + 8, 0xffffff, 1)
-      .setDepth(10);
-    this.windowBox = this.add.rectangle(x, y, w, h, 0x000000, 0.92).setDepth(11);
-    /* DQ風の二重枠 (内側の細いアクセント線) */
-    this.windowInner = this.add
-      .rectangle(x, y, w - 10, h - 10)
-      .setStrokeStyle(2, 0x8aa5d5, 0.9)
-      .setDepth(11);
-    this.textObj = this.add
-      .text(x - w / 2 + 24, y - h / 2 + 20, "", {
-        fontFamily: "sans-serif",
-        fontSize: "26px",
-        color: "#ffffff",
-        lineSpacing: 10,
-        wordWrap: { width: w - 48 },
-      })
-      .setDepth(12);
-    this.nextArrow = this.add
-      .text(x + w / 2 - 36, y + h / 2 - 34, "▼", {
-        fontFamily: "sans-serif",
-        fontSize: "22px",
-        color: "#ffffff",
-      })
-      .setDepth(12)
-      .setVisible(false);
-    this.tweens.add({
-      targets: this.nextArrow,
-      alpha: { from: 1, to: 0.2 },
-      duration: 450,
-      yoyo: true,
-      repeat: -1,
-    });
-  }
-
-  private startPage() {
-    if (!this.job || !this.textObj) return;
-    this.fullPageText = this.job.pages[this.job.pageIndex] ?? "";
-    this.textObj.setText("");
-    this.nextArrow?.setVisible(false);
-    this.typing = true;
-    let i = 0;
-    this.charTimer?.remove();
-    this.charTimer = this.time.addEvent({
-      delay: TYPE_MS,
-      repeat: this.fullPageText.length - 1,
-      callback: () => {
-        i += 1;
-        this.textObj?.setText(this.fullPageText.slice(0, i));
-        if (i >= this.fullPageText.length) {
-          this.typing = false;
-          this.nextArrow?.setVisible(true);
-        }
-      },
-    });
-  }
-
-  private onAdvance() {
-    if (this.statusPanel) {
-      this.closeStatusPanel();
-      return;
-    }
-    if (this.listResolve) {
-      this.resolveList(this.listIndex);
-      return;
-    }
-    if (this.choiceResolve) {
-      this.resolveChoice();
-      return;
-    }
-    if (!this.job) return;
-    if (this.typing) {
-      /* 全文即時表示 (子供が連打しても1ページ飛ばさない) */
-      this.charTimer?.remove();
-      this.typing = false;
-      this.textObj?.setText(this.fullPageText);
-      this.nextArrow?.setVisible(true);
-      return;
-    }
-    this.job.pageIndex += 1;
-    if (this.job.pageIndex < this.job.pages.length) {
-      this.startPage();
-    } else {
-      const onDone = this.job.onDone;
-      this.closeWindow();
-      /* 閉じてから完了通知 (連続イベントで再度開ける) */
-      onDone();
-    }
-  }
-
-  private closeWindow() {
-    this.job = null;
-    this.charTimer?.remove();
-    this.windowFrame?.destroy();
-    this.windowBox?.destroy();
-    this.windowInner?.destroy();
-    this.textObj?.destroy();
-    this.nextArrow?.destroy();
-    this.windowFrame = undefined;
-    this.windowBox = undefined;
-    this.windowInner = undefined;
-    this.textObj = undefined;
-    this.nextArrow = undefined;
-  }
-
-  /* ---------- はい/いいえ ---------- */
-
-  showChoice(prompt: string, onResult: (yes: boolean) => void): void {
-    this.ensureWindow();
-    this.textObj?.setText(prompt);
-    this.typing = false;
-    this.nextArrow?.setVisible(false);
-    this.choiceSelected = true;
-    this.choiceResolve = onResult;
-    this.renderChoice();
-  }
-
-  private renderChoice() {
-    this.choiceBox?.destroy();
-    const x = GAME_WIDTH - 240;
-    const y = GAME_HEIGHT - 260;
-    const frame = this.add.rectangle(0, 0, 200, 110, 0xffffff, 1);
-    const box = this.add.rectangle(0, 0, 192, 102, 0x000000, 0.92);
-    const yes = this.add.text(-60, -30, `${this.choiceSelected ? "▶" : "　"} はい`, {
-      fontFamily: "sans-serif",
-      fontSize: "26px",
-      color: "#ffffff",
-    });
-    const no = this.add.text(-60, 8, `${this.choiceSelected ? "　" : "▶"} いいえ`, {
-      fontFamily: "sans-serif",
-      fontSize: "26px",
-      color: "#ffffff",
-    });
-    yes.setInteractive().on("pointerdown", (p: Phaser.Input.Pointer, lx: number, ly: number, ev: Phaser.Types.Input.EventData) => {
-      ev.stopPropagation();
-      this.choiceSelected = true;
-      this.resolveChoice();
-    });
-    no.setInteractive().on("pointerdown", (p: Phaser.Input.Pointer, lx: number, ly: number, ev: Phaser.Types.Input.EventData) => {
-      ev.stopPropagation();
-      this.choiceSelected = false;
-      this.resolveChoice();
-    });
-    this.choiceBox = this.add.container(x, y, [frame, box, yes, no]).setDepth(13);
-  }
-
-  private moveChoice() {
-    if (!this.choiceResolve) return;
-    this.choiceSelected = !this.choiceSelected;
-    this.renderChoice();
-  }
-
-  private resolveChoice() {
-    const resolve = this.choiceResolve;
-    if (!resolve) return;
-    this.choiceResolve = null;
-    this.choiceBox?.destroy();
-    this.choiceBox = undefined;
-    const yes = this.choiceSelected;
-    this.closeWindow();
-    resolve(yes);
-  }
-
-  /* ---------- 選択リスト (道具屋・メニューなど) ---------- */
-
   /**
-   * 選択肢のリストを表示する。決定で index、X キーで null を返す。
+   * 選択肢のリストを表示する。決定で index、キャンセルで null を返す。
    * 呼び出し側が「やめる」相当の項目を入れておくのが親切。
    */
   showList(
@@ -685,93 +69,19 @@ export class UiScene extends Scene {
     options: string[],
     onResult: (index: number | null) => void,
   ): void {
-    this.ensureWindow();
-    this.textObj?.setText(prompt);
-    this.typing = false;
-    this.charTimer?.remove();
-    this.nextArrow?.setVisible(false);
-    this.listOptions = options;
-    this.listIndex = 0;
-    this.listResolve = onResult;
-    this.renderList();
+    this.request<{ id: number; index: number | null }>(
+      "ui-list",
+      "ui-list-done",
+      { prompt, options },
+      (r) => onResult(r.index),
+    );
   }
 
-  private renderList() {
-    this.listBox?.destroy();
-    const lineH = 34;
-    const w = 320;
-    const h = this.listOptions.length * lineH + 28;
-    const x = GAME_WIDTH - w / 2 - 60;
-    const y = GAME_HEIGHT - 190 - h / 2;
-    const frame = this.add.rectangle(0, 0, w + 8, h + 8, 0xffffff, 1);
-    const box = this.add.rectangle(0, 0, w, h, 0x000000, 0.94);
-    const children: Phaser.GameObjects.GameObject[] = [frame, box];
-    this.listOptions.forEach((label, i) => {
-      const text = this.add
-        .text(
-          -w / 2 + 18,
-          -h / 2 + 14 + i * lineH,
-          `${i === this.listIndex ? "▶" : "　"} ${label}`,
-          { fontFamily: "sans-serif", fontSize: "24px", color: "#ffffff" },
-        )
-        .setInteractive();
-      text.on(
-        "pointerdown",
-        (
-          _p: Phaser.Input.Pointer,
-          _lx: number,
-          _ly: number,
-          ev: Phaser.Types.Input.EventData,
-        ) => {
-          ev.stopPropagation();
-          this.resolveList(i);
-        },
-      );
-      children.push(text);
-    });
-    this.listBox = this.add.container(x, y, children).setDepth(13);
+  showStatusPanel(data: StatusData, onClose: () => void): void {
+    this.request("ui-status", "ui-status-closed", { data }, () => onClose());
   }
-
-  private moveList(delta: number) {
-    if (!this.listResolve || this.listOptions.length === 0) return;
-    const len = this.listOptions.length;
-    this.listIndex = (this.listIndex + delta + len) % len;
-    this.renderList();
-  }
-
-  private cancelList() {
-    if (!this.listResolve) return;
-    this.resolveList(null);
-  }
-
-  private resolveList(index: number | null) {
-    const resolve = this.listResolve;
-    if (!resolve) return;
-    this.listResolve = null;
-    this.listBox?.destroy();
-    this.listBox = undefined;
-    this.closeWindow();
-    resolve(index);
-  }
-
-  /* ---------- マップ名トースト ---------- */
 
   showMapName(name: string): void {
-    this.mapLabel?.destroy();
-    this.mapLabel = this.add
-      .text(GAME_WIDTH / 2, 48, name, {
-        fontFamily: "sans-serif",
-        fontSize: "26px",
-        fontStyle: "bold",
-        color: "#ffffff",
-        backgroundColor: "rgba(0,0,0,0.6)",
-        padding: { x: 18, y: 8 },
-      })
-      .setOrigin(0.5)
-      .setDepth(15);
-    this.time.delayedCall(1800, () => {
-      this.mapLabel?.destroy();
-      this.mapLabel = undefined;
-    });
+    EventBus.emit("ui-map-name", { name });
   }
 }

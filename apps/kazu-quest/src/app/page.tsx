@@ -29,6 +29,22 @@ const ProfileGate = dynamic(
   { ssr: false },
 );
 
+/* 会話UI・メニューは DOM で描画する (Canvas はゲーム世界のみ) */
+const GameUiOverlay = dynamic(
+  () => import("@/components/GameUiOverlay").then((m) => m.GameUiOverlay),
+  { ssr: false },
+);
+
+const StatusPanelOverlay = dynamic(
+  () => import("@/components/StatusPanelOverlay").then((m) => m.StatusPanelOverlay),
+  { ssr: false },
+);
+
+const MenuButton = dynamic(
+  () => import("@/components/MenuButton").then((m) => m.MenuButton),
+  { ssr: false },
+);
+
 export default function Home() {
   return (
     <>
@@ -36,6 +52,9 @@ export default function Home() {
       <MathPromptPanel />
       <SpellTestScreen />
       <DrillQuestScreen />
+      <GameUiOverlay />
+      <StatusPanelOverlay />
+      <MenuButton />
       <ProfileGate />
     </>
   );

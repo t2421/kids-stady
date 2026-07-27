@@ -114,7 +114,7 @@ export function handleDrillBoard(ui: UiScene, advance: () => void): void {
   }
   const options = [
     ...quests.map(
-      (q) => `${"★".repeat(q.stars)}${"　".repeat(3 - q.stars)} ${q.label}  1もん${q.goldPerCorrect}G`,
+      (q) => `${"★".repeat(q.stars)} ${q.label}  1もん${q.goldPerCorrect}G`,
     ),
     "やめる",
   ];

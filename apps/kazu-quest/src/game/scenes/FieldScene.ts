@@ -216,8 +216,15 @@ export class FieldScene extends Scene {
       Phaser.Scenes.Events.WAKE,
       (_sys: unknown, data?: BattleResult) => {
         this.battleStarting = false;
+        EventBus.emit("field-ready");
         if (data) this.onBattleResult(data);
       },
+    );
+    /* DOM 側の常設メニューボタンはフィールドにいる間だけ表示する */
+    EventBus.emit("field-ready");
+    this.events.on(Phaser.Scenes.Events.SLEEP, () => EventBus.emit("field-gone"));
+    this.events.on(Phaser.Scenes.Events.SHUTDOWN, () =>
+      EventBus.emit("field-gone"),
     );
 
     /* 常設メニューボタン (UiScene) → ステータスパネル。restart で重複登録
@@ -424,7 +431,9 @@ export class FieldScene extends Scene {
       !this.runActive &&
       !this.battleStarting &&
       !this.isUiBusy() &&
-      this.time.now - this.lastRunEndAt >= INTERACT_COOLDOWN_MS
+      /* 壁時計で判定する。フレーム時間 (time.now) は高負荷で止まり、
+         実時間で待ってもクールダウンが明けなくなる (E2Eで観測) */
+      performance.now() - this.lastRunEndAt >= INTERACT_COOLDOWN_MS
     );
   }
 
@@ -437,7 +446,7 @@ export class FieldScene extends Scene {
   /* タップ: 自分=メニュー / 隣接タイルの NPC・宝箱=しらべる。処理したら true */
   private tryPointerInteract(pointer: Phaser.Input.Pointer): boolean {
     if (this.moving || this.runActive) return false;
-    if (this.time.now - this.lastRunEndAt < INTERACT_COOLDOWN_MS) return false;
+    if (performance.now() - this.lastRunEndAt < INTERACT_COOLDOWN_MS) return false;
     const world = pointer.positionToCamera(
       this.cameras.main,
     ) as Phaser.Math.Vector2;
@@ -617,7 +626,7 @@ export class FieldScene extends Scene {
 
   private finishRun() {
     this.runActive = false;
-    this.lastRunEndAt = this.time.now;
+    this.lastRunEndAt = performance.now();
     this.view.refresh(getSave().flags);
     autosave();
   }
