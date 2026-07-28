@@ -54,7 +54,7 @@ export const CHAPTER1: ChapterDef = {
   /* 通常攻撃はくり上がりなしの基礎問題 (テンポ重視・10秒) */
   attackSkillIds: ["g1_count", "g1_compare", "g1_add_nc", "g1_sub_nc"],
   flags: {
-    "c1.started": "母から王様の呼び出しを聞いた",
+    "c1.started": "母から王様の呼び出しを聞いた (演出用・条件では未参照)",
     "c1.metKing": "カウント王に謁見し、数晶探索を引き受けた",
     "c1.midboss": "どんぐりの森の でかインクぐも を倒した",
     "c1.forestChest": "森の宝箱を開けた",

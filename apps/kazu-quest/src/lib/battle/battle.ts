@@ -24,6 +24,9 @@ export interface Combatant {
   atk: number;
   def: number;
   agi: number;
+  /* バフ/デバフの基準値。重ねがけしても base × 倍率で頭打ちにする */
+  baseAtk: number;
+  baseAgi: number;
   defending: boolean;
 }
 
@@ -99,6 +102,8 @@ export function makeMemberCombatant(member: PartyMember): Combatant {
     atk: stats.atk,
     def: stats.def,
     agi: stats.agi,
+    baseAtk: stats.atk,
+    baseAgi: stats.agi,
     defending: false,
   };
 }
@@ -121,6 +126,8 @@ export function createBattle(
       atk: m.atk,
       def: m.def,
       agi: m.agi,
+      baseAtk: m.atk,
+      baseAgi: m.agi,
       defending: false,
       exp: m.exp,
       gold: m.gold,
@@ -155,6 +162,9 @@ function livingMembers(state: BattleState): Combatant[] {
 }
 
 function pickWeighted<T extends { weight: number }>(items: T[], rng: Rng): T {
+  if (items.length === 0) {
+    throw new Error("pickWeighted: items must not be empty");
+  }
   const sum = items.reduce((s, a) => s + a.weight, 0);
   let roll = rng() * sum;
   for (const item of items) {
@@ -321,8 +331,9 @@ export function submitRound(
         } else if (spell.kind === "buff") {
           const target = findMember(cmd.targetId) ?? actor;
           if (spell.effect === "agiUp") {
-            /* トキシフト: 戦闘中ずっと すばやさ 1.5倍 (次ラウンドから行動順に効く) */
-            target.agi = Math.round(target.agi * 1.5);
+            /* トキシフト: 戦闘中ずっと すばやさ 1.5倍 (次ラウンドから行動順に
+               効く)。重ねがけは掛け直し扱いで累積しない */
+            target.agi = Math.round(target.baseAgi * 1.5);
             events.push({
               type: "message",
               text: `${target.name}の うごきが はやくなった!`,
@@ -342,8 +353,9 @@ export function submitRound(
               : [findEnemy(cmd.targetId) ?? livingEnemies(next)[0]].filter(
                   (t): t is EnemyCombatant => !!t,
                 );
+          /* 重ねがけは掛け直し扱いで累積しない */
           for (const target of targets) {
-            target.atk = Math.max(1, Math.round(target.atk * 0.7));
+            target.atk = Math.max(1, Math.round(target.baseAtk * 0.7));
           }
           if (targets.length > 0) {
             events.push({
@@ -369,9 +381,13 @@ export function submitRound(
       const action = pickWeighted(enemy.actions, rng);
       const target = targets[Math.floor(rng() * targets.length)];
 
-      if (action.kind === "heal") {
-        const wounded = livingEnemies(next).filter((e) => e.hp < e.maxHp);
-        const ally = wounded[0] ?? enemy;
+      /* かいふく対象がいなければ通常攻撃に切り替える (無駄ターン防止) */
+      const wounded =
+        action.kind === "heal"
+          ? livingEnemies(next).filter((e) => e.hp < e.maxHp)
+          : [];
+      if (action.kind === "heal" && wounded.length > 0) {
+        const ally = wounded[Math.floor(rng() * wounded.length)];
         const amount = Math.min(ally.maxHp - ally.hp, Math.round(ally.maxHp * 0.3));
         ally.hp += amount;
         events.push({ type: "message", text: `${enemy.name}は きずを なおした!` });

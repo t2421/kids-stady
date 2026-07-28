@@ -47,7 +47,7 @@ export const CHAPTER2: ChapterDef = {
   /* 通常攻撃の出題プール: 小1の基礎 + 九九 (章が進むと基礎も上がる) */
   attackSkillIds: ["g1_add_nc", "g1_sub_nc", "g2_kuku"],
   flags: {
-    "c2.metMaster": "みなとの長から魔女ブロッタの話を聞いた",
+    "c2.metMaster": "みなとの長から魔女ブロッタの話を聞いた (演出用・条件では未参照)",
     "c2.metTasuku": "僧侶タスクが仲間に加わった",
     "c2.lighthouse": "しおかぜ灯台に明かりをともした",
     "c2.lighthouseChest": "灯台の宝箱を開けた",

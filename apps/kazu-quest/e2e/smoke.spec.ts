@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { STEP_MS } from "../src/game/field/timing";
 
 /*
  * エンジン+第1章のスモークテスト (本番静的ビルドで実行)。
@@ -55,12 +56,14 @@ function fieldPos(page: Page) {
   return page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave().location);
 }
 
-/* 1タップ=1歩 (120ms押下 < STEP_MS なので2歩目が出ない) */
+/* 1タップ=1歩 (押下時間 < STEP_MS なので2歩目が出ない)。
+   エンジン定数と連動させ、STEP_MS を変えてもここが壊れないようにする */
+const STEP_HOLD_MS = Math.min(120, STEP_MS - 30);
 async function stepOnce(page: Page, key: string) {
   await page.keyboard.down(key);
-  await page.waitForTimeout(120);
+  await page.waitForTimeout(STEP_HOLD_MS);
   await page.keyboard.up(key);
-  await page.waitForTimeout(230);
+  await page.waitForTimeout(STEP_MS + 80);
 }
 
 /* 壁・NPC の方を向く (移動はブロックされ向きだけ変わる) */

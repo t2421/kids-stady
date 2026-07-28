@@ -15,6 +15,7 @@ import { MONSTERS } from "../src/content/monsters";
 import { ENCOUNTER_TABLES } from "../src/content/encounters";
 import { SPELLS } from "../src/content/spells";
 import { SKILLS } from "../src/lib/curriculum";
+import { MEMBERS } from "../src/lib/battle/members";
 
 const maps = listMaps();
 
@@ -119,6 +120,42 @@ function isWalkableTile(map: MapDef, x: number, y: number): boolean {
   const spec = map.legend[map.grid[y][x]];
   return !!spec?.walkable;
 }
+
+/*
+ * フラグ到達可能性: 条件 (dialog if / npc hideIf) が参照するフラグは、
+ * どこかの setFlag / onceFlag / battle winFlag / 習得テスト合格
+ * (learned.<spellId> — effectHandlers の規約) で必ず set できること。
+ * 単一タイル橋の番人 (hideIf) のタイポは新規セーブ全員を詰ませるため、
+ * この検査で1文字タイポを検出する。
+ */
+describe("flag reachability", () => {
+  it("every referenced condition flag is settable somewhere", () => {
+    const settable = new Set<string>();
+    const referenced = new Map<string, string>();
+    for (const map of maps) {
+      for (const cmd of collectCommands(map)) {
+        if (cmd.type === "setFlag") settable.add(cmd.flag);
+        if (cmd.type === "battle" && cmd.winFlag) settable.add(cmd.winFlag);
+        if (cmd.type === "openSpellTest") settable.add(`learned.${cmd.spellId}`);
+      }
+      for (const ev of map.events) {
+        if (ev.onceFlag) settable.add(ev.onceFlag);
+      }
+      for (const npc of map.npcs) {
+        if (npc.hideIf) referenced.set(npc.hideIf.flag, `${map.id}/npc:${npc.id}`);
+        for (const entry of npc.dialog) {
+          if (entry.if) referenced.set(entry.if.flag, `${map.id}/npc:${npc.id}`);
+        }
+      }
+    }
+    for (const [flag, where] of referenced) {
+      expect(
+        settable.has(flag),
+        `フラグ "${flag}" (${where}) は参照されるが どこでも set されない`,
+      ).toBe(true);
+    }
+  });
+});
 
 describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
   it("grid rows are uniform and non-empty", () => {
@@ -225,6 +262,17 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
       }
       if (cmd.type === "learnSpell" || cmd.type === "openSpellTest") {
         expect(SPELLS[cmd.spellId], `呪文 "${cmd.spellId}"`).toBeDefined();
+      }
+      /* クイズ扉のスキルはタイポすると全プレイヤーの扉が壊れる */
+      if (cmd.type === "quiz") {
+        expect(
+          SKILLS.some((s) => s.id === cmd.skillId && s.implemented),
+          `quiz の skill "${cmd.skillId}" が未実装/未登録`,
+        ).toBe(true);
+      }
+      /* memberId タイポは勇者ステータスに静かにフォールバックしてしまう */
+      if (cmd.type === "joinParty" || cmd.type === "learnSpell") {
+        expect(MEMBERS[cmd.memberId], `メンバー "${cmd.memberId}"`).toBeDefined();
       }
       if (cmd.type === "transfer") {
         expect(hasMap(cmd.mapId), `transfer 先マップ "${cmd.mapId}"`).toBe(true);

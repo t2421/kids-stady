@@ -28,11 +28,9 @@ import {
 } from "../field/effectHandlers";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
+import { INTERACT_COOLDOWN_MS, STEP_MS } from "../field/timing";
 
-const STEP_MS = 150;
 const ZOOM = 3;
-/* ダイアログを閉じた直後の action キー誤爆を防ぐクールダウン */
-const INTERACT_COOLDOWN_MS = 200;
 
 const DELTA: Record<Dir, { dx: number; dy: number }> = {
   up: { dx: 0, dy: -1 },
@@ -64,6 +62,7 @@ export class FieldScene extends Scene {
   private transferring = false;
   private runActive = false;
   private lastRunEndAt = 0;
+  private defeatHandling = false;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private pointerHeld = false;
@@ -210,31 +209,38 @@ export class FieldScene extends Scene {
       this.scene.launch("Ui");
     }
     this.ui = this.scene.get("Ui") as UiScene;
+    /* シーンインスタンスは restart をまたいで再利用されるので毎回リセット */
+    this.defeatHandling = false;
 
-    /* 戦闘から戻ったとき (sleep → wake) の結果処理 */
-    this.events.on(
-      Phaser.Scenes.Events.WAKE,
-      (_sys: unknown, data?: BattleResult) => {
-        this.battleStarting = false;
-        EventBus.emit("field-ready");
-        if (data) this.onBattleResult(data);
-      },
-    );
+    /*
+     * シーンイベントは必ず shutdown で解除する。Phaser の Systems.shutdown は
+     * TRANSITION系以外のリスナーを削除しないため、scene.restart() (= マップ
+     * 遷移のたび) に登録しっぱなしだと WAKE ハンドラが蓄積し、全滅時の
+     * showMessage が多重発行されて busy が永遠に解除されなくなる
+     * (レビューで検出したソフトロック)。
+     */
+    const onWake = (_sys: unknown, data?: BattleResult) => {
+      this.battleStarting = false;
+      EventBus.emit("field-ready");
+      if (data) this.onBattleResult(data);
+    };
+    this.events.on(Phaser.Scenes.Events.WAKE, onWake);
     /* DOM 側の常設メニューボタンはフィールドにいる間だけ表示する */
     EventBus.emit("field-ready");
-    this.events.on(Phaser.Scenes.Events.SLEEP, () => EventBus.emit("field-gone"));
-    this.events.on(Phaser.Scenes.Events.SHUTDOWN, () =>
-      EventBus.emit("field-gone"),
-    );
+    const onSleep = () => EventBus.emit("field-gone");
+    this.events.on(Phaser.Scenes.Events.SLEEP, onSleep);
 
-    /* 常設メニューボタン (UiScene) → ステータスパネル。restart で重複登録
-       しないよう shutdown で解除する */
+    /* 常設メニューボタン (React) → ステータスパネル */
     const onMenuButton = () => this.openStatusMenu();
     EventBus.on("menu-button-pressed", onMenuButton);
     /* ステータスパネルの「そうびを かえる」→ 装備メニュー */
     const onEquipMenu = () => this.openEquipFlow();
     EventBus.on("request-equip-menu", onEquipMenu);
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.WAKE, onWake);
+      this.events.off(Phaser.Scenes.Events.SLEEP, onSleep);
+      EventBus.emit("field-gone");
       EventBus.off("menu-button-pressed", onMenuButton);
       EventBus.off("request-equip-menu", onEquipMenu);
     });
@@ -404,7 +410,10 @@ export class FieldScene extends Scene {
       if (advance) this.finishRun();
       return;
     }
-    /* 全滅: ペナルティなしで ほこら (checkpoint) へ。HP/MP全回復 */
+    /* 全滅: ペナルティなしで ほこら (checkpoint) へ。HP/MP全回復。
+       多重呼び出しで showMessage が重複発行されないよう再入ガード */
+    if (this.defeatHandling) return;
+    this.defeatHandling = true;
     this.pendingBattleAdvance = null;
     this.runActive = false;
     const checkpoint = getSave().checkpoint;
@@ -445,8 +454,9 @@ export class FieldScene extends Scene {
 
   /* タップ: 自分=メニュー / 隣接タイルの NPC・宝箱=しらべる。処理したら true */
   private tryPointerInteract(pointer: Phaser.Input.Pointer): boolean {
-    if (this.moving || this.runActive) return false;
-    if (performance.now() - this.lastRunEndAt < INTERACT_COOLDOWN_MS) return false;
+    /* キーボードの interact() と同じガード (battleStarting 中のタップで
+       戦闘開始と会話が同時進行するレースを防ぐ) */
+    if (!this.canAct()) return false;
     const world = pointer.positionToCamera(
       this.cameras.main,
     ) as Phaser.Math.Vector2;

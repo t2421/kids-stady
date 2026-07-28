@@ -5,6 +5,7 @@
  */
 
 import { readJSON, writeJSON } from "./profiles";
+import { memberStats } from "./battle/members";
 import type { AnswerTelemetry, HistoryEntryBase, SkillStat } from "./telemetry";
 import { normalizeHistory, normalizeSkillStats, toCount } from "./telemetry";
 
@@ -125,15 +126,22 @@ function normalizeParty(raw: unknown, fallback: PartyMember[]): PartyMember[] {
         typeof m === "object" && m !== null &&
         typeof (m as { memberId?: unknown }).memberId === "string",
     )
-    .map((m) => ({
-      memberId: m.memberId as string,
-      level: Math.max(1, asNumber(m.level, 1)),
-      exp: Math.max(0, asNumber(m.exp, 0)),
-      hp: Math.max(0, asNumber(m.hp, 1)),
-      mp: Math.max(0, asNumber(m.mp, 0)),
-      learnedSpells: asStringArray(m.learnedSpells),
-      equipment: normalizeEquipment(m.equipment),
-    }));
+    .map((m) => {
+      const memberId = m.memberId as string;
+      const level = Math.max(1, asNumber(m.level, 1));
+      /* hp/mp が欠損・破損していたら満タンで復帰させる
+         (瀕死の 1 で復帰させると次の戦闘で理不尽に倒れる) */
+      const stats = memberStats(memberId, level);
+      return {
+        memberId,
+        level,
+        exp: Math.max(0, asNumber(m.exp, 0)),
+        hp: Math.max(0, asNumber(m.hp, stats.maxHp)),
+        mp: Math.max(0, asNumber(m.mp, stats.maxMp)),
+        learnedSpells: asStringArray(m.learnedSpells),
+        equipment: normalizeEquipment(m.equipment),
+      };
+    });
   return members.length > 0 ? members : fallback;
 }
 
