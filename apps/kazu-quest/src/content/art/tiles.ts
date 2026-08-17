@@ -7,6 +7,7 @@ import type { PixelArt } from "./format";
 import { TOWN_TILES } from "./tilesTown";
 import { INTERIOR_TILES } from "./tilesInterior";
 import { WORLD_TILES } from "./tilesWorld";
+import { DESERT_TILES } from "./tilesDesert";
 import { ANIM_TILES } from "./tileAnims";
 
 export const TILE_SIZE = 16;
@@ -203,5 +204,6 @@ export const TILE_ART: Record<string, PixelArt> = {
   ...TOWN_TILES,
   ...INTERIOR_TILES,
   ...WORLD_TILES,
+  ...DESERT_TILES,
   ...ANIM_TILES,
 };

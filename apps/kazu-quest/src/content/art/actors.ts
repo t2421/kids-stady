@@ -72,6 +72,26 @@ export const ACTOR_ART: Record<string, PixelArt> = {
       "..kWWwwwwwwWWk..", ".kWWWwwwwwwWWWk.", ".kWWWWWWWWWWWWk.", "..kkkkkkkkkkkk..",
     ],
   },
+  /* 武闘家カケル (第3章で加入する仲間 — オレンジの道着と はちまき) */
+  kakeru: {
+    palette: { k: "#1a1512", h: "#2f2118", s: "#e8ae80", S: "#ffd0a2", o: "#e8823a", O: "#a8531f", y: "#f2d04a", w: "#f7f1de" },
+    rows: [
+      ".....kkkkkk.....", "....khhhhhhk....", "...khhhhhhhhk...", "...kyyyyyyyyk...",
+      "...kSSSSSSSSk...", "...kSksSSskSk...", "...kSSssssSSk...", "....kssssssk....",
+      "...kkkooookkk...", "..kskoooooksk...", "..kskooooooksk..", "...kOoyyyyoOk...",
+      "...kOOooooOOk...", "...kkOkkkkOkk...", "....kOk..kOk....", "....kkk..kkk....",
+    ],
+  },
+  /* 隊商の商人 (砂の国のNPC — ターバンと青い旅装束) */
+  merchant: {
+    palette: { k: "#1b1920", w: "#f2eee1", W: "#cfc9b8", y: "#f2d675", s: "#dfaa82", S: "#f5c9a0", b: "#3d6fb0", B: "#274a7d" },
+    rows: [
+      ".....kkkkkk.....", "....kwwwwwwk....", "...kwwyywwwwk...", "...kkSSSSSSkk...",
+      "...kSSSSSSSSk...", "...kSksSSskSk...", "...kSSssssSSk...", "....kssssssk....",
+      "...kkkbbbbkkk...", "..kskbbbbbbksk..", "..kskbbyybbksk..", "...kBbbbbbbBk...",
+      "..kBBbbbbbbBBk..", "...kkBkkkkBkk...", "....kBk..kBk....", "....kkk..kkk....",
+    ],
+  },
   scholar: {
     palette: { k: "#1b1920", h: "#d7d5cf", H: "#ffffff", s: "#dfaa82", S: "#f5c9a0", b: "#4c4d72", B: "#30304d", l: "#7379a0", y: "#e6bd43", d: "#9b9b9b" },
     rows: [

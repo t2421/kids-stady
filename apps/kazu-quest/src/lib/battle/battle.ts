@@ -329,22 +329,28 @@ export function submitRound(
             events.push({ type: "heal", targetId: target.id, amount: healed, onParty: true });
           }
         } else if (spell.kind === "buff") {
-          const target = findMember(cmd.targetId) ?? actor;
-          if (spell.effect === "agiUp") {
-            /* トキシフト: 戦闘中ずっと すばやさ 1.5倍 (次ラウンドから行動順に
-               効く)。重ねがけは掛け直し扱いで累積しない */
-            target.agi = Math.round(target.baseAgi * 1.5);
-            events.push({
-              type: "message",
-              text: `${target.name}の うごきが はやくなった!`,
-            });
-          } else {
-            target.defending = true;
-            events.push({
-              type: "message",
-              text: `${target.name}は まもりの ちからに つつまれた!`,
-            });
+          /* target:"party" は みかた全員がかり (エンサークル等)、それ以外は単体 */
+          const targets =
+            spell.target === "party"
+              ? livingMembers(next)
+              : [findMember(cmd.targetId) ?? actor];
+          for (const target of targets) {
+            if (spell.effect === "agiUp") {
+              /* トキシフト: 戦闘中ずっと すばやさ 1.5倍 (次ラウンドから行動順に
+                 効く)。重ねがけは掛け直し扱いで累積しない */
+              target.agi = Math.round(target.baseAgi * 1.5);
+            } else {
+              target.defending = true;
+            }
           }
+          const who = targets.length > 1 ? "みかた ぜんいん" : targets[0].name;
+          events.push({
+            type: "message",
+            text:
+              spell.effect === "agiUp"
+                ? `${who}の うごきが はやくなった!`
+                : `${who}は まもりの ちからに つつまれた!`,
+          });
         } else if (spell.kind === "debuff") {
           /* カサミスト: 敵のこうげきを下げる (全体/単体) */
           const targets =

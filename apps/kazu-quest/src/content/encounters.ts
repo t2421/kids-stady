@@ -86,6 +86,42 @@ ENCOUNTER_TABLES["ch2-tower"] = {
   ],
 };
 
+/* ---------- 第3章 ---------- */
+
+ENCOUNTER_TABLES["ch3-desert"] = {
+  id: "ch3-desert",
+  stepRange: [12, 24],
+  groups: [
+    { monsterIds: ["sunaKeshigomun"], weight: 3 },
+    { monsterIds: ["sunaKeshigomun", "sunanezumi"], weight: 2 },
+    { monsterIds: ["cactusKnife"], weight: 3 },
+    { monsterIds: ["sasoriCompass"], weight: 2 },
+    { monsterIds: ["cactusKnife", "sunaKeshigomun"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch3-ruins"] = {
+  id: "ch3-ruins",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["sasoriCompass"], weight: 3 },
+    { monsterIds: ["mummyFusen"], weight: 2 },
+    { monsterIds: ["sasoriCompass", "sunanezumi"], weight: 2 },
+    { monsterIds: ["cactusKnife", "cactusKnife"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch3-pyramid"] = {
+  id: "ch3-pyramid",
+  stepRange: [9, 18],
+  groups: [
+    { monsterIds: ["mummyFusen"], weight: 3 },
+    { monsterIds: ["mummyFusen", "sasoriCompass"], weight: 2 },
+    { monsterIds: ["sunanezumi", "sunanezumi"], weight: 2 },
+    { monsterIds: ["mummyFusen", "mummyFusen"], weight: 1 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }

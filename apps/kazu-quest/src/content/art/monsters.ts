@@ -99,3 +99,71 @@ MONSTER_ART.awaKeshigomun = {
   palette: { k: "#18202b", w: "#d8f0ee", W: "#a8d5d0", l: "#ffffff", b: "#2a9aa5", B: "#1d6d78", c: "#69d5dc", p: "#7ec3d8" },
   rows: MONSTER_ART.keshigomun.rows,
 };
+
+/* ---------- 第3章 (砂の国ワケーラ) ---------- */
+
+/* サボテンナイフ — 腕がナイフの サボテン */
+MONSTER_ART.cactusKnife = {
+  palette: { k: "#152b1b", g: "#3f8a4a", G: "#57a95c", w: "#f2f6e4", s: "#9aa5b0", S: "#d3dae2", y: "#f2d675" },
+  rows: [
+    "................", "......kkkk......", ".....kgGGgk.....", "....kgGGGGgk....",
+    "...kgGwwGGwwGgk.", "...kgGwkGGkwGgk.", "...kgGGGGGGGGgk.", "sSSkkgGGGGGGGgk.",
+    "sSSkkgGGGGGGGgk.", "...kgGGGGGGGgkSs", "...kgGGGGGGGgkSs", "...kgGGGGGGGGgk.",
+    "...kgGGyyyyGGgk.", "...kgGGGGGGGGgk.", "....kgggggggk...", ".....kkkkkkk....",
+  ],
+};
+
+/* さそりコンパス — 製図コンパスの さそり */
+MONSTER_ART.sasoriCompass = {
+  palette: { k: "#1a1a22", m: "#6b7280", M: "#a8b0ba", w: "#f4f1e6", y: "#f2d675" },
+  rows: [
+    "................", "..kk........kk..", ".kmk........kmk.", ".kmk..kkkk..kmk.",
+    ".kmkkkmMMmkkkmk.", "..kmmmMwwMmmmk..", "...kmMwkkwMmk...", "...kmMMMMMMmk...",
+    "..kmMMMMMMMMmk..", "..kmMMkkkkMMmk..", "...kmMMMMMMmk...", "....kmMMMMmk....",
+    ".....kmMMmk.....", "......kmmk......", "......kmk.kyk...", ".......k..kyk...",
+  ],
+};
+
+/* ミイラふせん — 包帯だらけの ふせん紙 */
+MONSTER_ART.mummyFusen = {
+  palette: { k: "#2a2418", y: "#e8d98a", w: "#f7f3e2", d: "#8a7a4a" },
+  rows: [
+    "....kkkkkkkk....", "...kyyyyyyyyk...", "..kyywwwwwwyyk..", "..kywkwwwwkwyk..",
+    "..kywkwwwwkwyk..", "..kywwwwwwwwyk..", "..kyywwddwwyyk..", "..kyyyyyyyyyyk..",
+    "..kwwyyyyyywwk..", "..kwwwyyyywwwk..", "..kyywwwwwwyyk..", "..kyyyywwyyyyk..",
+    "..kyyyyyyyyyyk..", "...kyywwwwyyk...", "...kkyyyyyykk...", ".....kkkkkk.....",
+  ],
+};
+
+/* わけまえゴーレム — ピラミッドの門番 (中ボス) */
+MONSTER_ART.wakemaeGolem = {
+  palette: { k: "#4a3820", S: "#c9a468", d: "#8f6f43", y: "#f2d675" },
+  rows: [
+    "................", "...kkkkkkkkkk...", "..kSSSSSSSSSSk..", "..kSykSSSSkySk..",
+    "..kSSSSSSSSSSk..", "..kSSkkSSkkSSk..", "...kSSSSSSSSk...", "kkkSSSSSSSSSSkkk",
+    "kSSkSSSSSSSSkSSk", "kSSkSSdddddSkSSk", "kSSkSSdSSSdSkSSk", "kSSkSSdddddSkSSk",
+    "kkkkSSSSSSSSkkkk", "...kSSSkkSSSk...", "..kkSSkkkkSSkk..", "..kkkk....kkkk..",
+  ],
+};
+
+/* 盗賊王アマリダ — 第3章ボス (三日月刀と 赤いマント) */
+MONSTER_ART.amarida = {
+  palette: { k: "#1a1420", w: "#f4f1e6", y: "#f2d675", s: "#d9a06e", r: "#b8342f", R: "#7f2226", m: "#8a94a4", M: "#d3dae2" },
+  rows: [
+    "......kkkk......", ".....kwwwwk.....", "....kwwyywwk....", "....kwwwwwwk....",
+    "....kssssssk....", "...kssksskssk...", "...ksssssssssk..", "...ksssssssssk..",
+    "..kkrrrrrrrrkk..", ".kmrrryyyrrrrmk.", "kMmrrryyyrrrrmMk", "kMkrrrrrrrrrrkMk",
+    ".kkrrrRRRRrrrkk.", "..krrRRRRRRrrk..", "..kRRRRRRRRRRk..", "...kkkkkkkkkk...",
+  ],
+};
+
+/* すなケシゴムン / すなぬすみネズミ — 砂漠バージョン (色違い) */
+MONSTER_ART.sunaKeshigomun = {
+  palette: { k: "#2a2118", w: "#f2e2b8", W: "#d3bd88", l: "#fff8e2", b: "#c98a3a", B: "#8f5f24", c: "#e8bb6a", p: "#e0906a" },
+  rows: MONSTER_ART.keshigomun.rows,
+};
+
+MONSTER_ART.sunanezumi = {
+  palette: { k: "#241d16", g: "#c9a468", G: "#8f6f43", l: "#e8d3a0", p: "#e0906a", P: "#f2c0a0", w: "#fff8e6", y: "#edc43f" },
+  rows: MONSTER_ART.kazunezumi.rows,
+};

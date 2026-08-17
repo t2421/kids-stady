@@ -270,6 +270,12 @@ const SPELL_FX: Record<string, SpellFxDef> = {
   kazoeSlash: { style: "slash", color: 0x4de3ff, light: 0xd2f6ff, impact: "hit" },
   dandanZuki: { style: "multi", color: 0xffd94d, light: 0xfff3c0, impact: "hit" },
   hissanBreak: { style: "bigburst", color: 0xff5c3c, light: 0xffd2a8, impact: "explosion" },
+  /* 第3章 */
+  waridama: { style: "slash", color: 0x4de08a, light: 0xd6ffe8, impact: "hit" },
+  ketaCrush: { style: "bigburst", color: 0xff9f1c, light: 0xffe6b0, impact: "explosion" },
+  manLight: { style: "orb", color: 0xfff1a8, light: 0xffffff, impact: "explosion", orbScale: 8 },
+  shousuuRain: { style: "multi", color: 0x6fd0f2, light: 0xd8f4ff, impact: "hit" },
+  omosaPress: { style: "bigburst", color: 0x9a8f7a, light: 0xe0d8c8, impact: "hit" },
 };
 
 const DEFAULT_SPELL_FX: SpellFxDef = {

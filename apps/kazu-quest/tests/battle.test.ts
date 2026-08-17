@@ -319,6 +319,28 @@ describe("grade-2 spell mechanics", () => {
     expect(state.members[0].agi).toBe(Math.round(agiBefore * 1.5));
   });
 
+  /* エンサークル (第3章) — target:"party" の buff は みかた全員を まもる */
+  it("party guard buff protects every member", () => {
+    const EN_CIRCLE: SpellDef = {
+      ...KUKUDAMA,
+      id: "enCircle",
+      name: "エンサークル",
+      kind: "buff",
+      target: "party",
+      power: 0,
+      mpCost: 5,
+    };
+    const base = createBattle(
+      [HERO, { ...HERO, memberId: "tasuku" }],
+      [{ ...KESHIGOMUN, hp: 50 }],
+      false,
+    );
+    const { state } = cast(EN_CIRCLE, base);
+    for (const member of state.members) {
+      expect(member.defending).toBe(true);
+    }
+  });
+
   it("party heal restores every member", () => {
     const base = createBattle(
       [

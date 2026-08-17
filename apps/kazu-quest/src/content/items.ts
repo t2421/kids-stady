@@ -101,6 +101,47 @@ ITEMS.tetsuNoTate = {
   description: "しゅび +5。がんじょうな てつの たて",
 };
 
+/* ---------- 第3章の装備・どうぐ ---------- */
+
+ITEMS.jouyakusou = {
+  id: "jouyakusou",
+  name: "じょうやくそう",
+  kind: "heal",
+  power: 50,
+  price: 25,
+  description: "HPを 50 かいふくする よく効く くすり",
+};
+
+ITEMS.hagaNeNoTsurugi = {
+  id: "hagaNeNoTsurugi",
+  name: "はがねのつるぎ",
+  kind: "equip",
+  slot: "weapon",
+  atk: 14,
+  price: 280,
+  description: "こうげき +14。よく きれる はがねの つるぎ",
+};
+
+ITEMS.sabakuNoRobe = {
+  id: "sabakuNoRobe",
+  name: "さばくのローブ",
+  kind: "equip",
+  slot: "armor",
+  def: 10,
+  price: 230,
+  description: "しゅび +10。すなあらしを ふせぐ ぬの",
+};
+
+ITEMS.mikazukiNoTate = {
+  id: "mikazukiNoTate",
+  name: "みかづきのたて",
+  kind: "equip",
+  slot: "shield",
+  def: 8,
+  price: 190,
+  description: "しゅび +8。みかづきの かたちの たて",
+};
+
 export const SHOPS: Record<string, ShopDef> = {
   "ch1-capital-shop": {
     id: "ch1-capital-shop",
@@ -132,6 +173,25 @@ SHOPS["ch2-minatos-shop"] = {
     "kusariKatabira",
     "tetsuNoTate",
   ],
+};
+
+SHOPS["ch3-wakeera-shop"] = {
+  id: "ch3-wakeera-shop",
+  name: "ワケーラの どうぐや",
+  itemIds: [
+    "yakusou",
+    "jouyakusou",
+    "anshinNoSuzu",
+    "hagaNeNoTsurugi",
+    "sabakuNoRobe",
+    "mikazukiNoTate",
+  ],
+};
+
+SHOPS["ch3-caravan-shop"] = {
+  id: "ch3-caravan-shop",
+  name: "たいしょうの みせ",
+  itemIds: ["yakusou", "jouyakusou", "tetsuNoTsurugi", "kusariKatabira"],
 };
 
 export function getItem(id: string): ItemDef | undefined {

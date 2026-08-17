@@ -9,6 +9,7 @@ import type { SpellDef } from "./types";
 /* Tier別の制限時間 (設計 A3) */
 const TIER1_MS = 15000;
 const TIER2_MS = 20000;
+const TIER3_MS = 25000;
 
 export const SPELLS: Record<string, SpellDef> = {
   hikidama: {
@@ -183,6 +184,113 @@ SPELLS.tokiShift = {
   battleTimeLimitMs: TIER1_MS,
   learnTest: { skillIds: ["g2_time"], questions: 10, passCount: 8 },
   description: "とけいの ちからで うごきが はやくなる",
+};
+
+/* ---------- 第3章 (小3) ---------- */
+
+SPELLS.waridama = {
+  id: "waridama",
+  name: "ワリダマ",
+  kind: "attack",
+  mpCost: 4,
+  power: 30,
+  target: "enemy",
+  skillIds: ["g3_div"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g3_div"], questions: 10, passCount: 8 },
+  description: "わり算の ちからで まもりを 切りわって こうげき",
+};
+
+SPELLS.amariBind = {
+  id: "amariBind",
+  name: "アマリバインド",
+  kind: "debuff",
+  mpCost: 3,
+  power: 0,
+  target: "allEnemies",
+  effect: "atkDown",
+  skillIds: ["g3_div_remainder"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g3_div_remainder"], questions: 10, passCount: 8 },
+  description: "あまりの なわで てきを しばり こうげきを よわめる",
+};
+
+SPELLS.ketaCrush = {
+  id: "ketaCrush",
+  name: "ケタクラッシュ",
+  kind: "attack",
+  mpCost: 5,
+  power: 36,
+  target: "enemy",
+  skillIds: ["g3_mul_column"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g3_mul_column"], questions: 10, passCount: 8 },
+  description: "かけ算の ひっさんで けたごと たたきつぶす",
+};
+
+SPELLS.manLight = {
+  id: "manLight",
+  name: "マンライト",
+  kind: "attack",
+  mpCost: 6,
+  power: 24,
+  target: "allEnemies",
+  skillIds: ["g3_big_number"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g3_big_number"], questions: 10, passCount: 8 },
+  description: "「万」の ひかりが てき ぜんたいを つらぬく",
+};
+
+SPELLS.shousuuRain = {
+  id: "shousuuRain",
+  name: "ショウスウレイン",
+  kind: "attack",
+  mpCost: 5,
+  power: 21,
+  target: "allEnemies",
+  skillIds: ["g3_decimal"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g3_decimal"], questions: 10, passCount: 8 },
+  description: "小数の しずくが てき ぜんたいに ふりそそぐ",
+};
+
+SPELLS.hafun = {
+  id: "hafun",
+  name: "ハーフン",
+  kind: "buff",
+  mpCost: 3,
+  power: 0,
+  target: "ally",
+  skillIds: ["g3_fraction"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g3_fraction"], questions: 10, passCount: 8 },
+  description: "分数の ちからで うけるダメージを 半分に する",
+};
+
+SPELLS.omosaPress = {
+  id: "omosaPress",
+  name: "オモサプレス",
+  kind: "attack",
+  mpCost: 4,
+  power: 28,
+  target: "enemy",
+  skillIds: ["g3_weight"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g3_weight"], questions: 10, passCount: 8 },
+  description: "1kgの おもりを おとして おしつぶす",
+};
+
+SPELLS.enCircle = {
+  id: "enCircle",
+  name: "エンサークル",
+  kind: "buff",
+  mpCost: 5,
+  power: 0,
+  target: "party",
+  skillIds: ["g3_circle"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g3_circle"], questions: 10, passCount: 8 },
+  description: "円の まもりが みかた ぜんいんを つつむ",
 };
 
 export function getSpell(id: string): SpellDef | undefined {

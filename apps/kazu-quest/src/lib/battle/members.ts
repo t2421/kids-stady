@@ -34,6 +34,32 @@ export const MEMBERS: Record<string, MemberDef> = {
       agi: 4 + level,
     }),
   },
+  /* 武闘家カケル: HPと すばやさが 高く MPは ひかえめ (「かける」の使い手) */
+  kakeru: {
+    memberId: "kakeru",
+    name: "カケル",
+    initialSpells: ["dandanZuki"],
+    stats: (level) => ({
+      maxHp: 24 + level * 6,
+      maxMp: 4 + level,
+      atk: 6 + level * 2,
+      def: 3 + level,
+      agi: 6 + Math.round(level * 1.4),
+    }),
+  },
+  /* 魔法使いリトル: HPは低いが MPと 呪文の のびが よい (「リットル」の少女) */
+  little: {
+    memberId: "little",
+    name: "リトル",
+    initialSpells: ["shousuuRain"],
+    stats: (level) => ({
+      maxHp: 14 + level * 3,
+      maxMp: 12 + level * 4,
+      atk: 3 + level,
+      def: 2 + level,
+      agi: 5 + level,
+    }),
+  },
 };
 
 export function memberName(memberId: string): string {

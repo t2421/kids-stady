@@ -51,6 +51,37 @@ export const CH2_WORLD: MapDef = {
       ],
     },
     {
+      id: "sabaku-sailor",
+      x: 5,
+      y: 9,
+      art: "villager",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c2.clear", op: "set" },
+          pages: ["みなとの長の めいれいで 砂の国ゆきの 船を よういしたぜ!"],
+          then: [
+            {
+              type: "choice",
+              prompt: "砂の国 ワケーラへ 船を だす?",
+              yes: [
+                { type: "message", pages: ["それじゃ しゅっぱーつ!"] },
+                { type: "transfer", mapId: "ch3-world", spawn: "from-ship" },
+              ],
+              no: [{ type: "message", pages: ["いつでも こえを かけてくれ。"] }],
+            },
+          ],
+        },
+        {
+          pages: [
+            "おれは みなみまわりの 船のりさ。",
+            "この 海の さきには 砂の国が あるんだ。",
+            "「すうしょう・弐」が もどったら 船を だせるんだけどなあ…",
+          ],
+        },
+      ],
+    },
+    {
       id: "tower-guard",
       x: 18,
       y: 9,

@@ -42,10 +42,13 @@ export const CH2_MINATOS: MapDef = {
           pages: [
             "おお! 「すうしょう・弐」を とりもどしたのか!",
             "これで しまの かずも 船の じこくひょうも もとどおりじゃ。",
-            "ありがとう ゆうしゃよ! つぎの すうしょうは 砂漠の くにに…",
-            "それは また こんどの おはなし。ゆっくり やすんでいきなされ。",
+            "ありがとう ゆうしゃよ! つぎの すうしょうは みなみの 砂の国に あるという。",
+            "西の 港に 船を よういした。船のりに こえを かけるのじゃ!",
           ],
-          then: [{ type: "setFlag", flag: "c2.clear" }],
+          then: [
+            { type: "setFlag", flag: "c2.clear" },
+            { type: "advanceChapter", chapter: 3 },
+          ],
         },
         {
           if: { flag: "c2.metTasuku", op: "set" },
