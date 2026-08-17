@@ -16,6 +16,7 @@ import { ENCOUNTER_TABLES } from "../src/content/encounters";
 import { SPELLS } from "../src/content/spells";
 import { SKILLS } from "../src/lib/curriculum";
 import { MEMBERS } from "../src/lib/battle/members";
+import { CHAPTERS } from "../src/content/chapters";
 
 const maps = listMaps();
 
@@ -153,6 +154,78 @@ describe("flag reachability", () => {
         settable.has(flag),
         `フラグ "${flag}" (${where}) は参照されるが どこでも set されない`,
       ).toBe(true);
+    }
+  });
+});
+
+/*
+ * 章のつながり: 第1章のスタート地点から transfer をたどって
+ * すべての章のマップに行けること。章をまたぐ導線 (船・ゼロのあな) が
+ * 切れていると、そこから先の章が まるごと到達不能になるため
+ * 「マップは登録済みだが 誰も行けない」事故をここで検出する。
+ */
+describe("chapter progression", () => {
+  it("every chapter map is reachable from chapter 1 by following transfers", () => {
+    const byId = new Map(maps.map((m) => [m.id, m]));
+    const seen = new Set<string>([CHAPTERS[0].startMap]);
+    const queue = [CHAPTERS[0].startMap];
+    while (queue.length > 0) {
+      const map = byId.get(queue.shift()!);
+      if (!map) continue;
+      for (const cmd of collectCommands(map)) {
+        if (cmd.type !== "transfer" || seen.has(cmd.mapId)) continue;
+        seen.add(cmd.mapId);
+        queue.push(cmd.mapId);
+      }
+    }
+    for (const chapter of CHAPTERS) {
+      for (const map of chapter.maps) {
+        expect(
+          seen.has(map.id),
+          `第${chapter.id}章の "${map.id}" へ行く transfer がどこにもない`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it("every chapter clear flag is settable somewhere", () => {
+    const settable = new Set<string>();
+    for (const map of maps) {
+      for (const cmd of collectCommands(map)) {
+        if (cmd.type === "setFlag") settable.add(cmd.flag);
+        if (cmd.type === "battle" && cmd.winFlag) settable.add(cmd.winFlag);
+      }
+      for (const ev of map.events) {
+        if (ev.onceFlag) settable.add(ev.onceFlag);
+      }
+    }
+    for (const chapter of CHAPTERS) {
+      expect(
+        settable.has(chapter.clearFlag),
+        `第${chapter.id}章の clearFlag "${chapter.clearFlag}" を立てる場所がない`,
+      ).toBe(true);
+    }
+  });
+
+  it("every chapter spell is learnable at some まなびや", () => {
+    const testable = new Set<string>();
+    for (const map of maps) {
+      for (const cmd of collectCommands(map)) {
+        if (cmd.type === "openSpellTest") testable.add(cmd.spellId);
+        if (cmd.type === "learnSpell") testable.add(cmd.spellId);
+      }
+    }
+    /* 加入時に最初から覚えている呪文はテスト不要 */
+    for (const member of Object.values(MEMBERS)) {
+      for (const id of member.initialSpells) testable.add(id);
+    }
+    for (const chapter of CHAPTERS) {
+      for (const spellId of chapter.spellIds) {
+        expect(
+          testable.has(spellId),
+          `第${chapter.id}章の呪文 "${spellId}" を覚える手段がない`,
+        ).toBe(true);
+      }
     }
   });
 });

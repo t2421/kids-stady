@@ -214,6 +214,12 @@ export const TILE_ART: Record<string, PixelArt> = {
   ...ANIM_TILES,
 };
 
+/* 第4章: ふみかためた 雪の道 (雪原と 見わけが つくように 青みがかった灰色) */
+TILE_ART.snowPath = {
+  palette: { p: "#b9c6d6", P: "#cfdae7", d: "#9daebf", l: "#e2ecf5" },
+  rows: TILE_ART.path.rows,
+};
+
 /*
  * 第5章の色ちがいタイル。石壁・床・水は形はそのままに 色だけを
  * 海底 (青緑) / 魔王城 (くろむらさき) / ようがん (赤) に差し替える。
@@ -223,11 +229,11 @@ TILE_ART.seaWall = {
   rows: TILE_ART.wall.rows,
 };
 TILE_ART.seaFloor = {
-  palette: { k: "#173c4a", d: "#245263", s: "#3a7f8f", S: "#5aa6b3", l: "#8fd0d8" },
+  palette: { k: "#2f7183", d: "#4a97a8", s: "#6fbcc4", S: "#96d6da", l: "#c4eef0" },
   rows: TILE_ART.sandFloor.rows,
 };
 TILE_ART.seaFloor2 = {
-  palette: { k: "#173c4a", d: "#245263", s: "#3a7f8f", S: "#5aa6b3", l: "#8fd0d8" },
+  palette: { k: "#2f7183", d: "#4a97a8", s: "#6fbcc4", S: "#96d6da", l: "#c4eef0" },
   rows: TILE_ART.sandFloor2.rows,
 };
 TILE_ART.darkWall = {
@@ -235,11 +241,11 @@ TILE_ART.darkWall = {
   rows: TILE_ART.wall.rows,
 };
 TILE_ART.darkFloor = {
-  palette: { k: "#0d0a14", d: "#241d38", s: "#3a2f52", S: "#4f4370", l: "#6b5c8a" },
+  palette: { k: "#2a2140", d: "#453a63", s: "#5c4f80", S: "#736496", l: "#9a8ab8" },
   rows: TILE_ART.sandFloor.rows,
 };
 TILE_ART.darkFloor2 = {
-  palette: { k: "#0d0a14", d: "#241d38", s: "#3a2f52", S: "#4f4370", l: "#6b5c8a" },
+  palette: { k: "#2a2140", d: "#453a63", s: "#5c4f80", S: "#736496", l: "#9a8ab8" },
   rows: TILE_ART.sandFloor2.rows,
 };
 TILE_ART.lava = {

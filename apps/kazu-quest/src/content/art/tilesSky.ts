@@ -36,14 +36,24 @@ export const SKY_TILES: Record<string, PixelArt> = {
       "bbbbbbbbbbbbbybb", "bdbbbbbbbbbbbbbb", "bbbbbbbwbbbbbbbb", "bbbbbbbbbbbbdbbb",
     ],
   },
-  /* サンゴ (海底神殿・通行不能) */
+  /*
+   * サンゴ (海底神殿・通行不能)。b は しんでんの床と おなじ色 —
+   * タイルは 不透明で描かれるため、背景を ぬっておかないと 黒く ぬけて見える。
+   */
   coral: {
-    palette: { k: "#3a1f3a", r: "#c4527f", R: "#e87ba3", y: "#f2c46b", w: "#ffd9e8" },
+    palette: {
+      k: "#3a1f3a",
+      r: "#c4527f",
+      R: "#e87ba3",
+      y: "#f2c46b",
+      w: "#ffd9e8",
+      b: "#96d6da",
+    },
     rows: [
-      "................", "......kk...kk...", ".....kRRk.kRRk..", "..kk.kRwRkkRwRk.",
-      ".kRRkkRRRRRRRRk.", "kRwRRkRRkkRRRk..", "kRRRRRRk.kRRk...", ".kRRkRRk..kRk...",
-      "..kRRRRk..kRk...", "..kRRRRkkkRRk...", "...kRRRRRRRRk...", "...kyRRRRRRyk...",
-      "....kyRRRRyk....", "....kkyRRykk....", ".....kkyykk.....", "......kkkk......",
+      "bbbbbbbbbbbbbbbb", "bbbbbbkkbbbkkbbb", "bbbbbkRRkbkRRkbb", "bbkkbkRwRkkRwRkb",
+      "bkRRkkRRRRRRRRkb", "kRwRRkRRkkRRRkbb", "kRRRRRRkbkRRkbbb", "bkRRkRRkbbkRkbbb",
+      "bbkRRRRkbbkRkbbb", "bbkRRRRkkkRRkbbb", "bbbkRRRRRRRRkbbb", "bbbkyRRRRRRykbbb",
+      "bbbbkyRRRRykbbbb", "bbbbkkyRRykkbbbb", "bbbbbkkyykkbbbbb", "bbbbbbkkkkbbbbbb",
     ],
   },
   /* ---- ワールドマップの拠点アイコン ---- */

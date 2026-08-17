@@ -5,12 +5,20 @@
 import type { PixelArt } from "./format";
 
 const SAND_PALETTE = { s: "#e0bd79", S: "#eed69f", d: "#c8a45f", l: "#f7e9c2" };
+/* 壁は くらく、床は あかるく (歩ける ところが ひと目で わかるように) */
+const STONE_WALL_PALETTE = {
+  k: "#3f2d18",
+  d: "#5c4426",
+  s: "#7a5c33",
+  S: "#8f6c3c",
+  l: "#a8834c",
+};
 const STONE_PALETTE = {
-  k: "#6d5230",
-  d: "#8f6f43",
-  s: "#b08a53",
-  S: "#c9a468",
-  l: "#e0bf88",
+  k: "#8a6a3f",
+  d: "#b08a53",
+  s: "#d2ae74",
+  S: "#e6c68c",
+  l: "#f7e2b0",
 };
 
 export const DESERT_TILES: Record<string, PixelArt> = {
@@ -158,7 +166,7 @@ export const DESERT_TILES: Record<string, PixelArt> = {
   /* ---- ピラミッド内部 ---- */
   /* 砂岩の壁 (ヒエログリフつき) */
   sandWall: {
-    palette: STONE_PALETTE,
+    palette: STONE_WALL_PALETTE,
     rows: [
       "kkkkkkkkkkkkkkkk", "kSSSSSSSkSSSSSSS", "kSlSSdSSkSSdSlSS", "kSSSSSSSkSSSSSSS",
       "kkkkkkkkkkkkkkkk", "SSSkSSSSSSSkSSSS", "SdSkSSlSSSSkSdSS", "SSSkSSSSSSSkSSSS",

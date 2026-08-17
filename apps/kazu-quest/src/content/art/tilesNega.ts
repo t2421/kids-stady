@@ -8,7 +8,8 @@ import type { PixelArt } from "./format";
 export const NEGA_TILES: Record<string, PixelArt> = {
   /* ゼロのあな — 大地に ひらいた うずまき (踏むと 下の世界へ) */
   locZeroHole: {
-    palette: { g: "#398447", k: "#0a0810", d: "#241c3d", p: "#5a4886", l: "#8fe0ff" },
+    /* g は まわりの ネガリアの大地と おなじ色 (うずだけが 浮かんで見える) */
+    palette: { g: "#3b2f52", k: "#0a0810", d: "#241c3d", p: "#5a4886", l: "#8fe0ff" },
     rows: [
       "gggggggggggggggg", "ggggkkkkkkkkgggg", "ggkkddddddddkkgg", "gkdddppppppdddkg",
       "kddppppppppppddk", "kdppppkkkkppppdk", "kdppkkddddkkppdk", "kdpkddplppddkpdk",

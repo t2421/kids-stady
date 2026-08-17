@@ -18,7 +18,7 @@ export const CH4_WORLD_LEGEND: MapDef["legend"] = {
   ...WORLD_LEGEND,
   ".": { art: "snow", variants: SNOW_VARIANTS, walkable: true, encounter: true },
   "*": { art: "snow2", walkable: true, encounter: true },
-  "=": { art: "snow2", walkable: true, encounter: true },
+  "=": { art: "snowPath", walkable: true, encounter: true },
   T: { art: "frozenTree", walkable: false },
   r: { art: "icePillar", walkable: false },
   C: { art: "locMeasureCity", walkable: true },
@@ -30,7 +30,7 @@ export const CH4_WORLD_LEGEND: MapDef["legend"] = {
 export const CH4_TOWN_LEGEND: MapDef["legend"] = {
   ...VILLAGE_LEGEND,
   ".": { art: "snow", variants: SNOW_VARIANTS, walkable: true },
-  "=": { art: "snow2", walkable: true },
+  "=": { art: "snowPath", walkable: true },
   T: { art: "frozenTree", walkable: false },
   r: { art: "icePillar", walkable: false },
 };
