@@ -12,39 +12,58 @@ const RUNS = 500;
 const implementedByGrade = (grade: number) =>
   SKILLS.filter((s) => s.implemented && s.grade === grade).map((s) => s.id);
 
-/* 全学年共通の整形チェック (答えの値域は学年別テストで確認する) */
-function expectWellFormed(skillId: string, maxAnswer: number) {
+/*
+ * 選択肢の値。小3以降は "3/4" (分数) や "1.5" (小数) が混ざるため、
+ * 文字列の重複だけでなく「値としての重複」も見る
+ * — 2/4 と 1/2 が並ぶと、正しい答えを選んでも不正解にされてしまう。
+ */
+function valueOf(choice: string): number {
+  const fraction = /^(-?\d+)\/(\d+)$/.exec(choice);
+  if (fraction) return Number(fraction[1]) / Number(fraction[2]);
+  return Number(choice);
+}
+
+/* 全学年共通の整形チェック */
+function expectWellFormed(skillId: string) {
   const rng = mulberry32(42);
   for (let i = 0; i < RUNS; i++) {
     const p = generate(skillId, rng);
     expect(p.skillId).toBe(skillId);
 
-    /* 3択: 重複なし・正解を含む */
+    /* 3択: 文字列としても値としても重複なし・正解を含む */
     expect(new Set(p.choices).size).toBe(3);
     expect(p.choices).toContain(p.answer);
+    const values = p.choices.map(valueOf);
+    for (const v of values) expect(Number.isFinite(v), `値にならない選択肢: ${p.choices}`).toBe(true);
+    expect(new Set(values).size, `同じ値の選択肢が並んだ: ${p.choices}`).toBe(3);
 
-    const n = Number(p.answer);
-    expect(Number.isInteger(n)).toBe(true);
-    expect(n).toBeGreaterThanOrEqual(0);
-    expect(n).toBeLessThanOrEqual(maxAnswer);
-
-    /* 選択肢も非負整数 */
-    for (const c of p.choices) {
-      const cn = Number(c);
-      expect(Number.isInteger(cn)).toBe(true);
-      expect(cn).toBeGreaterThanOrEqual(0);
-    }
+    /* 答えは 0 いじょう (マイナスは 小6までの範囲では 出さない) */
+    expect(valueOf(p.answer)).toBeGreaterThanOrEqual(0);
+    for (const v of values) expect(v).toBeGreaterThanOrEqual(0);
 
     expect(p.explain.length).toBeGreaterThan(0);
     expect(p.text.length).toBeGreaterThan(0);
   }
 }
 
+/* 小1・小2は答えが非負整数で、学年ごとの上限内におさまる */
+function expectIntegerAnswers(skillId: string, maxAnswer: number) {
+  const rng = mulberry32(43);
+  for (let i = 0; i < RUNS; i++) {
+    const p = generate(skillId, rng);
+    const n = Number(p.answer);
+    expect(Number.isInteger(n)).toBe(true);
+    expect(n).toBeLessThanOrEqual(maxAnswer);
+    for (const c of p.choices) expect(Number.isInteger(Number(c))).toBe(true);
+  }
+}
+
 describe("curriculum property tests (grade 1)", () => {
   for (const skillId of implementedByGrade(1)) {
     it(`${skillId}: ${RUNS} problems are well-formed`, () => {
+      expectWellFormed(skillId);
       /* 小1: 答えは 0〜20 */
-      expectWellFormed(skillId, 20);
+      expectIntegerAnswers(skillId, 20);
     });
   }
 
@@ -107,8 +126,9 @@ describe("curriculum property tests (grade 1)", () => {
 describe("curriculum property tests (grade 2)", () => {
   for (const skillId of implementedByGrade(2)) {
     it(`${skillId}: ${RUNS} problems are well-formed`, () => {
+      expectWellFormed(skillId);
       /* 小2: 九九≤81・2桁ひっ算≤178・換算≤180 の範囲内 */
-      expectWellFormed(skillId, 200);
+      expectIntegerAnswers(skillId, 200);
     });
   }
 
@@ -164,11 +184,121 @@ describe("curriculum property tests (grade 2)", () => {
   });
 });
 
+describe.each([3, 4, 5, 6])("curriculum property tests (grade %i)", (grade) => {
+  for (const skillId of implementedByGrade(grade)) {
+    it(`${skillId}: ${RUNS} problems are well-formed`, () => {
+      expectWellFormed(skillId);
+    });
+  }
+
+  it(`grade ${grade} has 8 units`, () => {
+    expect(implementedByGrade(grade).length).toBe(8);
+  });
+});
+
+describe("grade 3 invariants", () => {
+  it("g3_div: divides exactly", () => {
+    const rng = mulberry32(3);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g3_div", rng);
+      expect(p.a! / p.b!).toBe(Number(p.answer));
+    }
+  });
+
+  it("g3_div_remainder: remainder is below the divisor and non-zero", () => {
+    const rng = mulberry32(3);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g3_div_remainder", rng);
+      expect(Number(p.answer)).toBe(p.a! % p.b!);
+      expect(Number(p.answer)).toBeGreaterThan(0);
+      expect(Number(p.answer)).toBeLessThan(p.b!);
+    }
+  });
+
+  it("g3_fraction / g3_decimal: answers are proper fraction or one-decimal strings", () => {
+    const rng = mulberry32(3);
+    for (let i = 0; i < RUNS; i++) {
+      expect(generate("g3_fraction", rng).answer).toMatch(/^\d+(\/\d+)?$/);
+      expect(generate("g3_decimal", rng).answer).toMatch(/^\d+(\.\d)?$/);
+    }
+  });
+});
+
+describe("grade 4 invariants", () => {
+  it("g4_round: rounds to the stated place", () => {
+    const rng = mulberry32(4);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g4_round", rng);
+      expect(Number(p.answer) % p.b!).toBe(0);
+      expect(Math.abs(Number(p.answer) - p.a!)).toBeLessThanOrEqual(p.b! / 2);
+    }
+  });
+
+  it("g4_angle: angles stay inside a full turn", () => {
+    const rng = mulberry32(4);
+    for (let i = 0; i < RUNS; i++) {
+      const n = Number(generate("g4_angle", rng).answer);
+      expect(n).toBeGreaterThan(0);
+      expect(n).toBeLessThan(360);
+    }
+  });
+});
+
+describe("grade 5 invariants", () => {
+  it("g5_multiple: lcm/gcd answers divide or are divided by both operands", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g5_multiple", rng);
+      const n = Number(p.answer);
+      const isLcm = n % p.a! === 0 && n % p.b! === 0;
+      const isGcd = p.a! % n === 0 && p.b! % n === 0;
+      expect(isLcm || isGcd).toBe(true);
+    }
+  });
+
+  it("g5_average: the average is a whole number of the listed values", () => {
+    const rng = mulberry32(5);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g5_average", rng);
+      const values = p.text.split("\n")[0].split(" の ")[0].split(" , ").map(Number);
+      const sum = values.reduce((s, v) => s + v, 0);
+      expect(sum / values.length).toBe(Number(p.answer));
+      for (const v of values) expect(v).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("grade 6 invariants", () => {
+  it("g6_speed: distance = speed × time in every phrasing", () => {
+    const rng = mulberry32(6);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g6_speed", rng);
+      expect(Number(p.answer)).toBeGreaterThan(0);
+    }
+  });
+
+  it("g6_circle_area: uses 3.14 and two decimals at most", () => {
+    const rng = mulberry32(6);
+    for (let i = 0; i < RUNS; i++) {
+      const p = generate("g6_circle_area", rng);
+      expect(p.answer).toMatch(/^\d+(\.\d{1,2})?$/);
+      expect(p.text).toContain("3.14");
+    }
+  });
+});
+
 describe("skill registry", () => {
-  it("future skills are registered but not implemented", () => {
-    expect(isImplemented("g3_div")).toBe(false);
-    expect(() => generate("g3_div")).toThrow();
-    expect(SKILLS.some((s) => s.id === "g6_speed")).toBe(true);
+  it("every grade from 1 to 6 is implemented", () => {
+    for (let grade = 1; grade <= 6; grade++) {
+      expect(implementedByGrade(grade).length).toBeGreaterThan(0);
+    }
+    expect(isImplemented("g3_div")).toBe(true);
+    expect(SKILLS.every((s) => s.implemented && s.label)).toBe(true);
+  });
+
+  it("unknown skills still throw", () => {
+    expect(isImplemented("g9_nonsense")).toBe(false);
+    expect(() => generate("g9_nonsense")).toThrow();
   });
 });
 
@@ -176,7 +306,7 @@ describe("pickSkill", () => {
   it("only returns implemented skills", () => {
     const rng = mulberry32(1);
     for (let i = 0; i < 100; i++) {
-      const id = pickSkill(["g1_add_nc", "g3_div"], {}, rng);
+      const id = pickSkill(["g1_add_nc", "g9_nonsense"], {}, rng);
       expect(id).toBe("g1_add_nc");
     }
   });
@@ -199,6 +329,6 @@ describe("pickSkill", () => {
   });
 
   it("throws when nothing is implemented", () => {
-    expect(() => pickSkill(["g3_div"], {})).toThrow();
+    expect(() => pickSkill(["g9_nonsense"], {})).toThrow();
   });
 });

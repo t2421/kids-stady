@@ -4,8 +4,56 @@
  * 空のグラデーション + 遠景シルエット + 地面を描き分ける。
  * ダメージポップアップとヒットバーストもここに集約する。
  */
+import type Phaser from "phaser";
 import type { Scene } from "phaser";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
+import { EFFECT_ART } from "../../content/art/effects";
+import { effectTextureKey } from "../textures";
+
+/* ---------- スプライトアニメ再生 ---------- */
+
+interface EffectAnimOpts {
+  scale?: number;
+  frameMs?: number;
+  tint?: number;
+  angle?: number;
+  flipX?: boolean;
+  depth?: number;
+  onDone?: () => void;
+}
+
+/*
+ * "fx-<name>-<i>" の連番テクスチャを順に表示して消える。
+ * 返した Image を呼び出し側が tween で動かしてもよい (移動しながら再生)。
+ */
+export function playEffectAnim(
+  scene: Scene,
+  name: keyof typeof EFFECT_ART,
+  x: number,
+  y: number,
+  opts: EffectAnimOpts = {},
+): Phaser.GameObjects.Image {
+  const frames = EFFECT_ART[name].length;
+  const img = scene.add
+    .image(x, y, effectTextureKey(name, 0))
+    .setDepth(opts.depth ?? 29)
+    .setScale(opts.scale ?? 6);
+  if (opts.tint !== undefined) img.setTint(opts.tint);
+  if (opts.angle !== undefined) img.setAngle(opts.angle);
+  if (opts.flipX) img.setFlipX(true);
+  const step = (i: number) => {
+    if (!img.active) return;
+    if (i >= frames) {
+      img.destroy();
+      opts.onDone?.();
+      return;
+    }
+    img.setTexture(effectTextureKey(name, i));
+    scene.time.delayedCall(opts.frameMs ?? 90, () => step(i + 1));
+  };
+  step(0);
+  return img;
+}
 
 interface StagePalette {
   sky: number[];
@@ -183,23 +231,12 @@ export function spawnDamagePopup(
   });
 }
 
-/* ヒットの白いバースト (リング + 火花) */
+/* 物理ヒットの白いスターバースト (スプライトアニメ + 火花) */
 export function spawnImpactBurst(scene: Scene, x: number, y: number): void {
-  const ring = scene.add
-    .circle(x, y, 12)
-    .setStrokeStyle(6, 0xffffff, 0.95)
-    .setDepth(29);
-  scene.tweens.add({
-    targets: ring,
-    scale: 4,
-    alpha: 0,
-    duration: 280,
-    ease: "Cubic.easeOut",
-    onComplete: () => ring.destroy(),
-  });
+  playEffectAnim(scene, "hit", x, y, { scale: 7, frameMs: 80 });
   for (let i = 0; i < 6; i++) {
     const angle = (Math.PI * 2 * i) / 6 + 0.4;
-    const spark = scene.add.rectangle(x, y, 10, 4, 0xffe9a0, 1).setDepth(29);
+    const spark = scene.add.rectangle(x, y, 10, 4, 0xffe9a0, 1).setDepth(28);
     spark.setRotation(angle);
     scene.tweens.add({
       targets: spark,
@@ -219,90 +256,59 @@ interface SpellFxDef {
   style: "orb" | "slash" | "multi" | "bigburst";
   color: number;
   light: number;
-  /* orb の弾の大きさ (上位呪文は大きく) */
-  size?: number;
+  /* 着弾演出: tint した hit スター or 炎の爆発 */
+  impact: "hit" | "explosion";
+  /* orb スプライトの拡大率 (上位呪文は大きく) */
+  orbScale?: number;
 }
 
 /* 呪文ごとの見た目。未登録の攻撃呪文は水色のオーブになる */
 const SPELL_FX: Record<string, SpellFxDef> = {
-  hikidama: { style: "orb", color: 0x7b5cff, light: 0xc9b8ff, size: 14 },
-  hikidaman: { style: "orb", color: 0x5c3cff, light: 0xb39fff, size: 20 },
-  kukudama: { style: "orb", color: 0xff7b2e, light: 0xffd9a0, size: 16 },
-  kazoeSlash: { style: "slash", color: 0x4de3ff, light: 0xd2f6ff },
-  dandanZuki: { style: "multi", color: 0xffd94d, light: 0xfff3c0 },
-  hissanBreak: { style: "bigburst", color: 0xff5c3c, light: 0xffd2a8 },
+  hikidama: { style: "orb", color: 0x9b7bff, light: 0xd9ccff, impact: "hit", orbScale: 5 },
+  hikidaman: { style: "orb", color: 0x7b54ff, light: 0xc4b2ff, impact: "hit", orbScale: 7 },
+  kukudama: { style: "orb", color: 0xffa04d, light: 0xffe2b8, impact: "explosion", orbScale: 6 },
+  kazoeSlash: { style: "slash", color: 0x4de3ff, light: 0xd2f6ff, impact: "hit" },
+  dandanZuki: { style: "multi", color: 0xffd94d, light: 0xfff3c0, impact: "hit" },
+  hissanBreak: { style: "bigburst", color: 0xff5c3c, light: 0xffd2a8, impact: "explosion" },
 };
 
 const DEFAULT_SPELL_FX: SpellFxDef = {
   style: "orb",
   color: 0x59c9f2,
   light: 0xd2f0fc,
-  size: 14,
+  impact: "hit",
+  orbScale: 5,
 };
 
-/* 色つきの爆発 (リング + 火花) */
-function coloredBurst(
+/* 着弾: hit スター (tint) or 炎の爆発アニメ + 色つき火花 */
+function impactAnim(
   scene: Scene,
   x: number,
   y: number,
-  color: number,
-  light: number,
-  scale = 1,
+  fx: SpellFxDef,
+  scale = 7,
 ): void {
-  const ring = scene.add
-    .circle(x, y, 14 * scale)
-    .setStrokeStyle(7 * scale, light, 0.95)
-    .setDepth(29);
-  scene.tweens.add({
-    targets: ring,
-    scale: 3.6,
-    alpha: 0,
-    duration: 320,
-    ease: "Cubic.easeOut",
-    onComplete: () => ring.destroy(),
-  });
-  const count = Math.round(8 * scale);
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 * i) / count + 0.2;
+  if (fx.impact === "explosion") {
+    playEffectAnim(scene, "explosion", x, y, { scale, frameMs: 80 });
+  } else {
+    playEffectAnim(scene, "hit", x, y, { scale, frameMs: 80, tint: fx.color });
+  }
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI * 2 * i) / 6 + 0.3;
     const spark = scene.add
-      .rectangle(x, y, 12 * scale, 5 * scale, i % 2 === 0 ? color : light, 1)
-      .setDepth(29)
+      .rectangle(x, y, 12, 5, i % 2 === 0 ? fx.color : fx.light, 1)
+      .setDepth(28)
       .setRotation(angle);
     scene.tweens.add({
       targets: spark,
-      x: x + Math.cos(angle) * 80 * scale,
-      y: y + Math.sin(angle) * 80 * scale,
+      x: x + Math.cos(angle) * 78,
+      y: y + Math.sin(angle) * 78,
       alpha: 0,
-      duration: 340,
+      duration: 320,
       ease: "Cubic.easeOut",
       onComplete: () => spark.destroy(),
     });
   }
-}
-
-/* 斜めの斬撃バー (色つき)。delay 後にシュッと伸びて消える */
-function slashBar(
-  scene: Scene,
-  x: number,
-  y: number,
-  color: number,
-  angleDeg: number,
-  delay: number,
-): void {
-  const bar = scene.add
-    .rectangle(x, y, 10, 14, color, 0.95)
-    .setDepth(29)
-    .setAngle(angleDeg)
-    .setAlpha(0);
-  scene.tweens.add({
-    targets: bar,
-    alpha: { from: 0.95, to: 0 },
-    scaleX: { from: 0.2, to: 16 },
-    duration: 240,
-    delay,
-    ease: "Cubic.easeOut",
-    onComplete: () => bar.destroy(),
-  });
 }
 
 /*
@@ -319,10 +325,22 @@ export function playSpellAttackFx(
   const fx = SPELL_FX[spellId] ?? DEFAULT_SPELL_FX;
 
   if (fx.style === "slash") {
-    slashBar(scene, targetX, targetY, fx.light, -38, 0);
-    slashBar(scene, targetX, targetY, fx.color, 32, 110);
-    scene.time.delayedCall(180, () => {
-      coloredBurst(scene, targetX, targetY, fx.color, fx.light, 0.9);
+    /* 三日月斬撃 2連 (2撃目は反転) → 着弾 */
+    playEffectAnim(scene, "slash", targetX, targetY, {
+      scale: 9,
+      frameMs: 70,
+      tint: fx.color,
+    });
+    scene.time.delayedCall(140, () => {
+      playEffectAnim(scene, "slash", targetX, targetY, {
+        scale: 9,
+        frameMs: 70,
+        tint: fx.light,
+        flipX: true,
+      });
+    });
+    scene.time.delayedCall(320, () => {
+      impactAnim(scene, targetX, targetY, fx, 6);
       onImpact();
     });
     return;
@@ -330,50 +348,59 @@ export function playSpellAttackFx(
 
   if (fx.style === "multi") {
     for (let i = 0; i < 3; i++) {
-      scene.time.delayedCall(i * 140, () => {
-        coloredBurst(
+      scene.time.delayedCall(i * 150, () => {
+        playEffectAnim(
           scene,
-          targetX + (i - 1) * 26,
-          targetY + (i % 2 === 0 ? 12 : -14),
-          fx.color,
-          fx.light,
-          0.7,
+          "hit",
+          targetX + (i - 1) * 28,
+          targetY + (i % 2 === 0 ? 14 : -16),
+          { scale: 5, frameMs: 70, tint: fx.color },
         );
       });
     }
-    scene.time.delayedCall(3 * 140, onImpact);
+    scene.time.delayedCall(3 * 150, onImpact);
     return;
   }
 
   if (fx.style === "bigburst") {
     scene.cameras.main.flash(220, 255, 190, 140);
     scene.cameras.main.shake(260, 0.012);
-    coloredBurst(scene, targetX, targetY, fx.color, fx.light, 2.1);
-    scene.time.delayedCall(240, onImpact);
+    playEffectAnim(scene, "explosion", targetX, targetY, { scale: 13, frameMs: 95 });
+    scene.time.delayedCall(280, onImpact);
     return;
   }
 
-  /* orb: 手前から山なりに飛んでいく魔法弾 + 尾を引く残光 */
+  /* orb: 回転しながら山なりに飛ぶ魔法弾 + 尾を引く残光 */
   const startX = GAME_WIDTH / 2;
   const startY = GAME_HEIGHT - 170;
-  const size = fx.size ?? 14;
-  const glow = scene.add.circle(startX, startY, size * 1.6, fx.color, 0.35).setDepth(28);
-  const core = scene.add.circle(startX, startY, size, fx.light, 1).setDepth(29);
+  const orbScale = fx.orbScale ?? 5;
+  const glow = scene.add
+    .circle(startX, startY, orbScale * 3.4, fx.color, 0.3)
+    .setDepth(27);
+  const orb = playEffectAnimLoop(scene, "orb", startX, startY, {
+    scale: orbScale,
+    frameMs: 90,
+    tint: fx.color,
+    depth: 29,
+  });
   let trailTick = 0;
   scene.tweens.addCounter({
     from: 0,
     to: 1,
-    duration: 430,
+    duration: 450,
     ease: "Sine.easeIn",
     onUpdate: (tween) => {
       const t = tween.getValue() ?? 0;
       const x = startX + (targetX - startX) * t;
       const y = startY + (targetY - startY) * t - Math.sin(Math.PI * t) * 130;
-      core.setPosition(x, y);
+      orb.setPosition(x, y);
+      orb.setAngle(t * 540);
       glow.setPosition(x, y);
       trailTick += 1;
       if (trailTick % 3 === 0) {
-        const dot = scene.add.circle(x, y, size * 0.55, fx.color, 0.5).setDepth(27);
+        const dot = scene.add
+          .circle(x, y, orbScale * 1.6, fx.color, 0.45)
+          .setDepth(26);
         scene.tweens.add({
           targets: dot,
           alpha: 0,
@@ -384,43 +411,51 @@ export function playSpellAttackFx(
       }
     },
     onComplete: () => {
-      core.destroy();
+      orb.destroy();
       glow.destroy();
-      coloredBurst(scene, targetX, targetY, fx.color, fx.light, 1.15);
+      impactAnim(scene, targetX, targetY, fx, 8);
       onImpact();
     },
   });
 }
 
-/* 物理攻撃: 白い十字の斬撃 */
+/* orb 用: フレームをループ再生し続ける (破棄は呼び出し側) */
+function playEffectAnimLoop(
+  scene: Scene,
+  name: keyof typeof EFFECT_ART,
+  x: number,
+  y: number,
+  opts: EffectAnimOpts,
+): Phaser.GameObjects.Image {
+  const frames = EFFECT_ART[name].length;
+  const img = scene.add
+    .image(x, y, effectTextureKey(name, 0))
+    .setDepth(opts.depth ?? 29)
+    .setScale(opts.scale ?? 6);
+  if (opts.tint !== undefined) img.setTint(opts.tint);
+  const step = (i: number) => {
+    if (!img.active) return;
+    img.setTexture(effectTextureKey(name, i % frames));
+    scene.time.delayedCall(opts.frameMs ?? 90, () => step(i + 1));
+  };
+  step(0);
+  return img;
+}
+
+/* 物理攻撃: 白い三日月斬撃 */
 export function playSlashFx(scene: Scene, x: number, y: number): void {
-  slashBar(scene, x, y, 0xffffff, -35, 0);
-  slashBar(scene, x, y, 0xd8e8ff, 40, 90);
+  playEffectAnim(scene, "slash", x, y, { scale: 9, frameMs: 60 });
 }
 
 /* 敵の攻撃: 画面手前 (プレイヤー側) に赤いツメあと */
 export function playEnemyAttackFx(scene: Scene): void {
-  const cx = GAME_WIDTH / 2;
-  const cy = GAME_HEIGHT - 190;
-  for (let i = 0; i < 3; i++) {
-    const bar = scene.add
-      .rectangle(cx - 60 + i * 60, cy - 40, 14, 10, 0xff4d4d, 0.9)
-      .setDepth(29)
-      .setAngle(62)
-      .setAlpha(0);
-    scene.tweens.add({
-      targets: bar,
-      alpha: { from: 0.9, to: 0 },
-      scaleY: { from: 0.3, to: 13 },
-      duration: 300,
-      delay: i * 70,
-      ease: "Cubic.easeOut",
-      onComplete: () => bar.destroy(),
-    });
-  }
+  playEffectAnim(scene, "claw", GAME_WIDTH / 2, GAME_HEIGHT - 210, {
+    scale: 10,
+    frameMs: 110,
+  });
 }
 
-/* 回復: みどりの光の粒が舞い上がる + やわらかい輪 */
+/* 回復: みどりのきらめきが舞い上がる + やわらかい輪 */
 export function playHealFx(scene: Scene): void {
   const cx = GAME_WIDTH / 2;
   const cy = GAME_HEIGHT - 180;
@@ -436,70 +471,61 @@ export function playHealFx(scene: Scene): void {
     ease: "Sine.easeOut",
     onComplete: () => ring.destroy(),
   });
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 6; i++) {
     const x = cx - 130 + hashNoise(i + 300) * 260;
     const y = cy + 10 + hashNoise(i + 330) * 30;
-    const star = scene.add.star(x, y, 4, 3, 7, 0x8cf5a2, 1).setDepth(29).setAlpha(0);
-    scene.tweens.add({
-      targets: star,
-      y: y - 70 - hashNoise(i) * 40,
-      alpha: { from: 1, to: 0 },
-      duration: 650 + hashNoise(i + 360) * 300,
-      delay: i * 45,
-      ease: "Sine.easeOut",
-      onComplete: () => star.destroy(),
+    scene.time.delayedCall(i * 90, () => {
+      const spark = playEffectAnim(scene, "sparkle", x, y, {
+        scale: 4 + Math.round(hashNoise(i) * 2),
+        frameMs: 140,
+        tint: 0x8cf5a2,
+      });
+      scene.tweens.add({
+        targets: spark,
+        y: y - 60 - hashNoise(i) * 40,
+        duration: 420,
+        ease: "Sine.easeOut",
+      });
     });
   }
 }
 
-/* 守りの呪文: 青いシールドの輪がひろがる */
+/* 守りの呪文: たてのスプライト + 青い輪がひろがる */
 export function playBuffFx(scene: Scene): void {
   const cx = GAME_WIDTH / 2;
-  const cy = GAME_HEIGHT - 185;
-  for (let i = 0; i < 2; i++) {
-    const ring = scene.add
-      .circle(cx, cy, 36)
-      .setStrokeStyle(7 - i * 2, 0x6fb8ff, 0.85)
-      .setDepth(28);
-    scene.tweens.add({
-      targets: ring,
-      scale: 2.2 + i * 0.9,
-      alpha: 0,
-      duration: 520,
-      delay: i * 130,
-      ease: "Sine.easeOut",
-      onComplete: () => ring.destroy(),
-    });
-  }
-  const dome = scene.add.circle(cx, cy, 58, 0x6fb8ff, 0.22).setDepth(27);
+  const cy = GAME_HEIGHT - 195;
+  playEffectAnim(scene, "shield", cx, cy, { scale: 8, frameMs: 160 });
+  const ring = scene.add
+    .circle(cx, cy, 36)
+    .setStrokeStyle(6, 0x6fb8ff, 0.8)
+    .setDepth(28);
   scene.tweens.add({
-    targets: dome,
-    scale: 1.5,
+    targets: ring,
+    scale: 2.4,
     alpha: 0,
-    duration: 620,
+    duration: 540,
     ease: "Sine.easeOut",
-    onComplete: () => dome.destroy(),
+    onComplete: () => ring.destroy(),
   });
 }
 
-/* 勝利のきらめき (金の粒が舞い上がる) */
+/* 勝利のきらめき (金のスパークルが舞い上がる) */
 export function spawnVictorySparkles(scene: Scene): void {
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 12; i++) {
     const x = GAME_WIDTH * 0.25 + hashNoise(i + 200) * GAME_WIDTH * 0.5;
     const y = GAME_HEIGHT * 0.45 + hashNoise(i + 230) * 60;
-    const spark = scene.add
-      .star(x, y, 4, 3, 8, 0xffe066, 1)
-      .setDepth(28)
-      .setAlpha(0);
-    scene.tweens.add({
-      targets: spark,
-      y: y - 90 - hashNoise(i) * 60,
-      alpha: { from: 1, to: 0 },
-      angle: 180,
-      duration: 900 + hashNoise(i + 260) * 500,
-      delay: i * 60,
-      ease: "Sine.easeOut",
-      onComplete: () => spark.destroy(),
+    scene.time.delayedCall(i * 70, () => {
+      const spark = playEffectAnim(scene, "sparkle", x, y, {
+        scale: 4 + Math.round(hashNoise(i) * 3),
+        frameMs: 170,
+        tint: 0xffe066,
+      });
+      scene.tweens.add({
+        targets: spark,
+        y: y - 80 - hashNoise(i) * 50,
+        duration: 500,
+        ease: "Sine.easeOut",
+      });
     });
   }
 }

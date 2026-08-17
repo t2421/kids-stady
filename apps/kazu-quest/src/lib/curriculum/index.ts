@@ -1,48 +1,45 @@
 /*
  * カリキュラムの入口。generate(skillId, rng) で問題を1問作る。
- * 小2〜小6のスキルはラベルのみ登録 (章の実装時にジェネレータを追加する)。
+ * 小1〜小6の全学年を実装済み (章1〜6に対応)。
  */
 
 import type { Problem, Rng, SkillInfo } from "./types";
 import { mulberry32 } from "./types";
 import { GRADE1_GENERATORS, GRADE1_LABELS } from "./grade1";
 import { GRADE2_GENERATORS, GRADE2_LABELS } from "./grade2";
+import { GRADE3_GENERATORS, GRADE3_LABELS } from "./grade3";
+import { GRADE4_GENERATORS, GRADE4_LABELS } from "./grade4";
+import { GRADE5_GENERATORS, GRADE5_LABELS } from "./grade5";
+import { GRADE6_GENERATORS, GRADE6_LABELS } from "./grade6";
 import type { SkillStat } from "../save";
 
-const FUTURE_SKILLS: SkillInfo[] = [
-  { id: "g3_div", grade: 3, label: "わり算", implemented: false },
-  { id: "g3_div_remainder", grade: 3, label: "あまりのある わり算", implemented: false },
-  { id: "g3_mul_column", grade: 3, label: "かけ算の ひっ算", implemented: false },
-  { id: "g4_decimal", grade: 4, label: "小数の 計算", implemented: false },
-  { id: "g4_fraction_same", grade: 4, label: "同分母の 分数", implemented: false },
-  { id: "g4_angle", grade: 4, label: "角度", implemented: false },
-  { id: "g5_percent", grade: 5, label: "割合と 百分率", implemented: false },
-  { id: "g5_fraction_diff", grade: 5, label: "異分母の 分数", implemented: false },
-  { id: "g6_fraction_muldiv", grade: 6, label: "分数の かけ算わり算", implemented: false },
-  { id: "g6_speed", grade: 6, label: "速さ", implemented: false },
-  { id: "g6_ratio", grade: 6, label: "比", implemented: false },
+/* 学年ごとの (ジェネレータ, ラベル) 束。学年を足すときはここに1行 */
+const BY_GRADE: {
+  grade: number;
+  generators: Record<string, (rng: Rng) => Problem>;
+  labels: Record<string, string>;
+}[] = [
+  { grade: 1, generators: GRADE1_GENERATORS, labels: GRADE1_LABELS },
+  { grade: 2, generators: GRADE2_GENERATORS, labels: GRADE2_LABELS },
+  { grade: 3, generators: GRADE3_GENERATORS, labels: GRADE3_LABELS },
+  { grade: 4, generators: GRADE4_GENERATORS, labels: GRADE4_LABELS },
+  { grade: 5, generators: GRADE5_GENERATORS, labels: GRADE5_LABELS },
+  { grade: 6, generators: GRADE6_GENERATORS, labels: GRADE6_LABELS },
 ];
 
-export const SKILLS: SkillInfo[] = [
-  ...Object.keys(GRADE2_GENERATORS).map((id) => ({
+export const SKILLS: SkillInfo[] = BY_GRADE.flatMap(({ grade, generators, labels }) =>
+  Object.keys(generators).map((id) => ({
     id,
-    grade: 2,
-    label: GRADE2_LABELS[id],
+    grade,
+    label: labels[id],
     implemented: true,
   })),
-  ...Object.keys(GRADE1_GENERATORS).map((id) => ({
-    id,
-    grade: 1,
-    label: GRADE1_LABELS[id],
-    implemented: true,
-  })),
-  ...FUTURE_SKILLS,
-];
+);
 
-const GENERATORS: Record<string, (rng: Rng) => Problem> = {
-  ...GRADE1_GENERATORS,
-  ...GRADE2_GENERATORS,
-};
+const GENERATORS: Record<string, (rng: Rng) => Problem> = Object.assign(
+  {},
+  ...BY_GRADE.map((g) => g.generators),
+);
 
 export function isImplemented(skillId: string): boolean {
   return skillId in GENERATORS;

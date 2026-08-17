@@ -9,6 +9,7 @@ import { artSize } from "../content/art/format";
 import { TILE_ART } from "../content/art/tiles";
 import { ACTOR_ART } from "../content/art/actors";
 import { MONSTER_ART } from "../content/art/monsters";
+import { EFFECT_ART } from "../content/art/effects";
 
 function generatePixelArt(scene: Scene, key: string, art: PixelArt): void {
   if (scene.textures.exists(key)) return;
@@ -40,6 +41,11 @@ export function monsterTextureKey(artName: string): string {
   return "monster-" + artName;
 }
 
+/* エフェクトは連番フレーム: fx-<名前>-<番号> */
+export function effectTextureKey(name: string, frame: number): string {
+  return `fx-${name}-${frame}`;
+}
+
 export function generateAllTextures(scene: Scene): void {
   for (const [name, art] of Object.entries(TILE_ART)) {
     generatePixelArt(scene, tileTextureKey(name), art);
@@ -49,5 +55,10 @@ export function generateAllTextures(scene: Scene): void {
   }
   for (const [name, art] of Object.entries(MONSTER_ART)) {
     generatePixelArt(scene, monsterTextureKey(name), art);
+  }
+  for (const [name, frames] of Object.entries(EFFECT_ART)) {
+    frames.forEach((art, i) => {
+      generatePixelArt(scene, effectTextureKey(name, i), art);
+    });
   }
 }

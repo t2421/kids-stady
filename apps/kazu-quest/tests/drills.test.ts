@@ -11,8 +11,8 @@ import {
 import { isImplemented } from "../src/lib/curriculum";
 
 describe("questsForGrade", () => {
-  it("grade 1 and 2 each expose all implemented skills as quests", () => {
-    for (const grade of [1, 2]) {
+  it("every grade exposes all implemented skills as quests", () => {
+    for (const grade of [1, 2, 3, 4, 5, 6]) {
       const quests = questsForGrade(grade);
       expect(quests.length).toBeGreaterThanOrEqual(6);
       for (const q of quests) {
@@ -26,15 +26,15 @@ describe("questsForGrade", () => {
   });
 
   it("quests are sorted easiest first", () => {
-    for (const grade of [1, 2]) {
+    for (const grade of [1, 2, 3, 4, 5, 6]) {
       const stars = questsForGrade(grade).map((q) => q.stars);
       expect([...stars].sort((a, b) => a - b)).toEqual(stars);
     }
   });
 
-  it("unimplemented grades have no quests", () => {
-    expect(questsForGrade(3)).toEqual([]);
-    expect(questsForGrade(6)).toEqual([]);
+  it("grades outside 1..6 have no quests", () => {
+    expect(questsForGrade(0)).toEqual([]);
+    expect(questsForGrade(7)).toEqual([]);
   });
 });
 
@@ -50,7 +50,7 @@ describe("goldPerCorrect", () => {
   });
 
   it("every quest carries its own per-correct rate and perfect bonus", () => {
-    for (const q of [...questsForGrade(1), ...questsForGrade(2)]) {
+    for (const q of [1, 2, 3, 4, 5, 6].flatMap((g) => questsForGrade(g))) {
       expect(q.goldPerCorrect).toBe(goldPerCorrect(q.grade, q.stars));
       expect(q.perfectBonus).toBe(q.goldPerCorrect * 5);
     }
@@ -80,8 +80,11 @@ describe("getDrillQuest", () => {
     expect(q?.stars).toBe(2);
   });
 
-  it("returns undefined for unknown or unimplemented skills", () => {
+  it("finds quests in the upper grades too", () => {
+    expect(getDrillQuest("g6_speed")?.grade).toBe(6);
+  });
+
+  it("returns undefined for unknown skills", () => {
     expect(getDrillQuest("nope")).toBeUndefined();
-    expect(getDrillQuest("g3_div")).toBeUndefined();
   });
 });
