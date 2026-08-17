@@ -39,6 +39,33 @@ export const CH4_WORLD: MapDef = {
       movement: "static",
       dialog: [
         {
+          if: { flag: "c4.clear", op: "set" },
+          pages: [
+            "けいそく長から あたらしい 船を あずかっているよ。",
+            "みなみの 割合の都 パーセンへ わたるかい?",
+          ],
+          then: [
+            {
+              type: "choice",
+              prompt: "割合の都 パーセンへ 船を だす?",
+              yes: [
+                { type: "message", pages: ["それじゃ しゅっぱーつ!"] },
+                { type: "transfer", mapId: "ch5-world", spawn: "from-ship" },
+              ],
+              no: [
+                {
+                  type: "choice",
+                  prompt: "砂の国 ワケーラへ もどる?",
+                  yes: [
+                    { type: "transfer", mapId: "ch3-world", spawn: "from-ship" },
+                  ],
+                  no: [{ type: "message", pages: ["いつでも こえを かけてくれ。"] }],
+                },
+              ],
+            },
+          ],
+        },
+        {
           pages: [
             "ここは メジャーリア せつげんの にしの みなと。",
             "さばくの くにへ もどるかい?",

@@ -158,6 +158,52 @@ ENCOUNTER_TABLES["ch4-angle-ruins"] = {
   ],
 };
 
+/* ---------- 第5章 ---------- */
+
+ENCOUNTER_TABLES["ch5-field"] = {
+  id: "ch5-field",
+  stepRange: [12, 24],
+  groups: [
+    { monsterIds: ["hasuuKeshigomun"], weight: 3 },
+    { monsterIds: ["hasuuKeshigomun", "waribikiGhost"], weight: 2 },
+    { monsterIds: ["waribikiGhost"], weight: 3 },
+    { monsterIds: ["tsuubunSnake"], weight: 2 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch5-sky"] = {
+  id: "ch5-sky",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["waribikiGhost", "waribikiGhost"], weight: 2 },
+    { monsterIds: ["tsuubunSnake"], weight: 3 },
+    { monsterIds: ["taisekiCube"], weight: 2 },
+    { monsterIds: ["hasuuKeshigomun", "tsuubunSnake"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch5-sea"] = {
+  id: "ch5-sea",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["kaiteiKani"], weight: 3 },
+    { monsterIds: ["kaiteiKani", "waribikiGhost"], weight: 2 },
+    { monsterIds: ["taisekiCube"], weight: 2 },
+    { monsterIds: ["kaiteiKani", "kaiteiKani"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch5-castle"] = {
+  id: "ch5-castle",
+  stepRange: [9, 18],
+  groups: [
+    { monsterIds: ["tsuubunSnake", "taisekiCube"], weight: 2 },
+    { monsterIds: ["waribikiGhost", "waribikiGhost", "hasuuKeshigomun"], weight: 2 },
+    { monsterIds: ["taisekiCube", "taisekiCube"], weight: 2 },
+    { monsterIds: ["kaiteiKani", "tsuubunSnake"], weight: 1 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }

@@ -9,6 +9,7 @@ import { INTERIOR_TILES } from "./tilesInterior";
 import { WORLD_TILES } from "./tilesWorld";
 import { DESERT_TILES } from "./tilesDesert";
 import { ICE_TILES } from "./tilesIce";
+import { SKY_TILES } from "./tilesSky";
 import { ANIM_TILES } from "./tileAnims";
 
 export const TILE_SIZE = 16;
@@ -207,5 +208,43 @@ export const TILE_ART: Record<string, PixelArt> = {
   ...WORLD_TILES,
   ...DESERT_TILES,
   ...ICE_TILES,
+  ...SKY_TILES,
   ...ANIM_TILES,
+};
+
+/*
+ * 第5章の色ちがいタイル。石壁・床・水は形はそのままに 色だけを
+ * 海底 (青緑) / 魔王城 (くろむらさき) / ようがん (赤) に差し替える。
+ */
+TILE_ART.seaWall = {
+  palette: { k: "#12303f", d: "#1f4d5e", s: "#2f7183", S: "#4a97a8", l: "#7fc4cf" },
+  rows: TILE_ART.wall.rows,
+};
+TILE_ART.seaFloor = {
+  palette: { k: "#173c4a", d: "#245263", s: "#3a7f8f", S: "#5aa6b3", l: "#8fd0d8" },
+  rows: TILE_ART.sandFloor.rows,
+};
+TILE_ART.seaFloor2 = {
+  palette: { k: "#173c4a", d: "#245263", s: "#3a7f8f", S: "#5aa6b3", l: "#8fd0d8" },
+  rows: TILE_ART.sandFloor2.rows,
+};
+TILE_ART.darkWall = {
+  palette: { k: "#0d0a14", d: "#1e1830", s: "#332a4d", S: "#4a3d6b", l: "#6b5c8a" },
+  rows: TILE_ART.wall.rows,
+};
+TILE_ART.darkFloor = {
+  palette: { k: "#0d0a14", d: "#241d38", s: "#3a2f52", S: "#4f4370", l: "#6b5c8a" },
+  rows: TILE_ART.sandFloor.rows,
+};
+TILE_ART.darkFloor2 = {
+  palette: { k: "#0d0a14", d: "#241d38", s: "#3a2f52", S: "#4f4370", l: "#6b5c8a" },
+  rows: TILE_ART.sandFloor2.rows,
+};
+TILE_ART.lava = {
+  palette: { b: "#a32a12", B: "#d1461c", d: "#6b1a0c", w: "#f2913a", l: "#ffd48a" },
+  rows: TILE_ART.water.rows,
+};
+TILE_ART.hedge = {
+  palette: { g: "#2c6b38", D: "#123a20", d: "#1b5228", G: "#3d8a46", l: "#5eab54" },
+  rows: TILE_ART.bush.rows,
 };

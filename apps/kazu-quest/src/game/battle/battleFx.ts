@@ -282,6 +282,12 @@ const SPELL_FX: Record<string, SpellFxDef> = {
   gaisuuBomb: { style: "bigburst", color: 0xffb347, light: 0xffe9c2, impact: "explosion" },
   octoBillion: { style: "orb", color: 0xc9a0ff, light: 0xf2e6ff, impact: "explosion", orbScale: 9 },
   warikiriBlade: { style: "slash", color: 0xa8e0ff, light: 0xffffff, impact: "explosion" },
+  /* 第5章 */
+  percenFlare: { style: "bigburst", color: 0xff6a3c, light: 0xffd9a8, impact: "explosion" },
+  tsuubunSlash: { style: "slash", color: 0x7fffd4, light: 0xffffff, impact: "explosion" },
+  shousuuStorm: { style: "multi", color: 0x5ec8f0, light: 0xe0f8ff, impact: "explosion" },
+  baiyakuBreak: { style: "bigburst", color: 0xd9a0ff, light: 0xf6e6ff, impact: "hit" },
+  taisekiPress: { style: "orb", color: 0x9ab8d8, light: 0xe6f0ff, impact: "explosion", orbScale: 9 },
 };
 
 const DEFAULT_SPELL_FX: SpellFxDef = {

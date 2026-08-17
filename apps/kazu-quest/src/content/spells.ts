@@ -400,6 +400,113 @@ SPELLS.graphEye = {
   description: "グラフで よわ点を みぬき てきの こうげきを よわめる",
 };
 
+/* ---------- 第5章 (小5) ---------- */
+
+SPELLS.percenFlare = {
+  id: "percenFlare",
+  name: "パーセンフレア",
+  kind: "attack",
+  mpCost: 7,
+  power: 52,
+  target: "enemy",
+  skillIds: ["g5_percent"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g5_percent"], questions: 10, passCount: 8 },
+  description: "百分率の ほのおが てきの ちからを けずる",
+};
+
+SPELLS.tsuubunSlash = {
+  id: "tsuubunSlash",
+  name: "ツウブンスラッシュ",
+  kind: "attack",
+  mpCost: 8,
+  power: 62,
+  target: "enemy",
+  skillIds: ["g5_fraction_diff"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g5_fraction_diff"], questions: 10, passCount: 8 },
+  description: "分母を そろえた いちげきで 単体に とくだいダメージ",
+};
+
+SPELLS.shousuuStorm = {
+  id: "shousuuStorm",
+  name: "ショウスウストーム",
+  kind: "attack",
+  mpCost: 9,
+  power: 40,
+  target: "allEnemies",
+  skillIds: ["g5_decimal_muldiv"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g5_decimal_muldiv"], questions: 10, passCount: 8 },
+  description: "小数の あらしが てき ぜんたいを のみこむ",
+};
+
+SPELLS.baiyakuBreak = {
+  id: "baiyakuBreak",
+  name: "バイヤクブレイク",
+  kind: "attack",
+  mpCost: 7,
+  power: 56,
+  target: "enemy",
+  skillIds: ["g5_multiple"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g5_multiple"], questions: 10, passCount: 8 },
+  description: "倍数と 約数の ちからで まもりを うちくだく",
+};
+
+SPELLS.heikinHeal = {
+  id: "heikinHeal",
+  name: "ヘイキンヒール",
+  kind: "heal",
+  mpCost: 8,
+  power: 45,
+  target: "party",
+  skillIds: ["g5_average"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g5_average"], questions: 10, passCount: 8 },
+  description: "平きんの ちからで みかた ぜんいんの HPを ならして かいふく",
+};
+
+SPELLS.tanniAttack = {
+  id: "tanniAttack",
+  name: "タンイアタック",
+  kind: "buff",
+  mpCost: 5,
+  power: 0,
+  target: "ally",
+  effect: "agiUp",
+  skillIds: ["g5_unit_rate"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g5_unit_rate"], questions: 10, passCount: 8 },
+  description: "1あたりの りょうを 高めて うごきを はやくする",
+};
+
+SPELLS.taisekiPress = {
+  id: "taisekiPress",
+  name: "タイセキプレス",
+  kind: "attack",
+  mpCost: 8,
+  power: 48,
+  target: "allEnemies",
+  skillIds: ["g5_volume"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g5_volume"], questions: 10, passCount: 8 },
+  description: "体せきぶんの 立方体で てき ぜんたいを おしつぶす",
+};
+
+SPELLS.sankakuMirror = {
+  id: "sankakuMirror",
+  name: "サンカクミラー",
+  kind: "buff",
+  mpCost: 7,
+  power: 0,
+  target: "party",
+  skillIds: ["g5_area"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g5_area"], questions: 10, passCount: 8 },
+  description: "三角形の かがみが みかた ぜんいんを まもる",
+};
+
 export function getSpell(id: string): SpellDef | undefined {
   return SPELLS[id];
 }

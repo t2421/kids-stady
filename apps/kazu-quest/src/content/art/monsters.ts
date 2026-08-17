@@ -219,6 +219,73 @@ MONSTER_ART.kooriGolem = {
   rows: MONSTER_ART.wakemaeGolem.rows,
 };
 
+/* ---------- 第5章 (割合の都と 魔王マイナドス) ---------- */
+
+/* ワリビキゴースト — 「%OFF」の ふだを もつ おばけ */
+MONSTER_ART.waribikiGhost = {
+  palette: { k: "#1c1a2e", w: "#dcd8f0", y: "#f2d675" },
+  rows: [
+    "................", ".....kkkkkk.....", "...kkwwwwwwkk...", "..kwwwwwwwwwwk..",
+    ".kwwkkwwwwkkwwk.", ".kwwkkwwwwkkwwk.", ".kwwwwwwwwwwwwk.", ".kwwwwkkkkwwwwk.",
+    "kwwwwwwwwwwwwwwk", "kwwyykwwwwkyywwk", "kwwwykwwwwkywwwk", "kwwwwwwwwwwwwwwk",
+    "kwwwwwwwwwwwwwwk", ".kwkkwwkkwwkkwk.", "..k..kk..kk..k..", "................",
+  ],
+};
+
+/* ツウブンヘビ — 分母を そろえる とぐろの ヘビ */
+MONSTER_ART.tsuubunSnake = {
+  palette: { k: "#16261c", g: "#3f8a5a", G: "#5cb078", y: "#f2d675", w: "#f7f4e8" },
+  rows: [
+    "......kkkk......", ".....kggggk.....", "....kgwgwggk....", "....kggggggk....",
+    ".....kgggggk....", "......kkgggk....", "........kgggk...", ".......kgggggk..",
+    "......kgGyGgk...", ".....kgGyyyGgk..", "....kgGyyyyyGgk.", "...kgGGGGGGGGgk.",
+    "..kgGGyyyyGGGgk.", ".kgGGGGGGGGGGgk.", ".kggggggggggggk.", "..kkkkkkkkkkkk..",
+  ],
+};
+
+/* タイセキキューブ — 立方体の からだを もつ まもの */
+MONSTER_ART.taisekiCube = {
+  palette: { k: "#1b2434", w: "#7fa8c4", W: "#b8d4e4" },
+  rows: [
+    "................", "...kkkkkkkkkk...", "..kwwwwwwwwwwk..", ".kwWWWWWWWWWWwk.",
+    "kwWWWWWWWWWWWWwk", "kwWkkWWWWkkWWWwk", "kwWkkWWWWkkWWWwk", "kwWWWWWWWWWWWWwk",
+    "kwWWWWkkkkWWWWwk", "kwWWWWWWWWWWWWwk", "kwWWWWWWWWWWWWwk", "kwWWWWWWWWWWWWwk",
+    ".kwWWWWWWWWWWwk.", "..kwwwwwwwwwwk..", "...kkkkkkkkkk...", "................",
+  ],
+};
+
+/* 魔王マイナドス — 第5章ボス (偽ラスボス) */
+MONSTER_ART.minados = {
+  palette: { k: "#0c0a14", d: "#3a2a52", D: "#221838", s: "#8a6bd5", w: "#f2eaff", y: "#f2d675" },
+  rows: [
+    "..k..........k..", "..kk...kk...kk..", ".kdkk.kddk.kkdk.", ".kddkkddddkkddk.",
+    "..kddddddddddk..", "..kdsdkddkdsdk..", "..kddddddddddk..", "..kddwwwwwwddk..",
+    ".kkddddddddddkk.", "kDDdddyyyydddDDk", "kDdddddddddddDDk", "kDddyyyyyyyydDDk",
+    ".kDdddddddddDDk.", "..kDDddddddDDk..", "...kDDDDDDDDk...", "....kkkkkkkk....",
+  ],
+};
+
+/* 第5章の 色ちがい (端数ケシゴムン・海底ガニ・雲の番人・深海の主) */
+MONSTER_ART.hasuuKeshigomun = {
+  palette: { k: "#2b1f3a", w: "#efe6f7", W: "#c9b8dd", l: "#ffffff", b: "#8a6bd5", B: "#5a3f96", c: "#b79ae8", p: "#e8a0c8" },
+  rows: MONSTER_ART.keshigomun.rows,
+};
+
+MONSTER_ART.kaiteiKani = {
+  palette: { k: "#0f2630", i: "#1f5a63", I: "#2f8a8f", l: "#5ec4c0", w: "#f2f8f0", r: "#f2a05a" },
+  rows: MONSTER_ART.inkgani.rows,
+};
+
+MONSTER_ART.kumoNoBanjin = {
+  palette: { k: "#3a4a6b", S: "#dbe6f7", d: "#8fa6c9", y: "#f2d675" },
+  rows: MONSTER_ART.wakemaeGolem.rows,
+};
+
+MONSTER_ART.shinkaiNoNushi = {
+  palette: { k: "#08131e", i: "#123a52", I: "#1f6b8a", l: "#4fb0c4", w: "#e2f4ff" },
+  rows: MONSTER_ART.dekaInkugumo.rows,
+};
+
 MONSTER_ART.sunanezumi = {
   palette: { k: "#241d16", g: "#c9a468", G: "#8f6f43", l: "#e8d3a0", p: "#e0906a", P: "#f2c0a0", w: "#fff8e6", y: "#edc43f" },
   rows: MONSTER_ART.kazunezumi.rows,

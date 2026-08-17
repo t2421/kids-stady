@@ -183,6 +183,47 @@ ITEMS.kagamiNoTate = {
   description: "しゅび +13。こおりの ように すきとおる たて",
 };
 
+/* ---------- 第5章の装備・どうぐ ---------- */
+
+ITEMS.seiNoShizuku = {
+  id: "seiNoShizuku",
+  name: "せいなるしずく",
+  kind: "heal",
+  power: 180,
+  price: 150,
+  description: "HPを 180 かいふくする めがみの しずく",
+};
+
+ITEMS.hikariNoKen = {
+  id: "hikariNoKen",
+  name: "ひかりのつるぎ",
+  kind: "equip",
+  slot: "weapon",
+  atk: 34,
+  price: 1500,
+  description: "こうげき +34。ひかりを やどす つるぎ",
+};
+
+ITEMS.maryokuNoRobe = {
+  id: "maryokuNoRobe",
+  name: "まりょくのローブ",
+  kind: "equip",
+  slot: "armor",
+  def: 24,
+  price: 1300,
+  description: "しゅび +24。まほうの ちからを たかめる ローブ",
+};
+
+ITEMS.seiginoTate = {
+  id: "seiginoTate",
+  name: "せいぎのたて",
+  kind: "equip",
+  slot: "shield",
+  def: 20,
+  price: 1100,
+  description: "しゅび +20。まものの まほうを はねかえす たて",
+};
+
 export const SHOPS: Record<string, ShopDef> = {
   "ch1-capital-shop": {
     id: "ch1-capital-shop",
@@ -252,6 +293,25 @@ SHOPS["ch4-kogoe-shop"] = {
   id: "ch4-kogoe-shop",
   name: "コゴエの みせ",
   itemIds: ["yakusou", "jouyakusou", "hagaNeNoTsurugi", "sabakuNoRobe"],
+};
+
+SHOPS["ch5-percen-shop"] = {
+  id: "ch5-percen-shop",
+  name: "パーセンの どうぐや",
+  itemIds: [
+    "kaifukuNoTama",
+    "seiNoShizuku",
+    "anshinNoSuzu",
+    "hikariNoKen",
+    "maryokuNoRobe",
+    "seiginoTate",
+  ],
+};
+
+SHOPS["ch5-bargain-shop"] = {
+  id: "ch5-bargain-shop",
+  name: "バーゲンの おおやすうり",
+  itemIds: ["jouyakusou", "kaifukuNoTama", "kooriNoKen", "ginNoYoroi", "kagamiNoTate"],
 };
 
 export function getItem(id: string): ItemDef | undefined {

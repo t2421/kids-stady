@@ -9,6 +9,7 @@ import { CHAPTER1 } from "./chapters/chapter1";
 import { CHAPTER2 } from "./chapters/chapter2";
 import { CHAPTER3 } from "./chapters/chapter3";
 import { CHAPTER4 } from "./chapters/chapter4";
+import { CHAPTER5 } from "./chapters/chapter5";
 
 /* dev マップはエンジンの E2E テスト用に登録し続ける (通常プレイでは到達不能) */
 const ALL_MAPS: MapDef[] = [
@@ -16,6 +17,7 @@ const ALL_MAPS: MapDef[] = [
   ...CHAPTER2.maps,
   ...CHAPTER3.maps,
   ...CHAPTER4.maps,
+  ...CHAPTER5.maps,
   DEV_VILLAGE,
   DEV_FIELD,
 ];
