@@ -10,6 +10,7 @@ import { WORLD_TILES } from "./tilesWorld";
 import { DESERT_TILES } from "./tilesDesert";
 import { ICE_TILES } from "./tilesIce";
 import { SKY_TILES } from "./tilesSky";
+import { NEGA_TILES } from "./tilesNega";
 import { ANIM_TILES } from "./tileAnims";
 
 export const TILE_SIZE = 16;
@@ -209,6 +210,7 @@ export const TILE_ART: Record<string, PixelArt> = {
   ...DESERT_TILES,
   ...ICE_TILES,
   ...SKY_TILES,
+  ...NEGA_TILES,
   ...ANIM_TILES,
 };
 
@@ -247,4 +249,71 @@ TILE_ART.lava = {
 TILE_ART.hedge = {
   palette: { g: "#2c6b38", D: "#123a20", d: "#1b5228", G: "#3d8a46", l: "#5eab54" },
   rows: TILE_ART.bush.rows,
+};
+
+/*
+ * 第6章「下の世界ネガリア」の色ちがいタイル。地面も海も木も
+ * 上の世界と同じ形のまま、色を すいこまれた むらさきに おきかえる。
+ */
+const NEGA_GROUND_PALETTE = { g: "#3b2f52", G: "#4d3f6b", d: "#2a2140", l: "#665694" };
+TILE_ART.negaGround = {
+  palette: NEGA_GROUND_PALETTE,
+  rows: TILE_ART.grass.rows,
+};
+TILE_ART.negaGround2 = {
+  palette: NEGA_GROUND_PALETTE,
+  rows: TILE_ART.grass2.rows,
+};
+TILE_ART.negaPath = {
+  palette: { p: "#57496e", P: "#6b5c87", d: "#3f3454", l: "#8a79a8" },
+  rows: TILE_ART.path.rows,
+};
+TILE_ART.negaSea = {
+  palette: { b: "#241c3d", B: "#332a57", d: "#150f26", w: "#5a4d8a", l: "#8a79b8" },
+  rows: TILE_ART.water.rows,
+};
+TILE_ART.negaTree = {
+  palette: { g: "#3b2f52", k: "#100c1a", d: "#241c3d", G: "#3f3160", l: "#5a4886", t: "#2a2138", T: "#463a5e" },
+  rows: TILE_ART.tree.rows,
+};
+TILE_ART.locNegaVillage = {
+  palette: {
+    g: "#3b2f52",
+    k: "#100c1a",
+    r: "#5a2f4a",
+    R: "#7d4166",
+    w: "#c9b8dd",
+    W: "#8a79a8",
+    d: "#2a2140",
+    G: "#4d3f6b",
+  },
+  rows: TILE_ART.locVillage.rows,
+};
+TILE_ART.locNegaTown = {
+  palette: { g: "#3b2f52", k: "#100c1a", w: "#c9b8dd", W: "#8a79a8", b: "#5a4886", y: "#f2d675", r: "#7d4166", d: "#2a2140", s: "#463a5e", S: "#6b5c8a" },
+  rows: TILE_ART.locCastle.rows,
+};
+TILE_ART.locSpeedHall = {
+  palette: {
+    g: "#3b2f52",
+    k: "#100c1a",
+    s: "#6b5c8a",
+    S: "#a99ac9",
+    d: "#463a5e",
+    p: "#8fe0ff",
+    y: "#f2e28a",
+  },
+  rows: TILE_ART.locTower.rows,
+};
+TILE_ART.locEnTemple = {
+  palette: { b: "#241c3d", B: "#332a57", w: "#5a4d8a", k: "#100c1a", s: "#6b5c8a", S: "#a99ac9", y: "#8fe0ff" },
+  rows: TILE_ART.locSeaTemple.rows,
+};
+TILE_ART.locPitagora = {
+  palette: { s: "#3b2f52", S: "#4d3f6b", d: "#2a2140", l: "#665694", k: "#100c1a", r: "#6b5c8a", R: "#a99ac9", y: "#f2e28a", o: "#8fe0ff" },
+  rows: TILE_ART.locRuins.rows,
+};
+TILE_ART.locZeromCastle = {
+  palette: { g: "#3b2f52", k: "#0a0810", d: "#161022", s: "#241c3d", S: "#3f3160", r: "#5a1f3a", y: "#8fe0ff" },
+  rows: TILE_ART.locDarkCastle.rows,
 };

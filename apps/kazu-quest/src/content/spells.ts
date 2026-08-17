@@ -507,6 +507,126 @@ SPELLS.sankakuMirror = {
   description: "三角形の かがみが みかた ぜんいんを まもる",
 };
 
+/* ---------- 第6章 (小6) ---------- */
+
+SPELLS.speedStar = {
+  id: "speedStar",
+  name: "スピードスター",
+  kind: "buff",
+  mpCost: 6,
+  power: 0,
+  target: "party",
+  effect: "agiUp",
+  skillIds: ["g6_speed"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_speed"], questions: 10, passCount: 8 },
+  description: "速さの ちからで みかた ぜんいんが すばやく うごく",
+};
+
+SPELLS.enNoHadou = {
+  id: "enNoHadou",
+  name: "エンノハドウ",
+  kind: "attack",
+  mpCost: 10,
+  power: 58,
+  target: "allEnemies",
+  skillIds: ["g6_circle_area"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_circle_area"], questions: 10, passCount: 8 },
+  description: "円の 面せきぶんの 聖なる はどうが ひろがる",
+};
+
+SPELLS.bunsuuNova = {
+  id: "bunsuuNova",
+  name: "ブンスウノヴァ",
+  kind: "attack",
+  mpCost: 12,
+  power: 92,
+  target: "enemy",
+  skillIds: ["g6_fraction_muldiv"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_fraction_muldiv"], questions: 10, passCount: 8 },
+  description: "分数の かけ算わり算が うみだす さいきょうの 一撃",
+};
+
+SPELLS.ratioBreak = {
+  id: "ratioBreak",
+  name: "レシオブレイク",
+  kind: "attack",
+  mpCost: 8,
+  power: 70,
+  target: "enemy",
+  skillIds: ["g6_ratio"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_ratio"], questions: 10, passCount: 8 },
+  description: "比の ちからで てきの バランスを くずして たたく",
+};
+
+SPELLS.mojishikiSign = {
+  id: "mojishikiSign",
+  name: "モジシキサイン",
+  kind: "attack",
+  mpCost: 9,
+  power: 76,
+  target: "enemy",
+  skillIds: ["g6_letter_expr"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_letter_expr"], questions: 10, passCount: 8 },
+  description: "x に あてはまる 数を みぬき よわ点を つらぬく",
+};
+
+SPELLS.kakudaiSlash = {
+  id: "kakudaiSlash",
+  name: "カクダイスラッシュ",
+  kind: "attack",
+  mpCost: 8,
+  power: 66,
+  target: "allEnemies",
+  skillIds: ["g6_scale"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_scale"], questions: 10, passCount: 8 },
+  description: "きりつけを 何ばいにも かくだいして はなつ",
+};
+
+SPELLS.baainoKazu = {
+  id: "baainoKazu",
+  name: "バアイノカズ",
+  kind: "attack",
+  mpCost: 9,
+  power: 26,
+  target: "enemy",
+  hits: 4,
+  skillIds: ["g6_combination"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g6_combination"], questions: 10, passCount: 8 },
+  description: "ぜんぶの ばあいを ためす 4れんぞく こうげき",
+};
+
+SPELLS.fukkatsuNoShiki = {
+  id: "fukkatsuNoShiki",
+  name: "フッカツノシキ",
+  kind: "heal",
+  mpCost: 14,
+  power: 120,
+  target: "party",
+  /* 総復習ミックス — 小1〜小6から出題される (設計 A4 の らせん復習) */
+  skillIds: [
+    "g1_add_carry",
+    "g2_kuku",
+    "g3_div",
+    "g4_decimal",
+    "g5_fraction_diff",
+    "g6_proportion",
+  ],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: {
+    skillIds: ["g6_proportion", "g5_percent", "g4_decimal", "g3_div"],
+    questions: 10,
+    passCount: 8,
+  },
+  description: "6年ぶんの 算数の ちからで みかた ぜんいんを よみがえらせる",
+};
+
 export function getSpell(id: string): SpellDef | undefined {
   return SPELLS[id];
 }

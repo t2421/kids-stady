@@ -100,6 +100,44 @@ export const CH5_WORLD: MapDef = {
       ],
     },
     {
+      id: "zero-hole",
+      x: 12,
+      y: 2,
+      art: "scholar",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c5.clear", op: "set" },
+          pages: [
+            "…ここが 「ゼロのあな」。下の せかい ネガリアへ つづいています。",
+            "冥王ゼロムは この 下に います。かくごは よろしいですか?",
+          ],
+          then: [
+            {
+              type: "choice",
+              prompt: "ゼロのあなへ おりる?",
+              yes: [
+                { type: "message", pages: ["うずまきに すいこまれていく…!"] },
+                { type: "transfer", mapId: "ch6-world", spawn: "from-hole" },
+              ],
+              no: [
+                {
+                  type: "message",
+                  pages: ["じゅんびが できたら こえを かけてください。"],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          pages: [
+            "きたの 空が くらい… 大地が うずを まいている ようです。",
+            "魔王を たおした とき、なにかが おきる かもしれません。",
+          ],
+        },
+      ],
+    },
+    {
       id: "castle-gate-guard",
       x: 13,
       y: 2,

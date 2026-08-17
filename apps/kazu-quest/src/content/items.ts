@@ -224,6 +224,38 @@ ITEMS.seiginoTate = {
   description: "しゅび +20。まものの まほうを はねかえす たて",
 };
 
+/* ---------- 第6章の装備・どうぐ ---------- */
+
+ITEMS.pitagoraNoKen = {
+  id: "pitagoraNoKen",
+  name: "ピタゴラのつるぎ",
+  kind: "equip",
+  slot: "weapon",
+  atk: 52,
+  price: 4000,
+  description: "こうげき +52。はつだいの 数ゆうしゃの つるぎ",
+};
+
+ITEMS.pitagoraNoYoroi = {
+  id: "pitagoraNoYoroi",
+  name: "ピタゴラのよろい",
+  kind: "equip",
+  slot: "armor",
+  def: 36,
+  price: 3600,
+  description: "しゅび +36。ゼロの ちからを はねかえす よろい",
+};
+
+ITEMS.suushouNoTate = {
+  id: "suushouNoTate",
+  name: "すうしょうのたて",
+  kind: "equip",
+  slot: "shield",
+  def: 30,
+  price: 3000,
+  description: "しゅび +30。6つの すうしょうの かがやきを やどす たて",
+};
+
 export const SHOPS: Record<string, ShopDef> = {
   "ch1-capital-shop": {
     id: "ch1-capital-shop",
@@ -312,6 +344,25 @@ SHOPS["ch5-bargain-shop"] = {
   id: "ch5-bargain-shop",
   name: "バーゲンの おおやすうり",
   itemIds: ["jouyakusou", "kaifukuNoTama", "kooriNoKen", "ginNoYoroi", "kagamiNoTate"],
+};
+
+SHOPS["ch6-hoshioki-shop"] = {
+  id: "ch6-hoshioki-shop",
+  name: "ホシオキの どうぐや",
+  itemIds: [
+    "kaifukuNoTama",
+    "seiNoShizuku",
+    "anshinNoSuzu",
+    "pitagoraNoKen",
+    "pitagoraNoYoroi",
+    "suushouNoTate",
+  ],
+};
+
+SHOPS["ch6-nokoribi-shop"] = {
+  id: "ch6-nokoribi-shop",
+  name: "ノコリビの みせ",
+  itemIds: ["jouyakusou", "kaifukuNoTama", "seiNoShizuku", "hikariNoKen", "maryokuNoRobe"],
 };
 
 export function getItem(id: string): ItemDef | undefined {

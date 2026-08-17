@@ -204,6 +204,52 @@ ENCOUNTER_TABLES["ch5-castle"] = {
   ],
 };
 
+/* ---------- 第6章 ---------- */
+
+ENCOUNTER_TABLES["ch6-nega"] = {
+  id: "ch6-nega",
+  stepRange: [12, 24],
+  groups: [
+    { monsterIds: ["zeroKeshigomun"], weight: 3 },
+    { monsterIds: ["zeroKeshigomun", "hayasaBat"], weight: 2 },
+    { monsterIds: ["negaGhost"], weight: 3 },
+    { monsterIds: ["sokudoWolf"], weight: 2 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch6-speed"] = {
+  id: "ch6-speed",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["hayasaBat", "hayasaBat"], weight: 3 },
+    { monsterIds: ["sokudoWolf"], weight: 3 },
+    { monsterIds: ["sokudoWolf", "hayasaBat"], weight: 2 },
+    { monsterIds: ["negaGhost", "negaGhost"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch6-temple"] = {
+  id: "ch6-temple",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["zeroCube"], weight: 3 },
+    { monsterIds: ["negaGhost", "zeroKeshigomun"], weight: 2 },
+    { monsterIds: ["zeroCube", "negaGhost"], weight: 2 },
+    { monsterIds: ["sokudoWolf", "sokudoWolf"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch6-zerom"] = {
+  id: "ch6-zerom",
+  stepRange: [9, 18],
+  groups: [
+    { monsterIds: ["zeroCube", "zeroCube"], weight: 2 },
+    { monsterIds: ["negaGhost", "sokudoWolf"], weight: 3 },
+    { monsterIds: ["zeroKeshigomun", "zeroKeshigomun", "hayasaBat"], weight: 2 },
+    { monsterIds: ["sokudoWolf", "zeroCube"], weight: 2 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }

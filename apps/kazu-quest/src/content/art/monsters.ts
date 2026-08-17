@@ -286,6 +286,62 @@ MONSTER_ART.shinkaiNoNushi = {
   rows: MONSTER_ART.dekaInkugumo.rows,
 };
 
+/* ---------- 第6章 (下の世界ネガリア) ---------- */
+
+/* 冥王ゼロム 第1形態 — すべてを 「0」に かえそうとする 王 */
+MONSTER_ART.zerom = {
+  palette: { k: "#05040a", d: "#1b1430", D: "#0e0a1c", s: "#4a3f7a", l: "#8fe0ff", w: "#e6f7ff", y: "#f2e28a" },
+  rows: [
+    "....kkkkkkkk....", "...kdddddddddk..", "..kdddwwwwdddk..", "..kddwllllwddk..",
+    ".kdddwlkkklwdddk", ".kddwlkyykkwlddk", ".kddwllkkllwddk.", ".kdddwllllwdddk.",
+    "kDddddwwwwddddDk", "kDdddddddddddDDk", "kDddlllllllldDDk", "kDdlkkkkkkkkldDk",
+    "kDddlllllllldDDk", ".kDdddddddddDDk.", "..kDDDddddDDDk..", "...kkkkkkkkkk...",
+  ],
+};
+
+/* まぼろしの ゆうしゃ — ピタゴラの試練の 番人 */
+MONSTER_ART.maboroshiHero = {
+  palette: { k: "#0f1226", w: "#9ad8f2", W: "#5d8fb8", l: "#e6f7ff", b: "#3d5891", B: "#26365e", y: "#cbe8f7", m: "#7fa8c4", M: "#c9e8f7", s: "#8fb8d8" },
+  rows: [
+    ".....kkkkkk.....", "....kmMMMMmk....", "...kmMMMMMMmk...", "..MkmyyMMyymk...",
+    "..MkwwwwwwwwWk..", "..MkwkWwwWkwWk..", "..MkwwWWWWwwWk..", "..M.kWWWWWWk....",
+    "..Mkkkbbbbkklwk.", ".yyskbbbbbbklwlk", ".WWskbbbbbbklwlk", "...kBbyyyyBkllk.",
+    "...kBBbbbbBBkk..", "...kkBkkkkBkk...", "....kBk..kBk....", "....kkk..kkk....",
+  ],
+};
+
+/* ネガリアの まもの (色ちがい) */
+MONSTER_ART.zeroKeshigomun = {
+  palette: { k: "#08060f", w: "#5a4d8a", W: "#3a3160", l: "#8fe0ff", b: "#241c3d", B: "#150f26", c: "#4a3f7a", p: "#7d4166" },
+  rows: MONSTER_ART.keshigomun.rows,
+};
+
+MONSTER_ART.negaGhost = {
+  palette: { k: "#08060f", w: "#6b5c9e", y: "#8fe0ff" },
+  rows: MONSTER_ART.waribikiGhost.rows,
+};
+
+MONSTER_ART.hayasaBat = {
+  palette: { k: "#08060f", b: "#2a1f4a", B: "#463a7a", l: "#8a79c9", w: "#e6f7ff", y: "#8fe0ff" },
+  rows: MONSTER_ART.mojibakeBat.rows,
+};
+
+MONSTER_ART.sokudoWolf = {
+  palette: { k: "#08060f", g: "#3f3160", G: "#6b5c9e", w: "#e6f7ff", y: "#8fe0ff" },
+  rows: MONSTER_ART.monosashiOokami.rows,
+};
+
+MONSTER_ART.zeroCube = {
+  palette: { k: "#08060f", w: "#4a3f7a", W: "#7d6fb0" },
+  rows: MONSTER_ART.taisekiCube.rows,
+};
+
+/* 冥王ゼロム 第2形態 (真の姿) */
+MONSTER_ART.zeromTrue = {
+  palette: { k: "#0a0812", d: "#4a1f3a", D: "#26101f", s: "#8f2f4a", l: "#ffd166", w: "#fff3d6", y: "#ff6a3c" },
+  rows: MONSTER_ART.zerom.rows,
+};
+
 MONSTER_ART.sunanezumi = {
   palette: { k: "#241d16", g: "#c9a468", G: "#8f6f43", l: "#e8d3a0", p: "#e0906a", P: "#f2c0a0", w: "#fff8e6", y: "#edc43f" },
   rows: MONSTER_ART.kazunezumi.rows,

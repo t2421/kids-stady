@@ -124,3 +124,9 @@ ACTOR_ART.measurer = {
   palette: { k: "#18202b", h: "#dfe8f0", H: "#ffffff", s: "#dfaa82", S: "#f5c9a0", b: "#3f6488", B: "#2b4560", l: "#8fc0e0", y: "#cbe8f7", d: "#a9b4c4" },
   rows: ACTOR_ART.scholar.rows,
 };
+
+/* 勇者ガウス (第6章 — 主人公の父。ゆうしゃの色ちがい: 赤マントと 白い髪) */
+ACTOR_ART.gauss = {
+  palette: { k: "#171820", h: "#7d6b58", m: "#a8a29a", M: "#e0dbd2", s: "#d9a682", S: "#f2c8a0", b: "#8f2f3f", B: "#5c1d2a", l: "#c04a5a", y: "#f1c644", w: "#f7f1de" },
+  rows: ACTOR_ART.hero.rows,
+};

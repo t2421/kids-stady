@@ -288,6 +288,13 @@ const SPELL_FX: Record<string, SpellFxDef> = {
   shousuuStorm: { style: "multi", color: 0x5ec8f0, light: 0xe0f8ff, impact: "explosion" },
   baiyakuBreak: { style: "bigburst", color: 0xd9a0ff, light: 0xf6e6ff, impact: "hit" },
   taisekiPress: { style: "orb", color: 0x9ab8d8, light: 0xe6f0ff, impact: "explosion", orbScale: 9 },
+  /* 第6章 */
+  enNoHadou: { style: "orb", color: 0xfff4c2, light: 0xffffff, impact: "explosion", orbScale: 10 },
+  bunsuuNova: { style: "bigburst", color: 0xff4fa3, light: 0xffd9ec, impact: "explosion" },
+  ratioBreak: { style: "slash", color: 0xffc14d, light: 0xfff0c2, impact: "explosion" },
+  mojishikiSign: { style: "orb", color: 0x8fe0ff, light: 0xffffff, impact: "hit", orbScale: 7 },
+  kakudaiSlash: { style: "slash", color: 0xd9a0ff, light: 0xf6e6ff, impact: "explosion" },
+  baainoKazu: { style: "multi", color: 0xffe98a, light: 0xfffbe6, impact: "hit" },
 };
 
 const DEFAULT_SPELL_FX: SpellFxDef = {
