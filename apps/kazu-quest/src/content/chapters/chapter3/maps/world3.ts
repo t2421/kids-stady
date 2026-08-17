@@ -40,6 +40,32 @@ export const CH3_WORLD: MapDef = {
       movement: "static",
       dialog: [
         {
+          if: { flag: "c3.clear", op: "set" },
+          pages: [
+            "まちおさの めいれいで きたの 氷の国ゆきの 船を よういしたぜ!",
+          ],
+          then: [
+            {
+              type: "choice",
+              prompt: "こおりの国 メジャーリアへ 船を だす?",
+              yes: [
+                { type: "message", pages: ["それじゃ しゅっぱーつ!"] },
+                { type: "transfer", mapId: "ch4-world", spawn: "from-ship" },
+              ],
+              no: [
+                {
+                  type: "choice",
+                  prompt: "うみかぜの しまへ もどる?",
+                  yes: [
+                    { type: "transfer", mapId: "ch2-world", spawn: "from-ship" },
+                  ],
+                  no: [{ type: "message", pages: ["いつでも こえを かけてな。"] }],
+                },
+              ],
+            },
+          ],
+        },
+        {
           pages: [
             "ここは ワケーラ さばくの きたの みなと。",
             "うみかぜの しまへ もどるかい?",

@@ -82,6 +82,16 @@ export const ACTOR_ART: Record<string, PixelArt> = {
       "...kOOooooOOk...", "...kkOkkkkOkk...", "....kOk..kOk....", "....kkk..kkk....",
     ],
   },
+  /* 魔法使いリトル (第4章で加入する仲間 — とんがり帽子と むらさきのローブ) */
+  little: {
+    palette: { k: "#1a1420", p: "#6b4a9e", P: "#432c6b", s: "#e8ae80", S: "#ffd0a2", y: "#f2d675" },
+    rows: [
+      ".......kk.......", "......kppk......", ".....kppppk.....", "....kpppppyk....",
+      "...kkkkkkkkkk...", "...kSSSSSSSSk...", "...kSksSSskSk...", "...kSSssssSSk...",
+      "....kssssssk....", "...kkkppppkkk...", "..kskppppppksk..", "..kskppyyppksk..",
+      "...kPppppppPk...", "..kPPppppppPPk..", "...kkPkkkkPkk...", "....kPk..kPk....",
+    ],
+  },
   /* 隊商の商人 (砂の国のNPC — ターバンと青い旅装束) */
   merchant: {
     palette: { k: "#1b1920", w: "#f2eee1", W: "#cfc9b8", y: "#f2d675", s: "#dfaa82", S: "#f5c9a0", b: "#3d6fb0", B: "#274a7d" },
@@ -101,4 +111,16 @@ export const ACTOR_ART: Record<string, PixelArt> = {
       "..kBBBbbbbBBBk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
     ],
   },
+};
+
+/* 雪国の村人 (第4章 — あつい コートと マフラー。村人の色違い) */
+ACTOR_ART.snowVillager = {
+  palette: { k: "#1b2230", h: "#4a3b5a", H: "#6d5c80", s: "#e5b48b", S: "#ffd7ae", g: "#3f6f9e", G: "#2a4d75", l: "#7fb0d8", b: "#c94f4f" },
+  rows: ACTOR_ART.villager.rows,
+};
+
+/* 計測の都の 学者 (第4章 — 白衣に みずいろの ライン。学者の色違い) */
+ACTOR_ART.measurer = {
+  palette: { k: "#18202b", h: "#dfe8f0", H: "#ffffff", s: "#dfaa82", S: "#f5c9a0", b: "#3f6488", B: "#2b4560", l: "#8fc0e0", y: "#cbe8f7", d: "#a9b4c4" },
+  rows: ACTOR_ART.scholar.rows,
 };

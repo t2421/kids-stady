@@ -142,6 +142,47 @@ ITEMS.mikazukiNoTate = {
   description: "しゅび +8。みかづきの かたちの たて",
 };
 
+/* ---------- 第4章の装備・どうぐ ---------- */
+
+ITEMS.kaifukuNoTama = {
+  id: "kaifukuNoTama",
+  name: "かいふくのたま",
+  kind: "heal",
+  power: 90,
+  price: 60,
+  description: "HPを 90 かいふくする ふしぎな たま",
+};
+
+ITEMS.kooriNoKen = {
+  id: "kooriNoKen",
+  name: "こおりのつるぎ",
+  kind: "equip",
+  slot: "weapon",
+  atk: 22,
+  price: 620,
+  description: "こうげき +22。こおりの やいばを もつ つるぎ",
+};
+
+ITEMS.ginNoYoroi = {
+  id: "ginNoYoroi",
+  name: "ぎんのよろい",
+  kind: "equip",
+  slot: "armor",
+  def: 16,
+  price: 540,
+  description: "しゅび +16。さむさに つよい ぎんの よろい",
+};
+
+ITEMS.kagamiNoTate = {
+  id: "kagamiNoTate",
+  name: "かがみのたて",
+  kind: "equip",
+  slot: "shield",
+  def: 13,
+  price: 460,
+  description: "しゅび +13。こおりの ように すきとおる たて",
+};
+
 export const SHOPS: Record<string, ShopDef> = {
   "ch1-capital-shop": {
     id: "ch1-capital-shop",
@@ -192,6 +233,25 @@ SHOPS["ch3-caravan-shop"] = {
   id: "ch3-caravan-shop",
   name: "たいしょうの みせ",
   itemIds: ["yakusou", "jouyakusou", "tetsuNoTsurugi", "kusariKatabira"],
+};
+
+SHOPS["ch4-majoria-shop"] = {
+  id: "ch4-majoria-shop",
+  name: "メジャーリアの どうぐや",
+  itemIds: [
+    "jouyakusou",
+    "kaifukuNoTama",
+    "anshinNoSuzu",
+    "kooriNoKen",
+    "ginNoYoroi",
+    "kagamiNoTate",
+  ],
+};
+
+SHOPS["ch4-kogoe-shop"] = {
+  id: "ch4-kogoe-shop",
+  name: "コゴエの みせ",
+  itemIds: ["yakusou", "jouyakusou", "hagaNeNoTsurugi", "sabakuNoRobe"],
 };
 
 export function getItem(id: string): ItemDef | undefined {

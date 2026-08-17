@@ -276,6 +276,12 @@ const SPELL_FX: Record<string, SpellFxDef> = {
   manLight: { style: "orb", color: 0xfff1a8, light: 0xffffff, impact: "explosion", orbScale: 8 },
   shousuuRain: { style: "multi", color: 0x6fd0f2, light: 0xd8f4ff, impact: "hit" },
   omosaPress: { style: "bigburst", color: 0x9a8f7a, light: 0xe0d8c8, impact: "hit" },
+  /* 第4章 */
+  kakudoSpin: { style: "slash", color: 0x8fc0e0, light: 0xf0fbff, impact: "hit" },
+  decimaFreeze: { style: "multi", color: 0x5ec8f0, light: 0xd8f4ff, impact: "hit" },
+  gaisuuBomb: { style: "bigburst", color: 0xffb347, light: 0xffe9c2, impact: "explosion" },
+  octoBillion: { style: "orb", color: 0xc9a0ff, light: 0xf2e6ff, impact: "explosion", orbScale: 9 },
+  warikiriBlade: { style: "slash", color: 0xa8e0ff, light: 0xffffff, impact: "explosion" },
 };
 
 const DEFAULT_SPELL_FX: SpellFxDef = {

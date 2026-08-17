@@ -163,6 +163,62 @@ MONSTER_ART.sunaKeshigomun = {
   rows: MONSTER_ART.keshigomun.rows,
 };
 
+/* ---------- 第4章 (氷の国メジャーリア) ---------- */
+
+/* ゆきだるマン — バケツを かぶった ゆきだるま */
+MONSTER_ART.yukiDaruman = {
+  palette: { k: "#2b4560", w: "#f4fbff", W: "#c9dcea", b: "#6b7280", o: "#e8823a", r: "#b8342f", t: "#7a5230" },
+  rows: [
+    "................", "....kkkkkkkk....", "...kbbbbbbbbk...", "...kbbbbbbbbk...",
+    "....kwwwwwwk....", "...kwwwwwwwwk...", "..kwwkwwwwkwwk..", "..kwwwwoowwwwk..",
+    "...kwwwwwwwwk...", "..kkwwwwwwwwkk..", "tkkwwwkkkkwwwkkt", ".kwwwwwwwwwwwwk.",
+    ".kwwwwrrrrwwwwk.", ".kwwwwwwwwwwwwk.", "..kwwwwwwwwwwk..", "...kkkkkkkkkk...",
+  ],
+};
+
+/* ものさしオオカミ — せなかに めもりが ある オオカミ */
+MONSTER_ART.monosashiOokami = {
+  palette: { k: "#1c2230", g: "#5c6b7d", G: "#8a99ab", w: "#f4f1e6", y: "#f2d675" },
+  rows: [
+    "................", "..kk........kk..", ".kgk........kgk.", ".kgGkkkkkkkkGgk.",
+    "kgGGGGGGGGGGGGgk", "kgGkwkGGGGkwkGgk", "kgGGGGGGGGGGGGgk", ".kgGGGwwwwGGGgk.",
+    ".kgGGwkkkkwGGgk.", "kkgGGGGGGGGGGgkk", "kgGyGyGyGyGyGGgk", "kgGGGGGGGGGGGGgk",
+    "kkgGGGGGGGGGGgkk", ".kkgGkkkkkkGgkk.", "..kgk......kgk..", "..kkk......kkk..",
+  ],
+};
+
+/* 小数の魔人デシマロン — 第4章ボス */
+MONSTER_ART.decimaron = {
+  palette: { k: "#0f1626", b: "#26407a", B: "#16264d", w: "#d8ecff", y: "#8fe0ff" },
+  rows: [
+    "......kkkk......", ".....kbbbbk.....", "....kbbyybbk....", "....kbbbbbbk....",
+    "...kbwbkkbwbk...", "...kbbbbbbbbk...", "..kbbbbwwbbbbk..", ".kBbbbbbbbbbbBk.",
+    "kBBbbbyyyybbbBBk", "kBbbbbbbbbbbbbBk", ".kBbbbyybbbbbBk.", "..kBbbbbbbbbBk..",
+    "...kBBbbbbBBk...", "....kBBBBBBk....", ".....kBBBBk.....", "......kkkk......",
+  ],
+};
+
+/* こおりの国の 色違い (ケシゴムン・コウモリ・カニ・ゴーレム) */
+MONSTER_ART.yukiKeshigomun = {
+  palette: { k: "#22384f", w: "#f4fbff", W: "#c9dcea", l: "#ffffff", b: "#5e8cb5", B: "#3f6488", c: "#a8d8ee", p: "#b8d0e8" },
+  rows: MONSTER_ART.keshigomun.rows,
+};
+
+MONSTER_ART.kooriBat = {
+  palette: { k: "#16243a", b: "#33547d", B: "#5e8cb5", l: "#a8d8ee", w: "#f4fbff", y: "#cbe8f7" },
+  rows: MONSTER_ART.mojibakeBat.rows,
+};
+
+MONSTER_ART.bundokiKani = {
+  palette: { k: "#1c2230", i: "#5a6675", I: "#8a99ab", l: "#c2cad8", w: "#f7f4e8", r: "#f2d675" },
+  rows: MONSTER_ART.inkgani.rows,
+};
+
+MONSTER_ART.kooriGolem = {
+  palette: { k: "#22384f", S: "#8fc0e0", d: "#3f6488", y: "#cbe8f7" },
+  rows: MONSTER_ART.wakemaeGolem.rows,
+};
+
 MONSTER_ART.sunanezumi = {
   palette: { k: "#241d16", g: "#c9a468", G: "#8f6f43", l: "#e8d3a0", p: "#e0906a", P: "#f2c0a0", w: "#fff8e6", y: "#edc43f" },
   rows: MONSTER_ART.kazunezumi.rows,

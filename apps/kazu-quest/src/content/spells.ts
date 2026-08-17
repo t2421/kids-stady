@@ -293,6 +293,113 @@ SPELLS.enCircle = {
   description: "円の まもりが みかた ぜんいんを つつむ",
 };
 
+/* ---------- 第4章 (小4) ---------- */
+
+SPELLS.kakudoSpin = {
+  id: "kakudoSpin",
+  name: "カクドスピン",
+  kind: "attack",
+  mpCost: 5,
+  power: 38,
+  target: "enemy",
+  skillIds: ["g4_angle"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g4_angle"], questions: 10, passCount: 8 },
+  description: "するどい 角度で きりこむ かいてん斬り",
+};
+
+SPELLS.mensekiWall = {
+  id: "mensekiWall",
+  name: "メンセキウォール",
+  kind: "buff",
+  mpCost: 5,
+  power: 0,
+  target: "party",
+  skillIds: ["g4_area"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g4_area"], questions: 10, passCount: 8 },
+  description: "面せきぶんの かべが みかた ぜんいんを まもる",
+};
+
+SPELLS.decimaFreeze = {
+  id: "decimaFreeze",
+  name: "デシマフリーズ",
+  kind: "attack",
+  mpCost: 6,
+  power: 27,
+  target: "allEnemies",
+  skillIds: ["g4_decimal"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g4_decimal"], questions: 10, passCount: 8 },
+  description: "小数の こおりが てき ぜんたいを こおらせる",
+};
+
+SPELLS.gaisuuBomb = {
+  id: "gaisuuBomb",
+  name: "ガイスウボム",
+  kind: "attack",
+  mpCost: 4,
+  power: 34,
+  target: "enemy",
+  skillIds: ["g4_round"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g4_round"], questions: 10, passCount: 8 },
+  description: "四捨五入で まるめた ばくだんを なげつける",
+};
+
+SPELLS.octoBillion = {
+  id: "octoBillion",
+  name: "オクトビリオン",
+  kind: "attack",
+  mpCost: 8,
+  power: 32,
+  target: "allEnemies",
+  skillIds: ["g4_big_number"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g4_big_number"], questions: 10, passCount: 8 },
+  description: "億と 兆の ひかりが てき ぜんたいを つらぬく",
+};
+
+SPELLS.bunsuuHeal = {
+  id: "bunsuuHeal",
+  name: "ブンスウヒール",
+  kind: "heal",
+  mpCost: 6,
+  power: 30,
+  target: "party",
+  skillIds: ["g4_fraction_same"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g4_fraction_same"], questions: 10, passCount: 8 },
+  description: "分数の ちからで みかた ぜんいんを 大きく かいふく",
+};
+
+SPELLS.warikiriBlade = {
+  id: "warikiriBlade",
+  name: "ワリキリブレード",
+  kind: "attack",
+  mpCost: 6,
+  power: 46,
+  target: "enemy",
+  skillIds: ["g4_div_2digit"],
+  battleTimeLimitMs: TIER3_MS,
+  learnTest: { skillIds: ["g4_div_2digit"], questions: 10, passCount: 8 },
+  description: "2けたで わりきる いちげきで 単体に 大ダメージ",
+};
+
+SPELLS.graphEye = {
+  id: "graphEye",
+  name: "グラフアイ",
+  kind: "debuff",
+  mpCost: 4,
+  power: 0,
+  target: "allEnemies",
+  effect: "atkDown",
+  skillIds: ["g4_graph"],
+  battleTimeLimitMs: TIER2_MS,
+  learnTest: { skillIds: ["g4_graph"], questions: 10, passCount: 8 },
+  description: "グラフで よわ点を みぬき てきの こうげきを よわめる",
+};
+
 export function getSpell(id: string): SpellDef | undefined {
   return SPELLS[id];
 }

@@ -122,6 +122,42 @@ ENCOUNTER_TABLES["ch3-pyramid"] = {
   ],
 };
 
+/* ---------- 第4章 ---------- */
+
+ENCOUNTER_TABLES["ch4-snowfield"] = {
+  id: "ch4-snowfield",
+  stepRange: [12, 24],
+  groups: [
+    { monsterIds: ["yukiKeshigomun"], weight: 3 },
+    { monsterIds: ["yukiKeshigomun", "kooriBat"], weight: 2 },
+    { monsterIds: ["kooriBat", "kooriBat"], weight: 2 },
+    { monsterIds: ["yukiDaruman"], weight: 2 },
+    { monsterIds: ["monosashiOokami"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch4-icecave"] = {
+  id: "ch4-icecave",
+  stepRange: [10, 20],
+  groups: [
+    { monsterIds: ["yukiDaruman"], weight: 3 },
+    { monsterIds: ["bundokiKani"], weight: 2 },
+    { monsterIds: ["yukiDaruman", "kooriBat"], weight: 2 },
+    { monsterIds: ["monosashiOokami", "yukiKeshigomun"], weight: 1 },
+  ],
+};
+
+ENCOUNTER_TABLES["ch4-angle-ruins"] = {
+  id: "ch4-angle-ruins",
+  stepRange: [9, 18],
+  groups: [
+    { monsterIds: ["bundokiKani"], weight: 3 },
+    { monsterIds: ["monosashiOokami"], weight: 3 },
+    { monsterIds: ["bundokiKani", "yukiDaruman"], weight: 2 },
+    { monsterIds: ["monosashiOokami", "monosashiOokami"], weight: 1 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }
