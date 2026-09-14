@@ -3,6 +3,14 @@
  * React / Phaser / DOM に依存しない純関数群。将来 mathematics へコピー可能に保つ。
  */
 
+/*
+ * 誤答の型 (LP-03, docs/kazu-quest-learning-tasks.md §1.1)。正典は
+ * src/content/lessons/types.ts (LP-01)。ここでは type-only import で
+ * 循環参照を避けつつ再 export し、curriculum 配下から `./types` だけで済むようにする
+ */
+import type { MistakePattern } from "../../content/lessons/types";
+export type { MistakePattern };
+
 export type Op = "+" | "-" | "×" | "÷" | null;
 
 export interface CherryHint {
@@ -32,6 +40,17 @@ export interface Problem {
   choices: [string, string, string];
   hint: Hint | null;
   explain: string[];
+  /*
+   * 段階ヒント (LP-03): [0]=考え方・[1]=途中まで・[2]=直前。既定値は
+   * genericHints() (src/lib/curriculum/hints.ts) が explain から機械的に作り、
+   * 手書きした単元だけ上書きする
+   */
+  hints: [string, string, string];
+  /*
+   * choices の各誤答が表す誤答パターン (任意)。makeChoicesTagged で作った
+   * choices にだけ付く。無い問題は diagnose() が数値差分から推定する
+   */
+  choiceTags?: [MistakePattern, MistakePattern, MistakePattern];
   /* かぞえ問題のみ: 描画するアイコンと個数 */
   visual?: CountVisual;
 }

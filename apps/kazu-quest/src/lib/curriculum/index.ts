@@ -1,6 +1,12 @@
 /*
- * カリキュラムの入口。generate(skillId, rng) で問題を1問作る。
+ * カリキュラムの入口。generate(skillId, rng, opts?) で問題を1問作る。
  * 小1〜小6の全学年を実装済み (章1〜6に対応)。
+ *
+ * 出題の段階 (LP-02, docs/kazu-quest-levels.md): opts.level (1|2|3) を
+ * 各ジェネレータへそのまま渡す。省略時は各ジェネレータ側の既定 (= 2、従来の
+ * 出題) が使われる。小1〜小3の20単元は level ごとに値域が変わる。
+ * 小4〜小6は level 引数を受け取らないジェネレータのままでもよい
+ * (第2引数を無視するだけなので型上も呼び出し上も問題ない — LP-02b で対応)。
  */
 
 import type { Problem, Rng, SkillInfo } from "./types";
@@ -13,10 +19,19 @@ import { GRADE5_GENERATORS, GRADE5_LABELS } from "./grade5";
 import { GRADE6_GENERATORS, GRADE6_LABELS } from "./grade6";
 import type { SkillStat } from "../save";
 
+export type SkillLevel = 1 | 2 | 3;
+
+export interface GenerateOptions {
+  /* 出題の段階。省略時は各ジェネレータの既定 (= 2、従来の出題) */
+  level?: SkillLevel;
+}
+
+type Generator = (rng: Rng, level?: SkillLevel) => Problem;
+
 /* 学年ごとの (ジェネレータ, ラベル) 束。学年を足すときはここに1行 */
 const BY_GRADE: {
   grade: number;
-  generators: Record<string, (rng: Rng) => Problem>;
+  generators: Record<string, Generator>;
   labels: Record<string, string>;
 }[] = [
   { grade: 1, generators: GRADE1_GENERATORS, labels: GRADE1_LABELS },
@@ -36,7 +51,7 @@ export const SKILLS: SkillInfo[] = BY_GRADE.flatMap(({ grade, generators, labels
   })),
 );
 
-const GENERATORS: Record<string, (rng: Rng) => Problem> = Object.assign(
+const GENERATORS: Record<string, Generator> = Object.assign(
   {},
   ...BY_GRADE.map((g) => g.generators),
 );
@@ -45,12 +60,12 @@ export function isImplemented(skillId: string): boolean {
   return skillId in GENERATORS;
 }
 
-export function generate(skillId: string, rng?: Rng): Problem {
+export function generate(skillId: string, rng?: Rng, opts?: GenerateOptions): Problem {
   const gen = GENERATORS[skillId];
   if (!gen) {
     throw new Error(`curriculum: unknown or unimplemented skill "${skillId}"`);
   }
-  return gen(rng ?? mulberry32((Math.random() * 2 ** 32) >>> 0));
+  return gen(rng ?? mulberry32((Math.random() * 2 ** 32) >>> 0), opts?.level);
 }
 
 /*

@@ -30,6 +30,22 @@ export {
 
 export type Dir = "up" | "down" | "left" | "right";
 
+/*
+ * 単元の習熟状態 (学びの設計 LP-04)。none < practicing < can < mastered の順で進む。
+ * reviewDue は間隔復習 (src/lib/mastery.ts) の次回期日、streak は連続合格回数。
+ * 実際の遷移ロジックは src/lib/mastery.ts の純関数群にある — ここは型と正規化のみ
+ */
+export type MasteryState = "none" | "practicing" | "can" | "mastered";
+
+export interface MasteryEntry {
+  state: MasteryState;
+  reviewDue: number | null;
+  streak: number;
+  passedAt: number | null;
+}
+
+const MASTERY_STATES: MasteryState[] = ["none", "practicing", "can", "mastered"];
+
 /* 装備部位。アイテム定義 (content/types.ts) からも参照される */
 export type EquipSlot = "weapon" | "armor" | "shield";
 
@@ -69,6 +85,8 @@ export interface SaveData extends AnswerTelemetry {
   history: HistoryEntry[];
   /* まちがいノート: 戦闘で間違えた問題、新しい順 (最大 20 件 — lib/mistakes.ts) */
   mistakes: MistakeEntry[];
+  /* 単元の習熟状態。skillId → MasteryEntry。欠損は {} (lib/mastery.ts) */
+  mastery: Record<string, MasteryEntry>;
   settings: SaveSettings;
   updatedAt: number;
 }
@@ -107,6 +125,7 @@ export function defaultSave(): SaveData {
     skillStats: {},
     history: [],
     mistakes: [],
+    mastery: {},
     settings: { ...DEFAULT_SETTINGS },
     updatedAt: 0,
   };
@@ -186,6 +205,40 @@ function normalizeFlags(raw: unknown): Record<string, number | boolean> {
   return out;
 }
 
+function asNonNegativeInt(v: unknown, fallback: number): number {
+  return typeof v === "number" && Number.isInteger(v) && v >= 0 ? v : fallback;
+}
+
+function asNullableFiniteNumber(v: unknown): number | null {
+  return typeof v === "number" && Number.isFinite(v) ? v : null;
+}
+
+function normalizeMasteryEntry(raw: unknown): MasteryEntry | null {
+  /* エントリそのものがオブジェクトでなければゴミとして捨てる */
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  return {
+    state: MASTERY_STATES.includes(r.state as MasteryState) ? (r.state as MasteryState) : "none",
+    reviewDue: asNullableFiniteNumber(r.reviewDue),
+    streak: asNonNegativeInt(r.streak, 0),
+    passedAt: asNullableFiniteNumber(r.passedAt),
+  };
+}
+
+/* 欠損・破損したセーブから安全に復元する。ゴミの行 (キーが空・値がオブジェクト
+   でない 等) は落とし、オブジェクトとして残った行は欠けた項目を既定値で埋める
+   (normalizeMistakes と同じ作法) */
+export function normalizeMastery(raw: unknown): Record<string, MasteryEntry> {
+  if (typeof raw !== "object" || raw === null) return {};
+  const out: Record<string, MasteryEntry> = {};
+  for (const [skillId, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!skillId) continue;
+    const entry = normalizeMasteryEntry(value);
+    if (entry) out[skillId] = entry;
+  }
+  return out;
+}
+
 export function normalizeSave(raw: unknown): SaveData {
   const d = defaultSave();
   if (typeof raw !== "object" || raw === null) return d;
@@ -261,6 +314,7 @@ export function normalizeSave(raw: unknown): SaveData {
     skillStats: normalizeSkillStats(r.skillStats),
     history: normalizeKazuHistory(r.history),
     mistakes: normalizeMistakes(r.mistakes),
+    mastery: normalizeMastery(r.mastery),
     settings: normalizeSettings(r.settings),
     updatedAt: Math.max(0, asNumber(r.updatedAt, 0)),
   };

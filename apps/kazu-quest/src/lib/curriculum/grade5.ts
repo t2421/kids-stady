@@ -7,6 +7,7 @@ import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
 import { dec, frac, gcd, lcm } from "./numbers";
+import { genericHints } from "./hints";
 
 /* 小数の かけ算わり算 (0.1きざみ × 整数) */
 function genDecimalMulDiv(rng: Rng): Problem {
@@ -32,6 +33,11 @@ function genDecimalMulDiv(rng: Rng): Problem {
         `かけられる数に 小数点が 1つ あるので 1けた もどす`,
         `こたえは ${answer}`,
       ],
+      hints: genericHints([
+        `まず 小数点を わすれて ${tenths} × ${b} = ${tenths * b}`,
+        `かけられる数に 小数点が 1つ あるので 1けた もどす`,
+        `こたえは ${answer}`,
+      ]),
     };
   }
   const quotientTenths = randInt(rng, 12, 95);
@@ -56,6 +62,11 @@ function genDecimalMulDiv(rng: Rng): Problem {
       `小数点の いちを そろえて もどす`,
       `こたえは ${answer}`,
     ],
+    hints: genericHints([
+      `${dividendTenths} ÷ ${divisor} = ${quotientTenths} と かんがえる`,
+      `小数点の いちを そろえて もどす`,
+      `こたえは ${answer}`,
+    ]),
   };
 }
 
@@ -89,6 +100,11 @@ function genFractionDiff(rng: Rng): Problem {
         `${(n1 * common) / d1}/${common} + ${(n2 * common) / d2}/${common} = ${total}/${common}`,
         `こたえは ${answer}`,
       ],
+      hints: [
+        `分母が ちがう ぶんすうは まず 通分するよ`,
+        `分母を ${common} に そろえると ${(n1 * common) / d1}/${common} と ${(n2 * common) / d2}/${common}`,
+        `${(n1 * common) / d1} + ${(n2 * common) / d2} = ${total}。分母は ${common} の ままだから…`,
+      ],
     };
   }
   /* ひき算は 大きいほうから ひく */
@@ -114,6 +130,11 @@ function genFractionDiff(rng: Rng): Problem {
         `分母を ${common} に そろえると どちらも ${big}/${common}`,
         `おなじ大きさ だから こたえは 0`,
       ],
+      hints: [
+        `分母が ちがう ぶんすうは まず 通分するよ`,
+        `分母を ${common} に そろえて くらべてみよう`,
+        `${big}/${common} と ${big}/${common}。おなじ 大きさだから…`,
+      ],
     };
   }
   const answer = frac(big - small, common);
@@ -136,6 +157,11 @@ function genFractionDiff(rng: Rng): Problem {
       `分母を ${common} に そろえる (通分)`,
       `${big}/${common} - ${small}/${common} = ${big - small}/${common}`,
       `こたえは ${answer}`,
+    ],
+    hints: [
+      `分母が ちがう ぶんすうは まず 通分するよ`,
+      `分母を ${common} に そろえると ${big}/${common} と ${small}/${common}`,
+      `${big} - ${small} = ${big - small}。分母は ${common} の ままだから…`,
     ],
   };
 }
@@ -163,6 +189,11 @@ function genPercent(rng: Rng): Problem {
         `${pct}% = ${dec(pct / 100, 2)}`,
         `${base} × ${dec(pct / 100, 2)} = ${value}こ`,
       ],
+      hints: [
+        `%を 小数に なおしてから かけ算しよう`,
+        `${pct}% は 小数で ${dec(pct / 100, 2)}`,
+        `${base} × ${dec(pct / 100, 2)} を けいさんすると…`,
+      ],
     };
   }
   /* 「○は □の なん%?」 (割り切れる組にする) */
@@ -185,6 +216,11 @@ function genPercent(rng: Rng): Problem {
     explain: [
       `${part} ÷ ${whole} = ${dec(part / whole, 2)}`,
       `100を かけて ${percent}%`,
+    ],
+    hints: [
+      `わり算してから 100を かけると 百分率に なるよ`,
+      `${part} ÷ ${whole} を けいさんしてみよう`,
+      `${dec(part / whole, 2)} に 100を かけると…`,
     ],
   };
 }
@@ -225,6 +261,11 @@ function genAverage(rng: Rng): Problem {
       `平きん = 合計 ÷ こ数`,
       `${answer * count} ÷ ${count} = ${answer}`,
     ],
+    hints: genericHints([
+      `ぜんぶ たすと ${answer * count}`,
+      `平きん = 合計 ÷ こ数`,
+      `${answer * count} ÷ ${count} = ${answer}`,
+    ]),
   };
 }
 
@@ -248,6 +289,7 @@ function genUnitRate(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`1こ分 = 合計 ÷ こ数`, `${total} ÷ ${count} = ${per}円`],
+      hints: genericHints([`1こ分 = 合計 ÷ こ数`, `${total} ÷ ${count} = ${per}円`]),
     };
   }
   return {
@@ -264,6 +306,7 @@ function genUnitRate(rng: Rng): Problem {
     ]),
     hint: null,
     explain: [`合計 = 1こ分 × こ数`, `${per} × ${count} = ${total}円`],
+    hints: genericHints([`合計 = 1こ分 × こ数`, `${per} × ${count} = ${total}円`]),
   };
 }
 
@@ -291,6 +334,10 @@ function genVolume(rng: Rng): Problem {
         `体せき = たて × よこ × 高さ`,
         `${a} × ${b} × ${c} = ${answer}cm³`,
       ],
+      hints: genericHints([
+        `体せき = たて × よこ × 高さ`,
+        `${a} × ${b} × ${c} = ${answer}cm³`,
+      ]),
     };
   }
   const s = randInt(rng, 2, 9);
@@ -309,6 +356,7 @@ function genVolume(rng: Rng): Problem {
     ]),
     hint: null,
     explain: [`立方体の 体せき = 1ぺん × 1ぺん × 1ぺん`, `${s}×${s}×${s} = ${answer}cm³`],
+    hints: genericHints([`立方体の 体せき = 1ぺん × 1ぺん × 1ぺん`, `${s}×${s}×${s} = ${answer}cm³`]),
   };
 }
 
@@ -337,6 +385,11 @@ function genMultiple(rng: Rng): Problem {
         `${b}の 倍数: ${b}, ${b * 2}, ${b * 3}…`,
         `はじめて そろうのは ${answer}`,
       ],
+      hints: genericHints([
+        `${a}の 倍数: ${a}, ${a * 2}, ${a * 3}…`,
+        `${b}の 倍数: ${b}, ${b * 2}, ${b * 3}…`,
+        `はじめて そろうのは ${answer}`,
+      ]),
     };
   }
   const answer = gcd(a, b);
@@ -357,6 +410,10 @@ function genMultiple(rng: Rng): Problem {
       `${a} も ${b} も わりきれる 数を さがす`,
       `いちばん 大きいのは ${answer}`,
     ],
+    hints: genericHints([
+      `${a} も ${b} も わりきれる 数を さがす`,
+      `いちばん 大きいのは ${answer}`,
+    ]),
   };
 }
 
@@ -384,6 +441,11 @@ function genArea(rng: Rng): Problem {
         `${base} × ${height} = ${base * height}`,
         `${base * height} ÷ 2 = ${answer}cm²`,
       ],
+      hints: genericHints([
+        `三角形の 面せき = そこへん × 高さ ÷ 2`,
+        `${base} × ${height} = ${base * height}`,
+        `${base * height} ÷ 2 = ${answer}cm²`,
+      ]),
     };
   }
   const base = randInt(rng, 3, 14);
@@ -406,6 +468,10 @@ function genArea(rng: Rng): Problem {
       `平行四辺形の 面せき = そこへん × 高さ`,
       `${base} × ${height} = ${answer}cm²`,
     ],
+    hints: genericHints([
+      `平行四辺形の 面せき = そこへん × 高さ`,
+      `${base} × ${height} = ${answer}cm²`,
+    ]),
   };
 }
 

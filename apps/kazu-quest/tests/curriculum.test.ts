@@ -43,6 +43,12 @@ function expectWellFormed(skillId: string) {
 
     expect(p.explain.length).toBeGreaterThan(0);
     expect(p.text.length).toBeGreaterThan(0);
+
+    /* 段階ヒント (LP-03): 全単元で3段そろっていること */
+    expect(p.hints).toHaveLength(3);
+    for (const h of p.hints) expect(h.length).toBeGreaterThan(0);
+    /* choiceTags を持つ問題は choices と同じ3件、diagnose が正解以外で使える形 */
+    if (p.choiceTags) expect(p.choiceTags).toHaveLength(3);
   }
 }
 
@@ -330,5 +336,104 @@ describe("pickSkill", () => {
 
   it("throws when nothing is implemented", () => {
     expect(() => pickSkill(["g9_nonsense"], {})).toThrow();
+  });
+});
+
+/*
+ * LP-02: 出題の段階 (level 1〜3、docs/kazu-quest-levels.md)。
+ * 小1〜小3 の20単元について、各レベルで3択が成立すること、
+ * レベルが上がると値域 (難度) が広がることを確認する。
+ * level 省略時 (= 2引数呼び出し) が level: 2 と完全に一致することは
+ * 上の各 describe ブロックの既存テスト (すべて generate(skillId, rng) の
+ * 2引数呼び出し) が引き続き緑であることで担保している — この変更で
+ * Lv2 の乱数消費・値域は一切変えていないため。
+ */
+describe("LP-02: level 1〜3 (grade1〜3, 20単元)", () => {
+  const LEVEL_RUNS = 300;
+  const LEVEL_SKILLS = [
+    ...implementedByGrade(1),
+    ...implementedByGrade(2),
+    ...implementedByGrade(3),
+  ];
+
+  /*
+   * 値域の単調性チェック用の magnitude proxy。既定は answer の数値。
+   * 一部の単元は「値の大きさ」だけでは難度を測れないため、専用の proxy か
+   * チェック自体の対象外化 (MAGNITUDE_SKIP) を個別に指定する。
+   */
+  const MAGNITUDE_OVERRIDE: Record<string, (p: ReturnType<typeof generate>) => number> = {
+    /*
+     * あまりは わる数-1 で頭打ちになり、Lv3 で商を大きくしても「あまり」
+     * そのものの最大値は Lv2 とほぼ変わらない。「わられる数」の方が
+     * Lv3 の難度 (大きな数からの逆算) を反映する
+     */
+    g3_div_remainder: (p) => Number(p.a),
+  };
+  /*
+   * g3_fraction は Lv1=読み・Lv2=大小くらべ/たし算・Lv3=たしひき と
+   * 「出題の種類」が変わる単元で、値の大きさ (分数はどのレベルも 0〜1 の
+   * 範囲) では難度を測れないため、単調性チェックの対象外にする
+   */
+  const MAGNITUDE_SKIP = new Set(["g3_fraction"]);
+
+  for (const skillId of LEVEL_SKILLS) {
+    it(`${skillId}: レベル1〜3 (各 ${LEVEL_RUNS} 問) は 3択ユニーク・正答を含む`, () => {
+      for (const level of [1, 2, 3] as const) {
+        const rng = mulberry32(1000 + level);
+        for (let i = 0; i < LEVEL_RUNS; i++) {
+          const p = generate(skillId, rng, { level });
+          expect(p.skillId).toBe(skillId);
+          expect(p.choices).toContain(p.answer);
+          const values = p.choices.map(valueOf);
+          for (const v of values) {
+            expect(Number.isFinite(v), `値にならない選択肢: ${p.choices}`).toBe(true);
+          }
+          expect(new Set(values).size, `同じ値の選択肢が並んだ: ${p.choices}`).toBe(3);
+        }
+      }
+    });
+
+    if (!MAGNITUDE_SKIP.has(skillId)) {
+      it(`${skillId}: レベルが上がると 値域が広がる (max(Lv1) <= max(Lv2) <= max(Lv3))`, () => {
+        const magnitude =
+          MAGNITUDE_OVERRIDE[skillId] ??
+          ((p: ReturnType<typeof generate>) => valueOf(p.answer));
+        const maxByLevel: Record<1 | 2 | 3, number> = {
+          1: -Infinity,
+          2: -Infinity,
+          3: -Infinity,
+        };
+        for (const level of [1, 2, 3] as const) {
+          const rng = mulberry32(2000 + level);
+          for (let i = 0; i < LEVEL_RUNS; i++) {
+            const p = generate(skillId, rng, { level });
+            maxByLevel[level] = Math.max(maxByLevel[level], magnitude(p));
+          }
+        }
+        expect(maxByLevel[1]).toBeLessThanOrEqual(maxByLevel[2]);
+        expect(maxByLevel[2]).toBeLessThanOrEqual(maxByLevel[3]);
+      });
+    }
+  }
+
+  it("level を省略した2引数呼び出しは level: 2 と完全に同じ問題列になる", () => {
+    for (const skillId of LEVEL_SKILLS) {
+      const withoutLevel = generate(skillId, mulberry32(77));
+      const withLevel2 = generate(skillId, mulberry32(77), { level: 2 });
+      expect(withLevel2).toEqual(withoutLevel);
+    }
+  });
+
+  it("g3_fraction: Lv1は単位分数の読み、Lv3は同分母のたしひきになる (値域ではなく出題の種類が変わる例)", () => {
+    const rng1 = mulberry32(9);
+    for (let i = 0; i < LEVEL_RUNS; i++) {
+      const p = generate("g3_fraction", rng1, { level: 1 });
+      expect(p.answer).toMatch(/^1\/[23]$/);
+    }
+    const rng3 = mulberry32(9);
+    for (let i = 0; i < LEVEL_RUNS; i++) {
+      const p = generate("g3_fraction", rng3, { level: 3 });
+      expect(p.op === "+" || p.op === "-").toBe(true);
+    }
   });
 });

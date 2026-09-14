@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { EventCommand, MapDef } from "../src/content/types";
+import type { EventCommand, FlagCond, MapDef } from "../src/content/types";
 import { listMaps, hasMap, getMapDef } from "../src/content/maps";
 import { TILE_ART } from "../src/content/art/tiles";
 import { ACTOR_ART } from "../src/content/art/actors";
@@ -149,9 +149,13 @@ describe("flag reachability", () => {
         if (ev.onceFlag) settable.add(ev.onceFlag);
       }
       for (const npc of map.npcs) {
-        if (npc.hideIf) referenced.set(npc.hideIf.flag, `${map.id}/npc:${npc.id}`);
+        if (npc.hideIf && "flag" in npc.hideIf) {
+          referenced.set(npc.hideIf.flag, `${map.id}/npc:${npc.id}`);
+        }
         for (const entry of npc.dialog) {
-          if (entry.if) referenced.set(entry.if.flag, `${map.id}/npc:${npc.id}`);
+          if (entry.if && "flag" in entry.if) {
+            referenced.set(entry.if.flag, `${map.id}/npc:${npc.id}`);
+          }
         }
       }
     }
@@ -160,6 +164,29 @@ describe("flag reachability", () => {
         settable.has(flag),
         `フラグ "${flag}" (${where}) は参照されるが どこでも set されない`,
       ).toBe(true);
+    }
+  });
+
+  /* skill 条件版 FlagCond (LP-01/LP-04): skillId は実在し、state は4値のいずれか */
+  it("every skill condition references a real skillId with a valid state", () => {
+    const skillIds = new Set(SKILLS.map((s) => s.id));
+    const validStates = new Set(["none", "practicing", "can", "mastered"]);
+    const skillConds: { cond: Extract<FlagCond, { skill: string }>; where: string }[] = [];
+    for (const map of maps) {
+      for (const npc of map.npcs) {
+        if (npc.hideIf && "skill" in npc.hideIf) {
+          skillConds.push({ cond: npc.hideIf, where: `${map.id}/npc:${npc.id} hideIf` });
+        }
+        for (const entry of npc.dialog) {
+          if (entry.if && "skill" in entry.if) {
+            skillConds.push({ cond: entry.if, where: `${map.id}/npc:${npc.id} dialog.if` });
+          }
+        }
+      }
+    }
+    for (const { cond, where } of skillConds) {
+      expect(skillIds.has(cond.skill), `${where} の skill "${cond.skill}"`).toBe(true);
+      expect(validStates.has(cond.state), `${where} の state "${cond.state}"`).toBe(true);
     }
   });
 });
@@ -436,6 +463,13 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
         expect(
           SKILLS.some((s) => s.id === cmd.skillId && s.implemented),
           `quiz の skill "${cmd.skillId}" が未実装/未登録`,
+        ).toBe(true);
+      }
+      /* まなびやの先生 (openLesson) のスキルも同様にタイポ検出する */
+      if (cmd.type === "openLesson") {
+        expect(
+          SKILLS.some((s) => s.id === cmd.skillId && s.implemented),
+          `openLesson の skill "${cmd.skillId}" が未実装/未登録`,
         ).toBe(true);
       }
       /* memberId タイポは勇者ステータスに静かにフォールバックしてしまう */

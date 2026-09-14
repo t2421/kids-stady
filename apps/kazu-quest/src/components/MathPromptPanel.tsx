@@ -53,13 +53,24 @@ export interface MathPromptResult {
 
 const TIMER_TICK_MS = 100;
 
+/*
+ * 出題の段階 (LP-02, docs/kazu-quest-learning-tasks.md §1.5): 戦闘 = Lv2、
+ * おだい (drill) = Lv3、それ以外 (test / practice / field) は既定 (= Lv2 相当)
+ * のまま。れんしゅう (Lv1→3 の段階的な出題) は LP-09 で別途対応する。
+ */
+function levelForContext(context: MathPromptRequest["context"]): 1 | 2 | 3 {
+  if (context === "drill") return 3;
+  return 2;
+}
+
 export function MathPromptPanel() {
   const [request, setRequest] = useState<MathPromptRequest | null>(null);
   const [problem, setProblem] = useState<Problem | null>(null);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
-  /* とっくん: ヒントを開いたか / 不正解の解説を読んでいる間の保留結果 */
-  const [hintShown, setHintShown] = useState(false);
+  /* とっくん: いま見えているヒントの段 (0=未表示、LP-03は3段) / 不正解の解説を
+   * 読んでいる間の保留結果 */
+  const [hintLevel, setHintLevel] = useState(0);
   const [pending, setPending] = useState<MathPromptResult | null>(null);
   const startedAt = useRef(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -113,13 +124,15 @@ export function MathPromptPanel() {
         req.problem ??
         generate(
           req.skillId ?? pickSkill(req.skillIds ?? [], getSave().skillStats),
+          undefined,
+          { level: levelForContext(req.context) },
         );
       answeredRef.current = false;
       setRequest(req);
       setProblem(prob);
       setCurrentProblem(prob);
       setFeedback(null);
-      setHintShown(false);
+      setHintLevel(0);
       setPending(null);
       startedAt.current = performance.now();
 
@@ -193,14 +206,17 @@ export function MathPromptPanel() {
         {problem.visual && (
           <CountRow icon={problem.visual.icon} count={problem.visual.count} />
         )}
-        {isPractice && !hintShown && feedback === null && (
+        {isPractice && feedback === null && (
           <div style={{ display: "flex", justifyContent: "center" }}>
-            <MathHintButton onTap={() => setHintShown(true)} />
+            <MathHintButton
+              level={hintLevel}
+              onTap={() => setHintLevel((l) => Math.min(3, l + 1))}
+            />
           </div>
         )}
-        {isPractice && hintShown && pending === null && (
+        {isPractice && hintLevel > 0 && pending === null && (
           <div style={{ marginBottom: 14 }}>
-            <MathHintBody problem={problem} />
+            <MathHintBody problem={problem} level={hintLevel} />
           </div>
         )}
         {inputMode === "keypad" ? (
@@ -236,7 +252,11 @@ export function MathPromptPanel() {
           </div>
         )}
         {pending !== null && (
-          <MathExplain problem={problem} onNext={() => emitResult(pending)} />
+          <MathExplain
+            problem={problem}
+            chosen={pending.chosen}
+            onNext={() => emitResult(pending)}
+          />
         )}
       </div>
     </div>

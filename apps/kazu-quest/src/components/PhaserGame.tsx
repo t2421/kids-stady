@@ -8,6 +8,9 @@ import { expForLevel } from "@/lib/battle/stats";
 import { memberStats } from "@/lib/battle/members";
 import { installSfxUnlock } from "@/game/audio/sfx";
 import { currentAnswer } from "@/components/currentProblem";
+import { advanceClock as advanceClockOffset, now } from "@/lib/clock";
+import { REVIEW_INTERVALS_MS } from "@/lib/mastery";
+import type { MasteryState } from "@/lib/save";
 import type Phaser from "phaser";
 
 /*
@@ -52,6 +55,26 @@ export function PhaserGame() {
         },
         setFlag: (flag: string, value: number | boolean = true) => {
           updateSave((s) => ({ ...s, flags: { ...s.flags, [flag]: value } }));
+        },
+        /* E2E (学びの設計): 間隔復習の期日到来を待たずに時計を進める */
+        advanceClock: (ms: number) => {
+          advanceClockOffset(ms);
+        },
+        /* E2E: 単元の習熟状態を直接書く (学びの設計まわりのテスト用) */
+        setMastery: (skillId: string, state: MasteryState) => {
+          updateSave((s) => ({
+            ...s,
+            mastery: {
+              ...s.mastery,
+              [skillId]: {
+                state,
+                reviewDue: state === "can" || state === "mastered" ? now() + REVIEW_INTERVALS_MS[0] : null,
+                streak: 0,
+                passedAt: state !== "none" ? now() : null,
+              },
+            },
+          }));
+          autosave();
         },
         learnSpell: (spellId: string) => {
           updateSave((s) => ({

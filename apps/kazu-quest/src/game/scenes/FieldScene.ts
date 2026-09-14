@@ -657,6 +657,12 @@ export class FieldScene extends Scene {
         case "openReviewQuest":
           handleReviewQuest(this.ui, () => advance());
           break;
+        // LP-08/LP-11 replaces this with EventBus emit (open-lesson / open-review)
+        case "openLesson":
+        case "openReview":
+        case "openPreview":
+          this.ui.showMessage(["じゅんびちゅう…"], () => advance());
+          break;
         case "openShop":
           handleShop(this.ui, effect.shopId, () => advance());
           break;

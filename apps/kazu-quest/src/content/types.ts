@@ -5,6 +5,7 @@
  */
 
 import type { Dir, EquipSlot } from "../lib/save";
+import type { MasteryState } from "./lessons/types";
 
 /* ---------- マップ ---------- */
 
@@ -23,11 +24,10 @@ export interface TileSpec {
 
 export type FlagValue = number | boolean;
 
-export interface FlagCond {
-  flag: string;
-  op: "set" | "unset" | ">=";
-  value?: number;
-}
+export type FlagCond =
+  | { flag: string; op: "set" | "unset" | ">="; value?: number }
+  /* 単元の習熟状態が指定状態「以上」で成立 (LP-01/LP-04。順序 none < practicing < can < mastered) */
+  | { skill: string; state: MasteryState };
 
 export type EventCommand =
   | { type: "message"; pages: string[] }
@@ -46,6 +46,12 @@ export type EventCommand =
   | { type: "openDrillBoard" }
   /* ふくしゅうのほこら: 弱点スキル3つから10問 → ひらめきメダル + ゴールド (設計 A6) */
   | { type: "openReviewQuest" }
+  /* まなびやの先生: 単元1つのレッスン画面を開く (LP-08) */
+  | { type: "openLesson"; skillId: string }
+  /* ほこら/まなびやの「おさらい」: 期日の来た単元を自動選択して5問 (LP-11) */
+  | { type: "openReview" }
+  /* ほこらの「さきどり」: 前提を満たす未受講単元の一覧 (LP-11) */
+  | { type: "openPreview" }
   | { type: "savePoint" }
   /* ボス前の すいしょうレベル看板: 推奨Lv と いまの勇者Lv を並べて見せる (入室制限はしない) */
   | { type: "levelSign"; level: number }

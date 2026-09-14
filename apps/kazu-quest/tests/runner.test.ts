@@ -25,6 +25,52 @@ describe("evalCond", () => {
   it("undefined cond is always true", () => {
     expect(evalCond(undefined, flags)).toBe(true);
   });
+
+  describe("skill condition (LP-01/LP-04)", () => {
+    const mastery = {
+      g1_add_nc: { state: "can" },
+      g1_add_carry: { state: "mastered" },
+      g2_kuku: { state: "practicing" },
+    };
+
+    it("passes when actual state equals the required state", () => {
+      expect(evalCond({ skill: "g1_add_nc", state: "can" }, flags, mastery)).toBe(true);
+      expect(evalCond({ skill: "g1_add_carry", state: "mastered" }, flags, mastery)).toBe(true);
+      expect(evalCond({ skill: "g2_kuku", state: "practicing" }, flags, mastery)).toBe(true);
+    });
+
+    it("passes when actual state is higher (>= semantics)", () => {
+      expect(evalCond({ skill: "g1_add_nc", state: "practicing" }, flags, mastery)).toBe(true);
+      expect(evalCond({ skill: "g1_add_carry", state: "can" }, flags, mastery)).toBe(true);
+      expect(evalCond({ skill: "g1_add_carry", state: "none" }, flags, mastery)).toBe(true);
+    });
+
+    it("fails when actual state is lower than required", () => {
+      expect(evalCond({ skill: "g2_kuku", state: "can" }, flags, mastery)).toBe(false);
+      expect(evalCond({ skill: "g2_kuku", state: "mastered" }, flags, mastery)).toBe(false);
+      expect(evalCond({ skill: "g1_add_nc", state: "mastered" }, flags, mastery)).toBe(false);
+    });
+
+    it("treats a skill missing from mastery as none", () => {
+      expect(evalCond({ skill: "g3_div", state: "none" }, flags, mastery)).toBe(true);
+      expect(evalCond({ skill: "g3_div", state: "practicing" }, flags, mastery)).toBe(false);
+    });
+
+    it("treats an omitted mastery argument entirely as none for every skill", () => {
+      expect(evalCond({ skill: "g1_add_nc", state: "none" }, flags)).toBe(true);
+      expect(evalCond({ skill: "g1_add_nc", state: "practicing" }, flags)).toBe(false);
+    });
+
+    it("orders none < practicing < can < mastered end to end", () => {
+      const order = ["none", "practicing", "can", "mastered"] as const;
+      for (let i = 0; i < order.length; i++) {
+        for (let j = 0; j < order.length; j++) {
+          const m = { skill: { state: order[i] } };
+          expect(evalCond({ skill: "skill", state: order[j] }, flags, m)).toBe(i >= j);
+        }
+      }
+    });
+  });
 });
 
 describe("event runner", () => {
@@ -176,6 +222,24 @@ describe("event runner", () => {
     ];
     let r = step(startRun(commands, defaultSave()));
     expect(r.effect).toEqual({ kind: "openReviewQuest" });
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
+  it("openLesson/openReview/openPreview surface as UI effects then continue", () => {
+    const commands: EventCommand[] = [
+      { type: "openLesson", skillId: "g1_add_nc" },
+      { type: "openReview" },
+      { type: "openPreview" },
+      { type: "setFlag", flag: "after" },
+    ];
+    let r = step(startRun(commands, defaultSave()));
+    expect(r.effect).toEqual({ kind: "openLesson", skillId: "g1_add_nc" });
+    r = step(r.state);
+    expect(r.effect).toEqual({ kind: "openReview" });
+    r = step(r.state);
+    expect(r.effect).toEqual({ kind: "openPreview" });
     r = step(r.state);
     expect(r.done).toBe(true);
     expect(r.state.save.flags.after).toBe(true);

@@ -25,6 +25,10 @@ export type RunnerEffect =
   | { kind: "openSpellTest"; spellId: string }
   | { kind: "openDrillBoard" }
   | { kind: "openReviewQuest" }
+  /* LP-08/LP-11 が React 画面に差し替えるまでは FieldScene が仮メッセージを出す */
+  | { kind: "openLesson"; skillId: string }
+  | { kind: "openReview" }
+  | { kind: "openPreview" }
   | { kind: "savePoint" }
   | { kind: "choice"; prompt: string }
   | { kind: "quiz"; skillId: string }
@@ -48,11 +52,34 @@ export interface RunnerState {
   pending: EventCommand | null;
 }
 
+/* 習熟状態の順序。skill 条件は「指定状態 以上」で成立する */
+const MASTERY_ORDER: Record<string, number> = {
+  none: 0,
+  practicing: 1,
+  can: 2,
+  mastered: 3,
+};
+
+/*
+ * skill 条件が読む mastery の形。SaveData にはまだ mastery が無い (LP-04 が足す) ため、
+ * 厳密な型を import せず構造的に必要な部分だけを受け取る。
+ * TODO(LP-04): save.mastery が型付けされたら SaveData["mastery"] を直接受け取るよう厳格化する
+ */
+type MasteryLookup = Record<string, { state?: string } | undefined> | undefined;
+
 export function evalCond(
   cond: FlagCond | undefined,
   flags: SaveData["flags"],
+  /* skill 条件の評価に使う。省略時 (mastery が無いセーブ/呼び出し) は全skillが "none" 扱い */
+  mastery?: MasteryLookup,
 ): boolean {
   if (!cond) return true;
+  if ("skill" in cond) {
+    const actual = mastery?.[cond.skill]?.state ?? "none";
+    const actualRank = MASTERY_ORDER[actual] ?? 0;
+    const requiredRank = MASTERY_ORDER[cond.state] ?? 0;
+    return actualRank >= requiredRank;
+  }
   const value = flags[cond.flag];
   switch (cond.op) {
     case "set":
@@ -317,6 +344,24 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
         return {
           state: { stack, save, pending: cmd },
           effect: { kind: "openReviewQuest" },
+          done: false,
+        };
+      case "openLesson":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openLesson", skillId: cmd.skillId },
+          done: false,
+        };
+      case "openReview":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openReview" },
+          done: false,
+        };
+      case "openPreview":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openPreview" },
           done: false,
         };
       case "savePoint":

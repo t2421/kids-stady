@@ -7,6 +7,7 @@ import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
 import { dec, frac, gcd } from "./numbers";
+import { genericHints } from "./hints";
 
 const PI = 3.14;
 
@@ -36,6 +37,11 @@ function genFractionMulDiv(rng: Rng): Problem {
         `${n} × ${m} = ${n * m}`,
         `こたえは ${answer}`,
       ],
+      hints: genericHints([
+        `整数を かけるときは 分子に かける`,
+        `${n} × ${m} = ${n * m}`,
+        `こたえは ${answer}`,
+      ]),
     };
   }
   if (kind === 1) {
@@ -59,6 +65,11 @@ function genFractionMulDiv(rng: Rng): Problem {
         `${d} × ${m} = ${d * m}`,
         `こたえは ${answer}`,
       ],
+      hints: genericHints([
+        `整数で わるときは 分母に かける`,
+        `${d} × ${m} = ${d * m}`,
+        `こたえは ${answer}`,
+      ]),
     };
   }
   const d2 = randInt(rng, 2, 7);
@@ -82,6 +93,11 @@ function genFractionMulDiv(rng: Rng): Problem {
       `${n} × ${n2} = ${n * n2}、${d} × ${d2} = ${d * d2}`,
       `やくぶんして ${answer}`,
     ],
+    hints: genericHints([
+      `分数どうしは 分子は 分子、分母は 分母で かける`,
+      `${n} × ${n2} = ${n * n2}、${d} × ${d2} = ${d * d2}`,
+      `やくぶんして ${answer}`,
+    ]),
   };
 }
 
@@ -105,6 +121,7 @@ function genLetterExpr(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`x = ${x + b} - ${b}`, `x = ${x}`],
+      hints: genericHints([`x = ${x + b} - ${b}`, `x = ${x}`]),
     };
   }
   if (kind === 1) {
@@ -124,6 +141,7 @@ function genLetterExpr(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`x = ${a * x} ÷ ${a}`, `x = ${x}`],
+      hints: genericHints([`x = ${a * x} ÷ ${a}`, `x = ${x}`]),
     };
   }
   const x = randInt(rng, 2, 12);
@@ -146,6 +164,10 @@ function genLetterExpr(rng: Rng): Problem {
       `${a} × ${x} = ${a * x}`,
       `${a * x} + ${b} = ${a * x + b}`,
     ],
+    hints: genericHints([
+      `${a} × ${x} = ${a * x}`,
+      `${a * x} + ${b} = ${a * x + b}`,
+    ]),
   };
 }
 
@@ -172,6 +194,7 @@ function genRatio(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`比の あたい = ${a} ÷ ${b}`, `こたえは ${answer}`],
+      hints: genericHints([`比の あたい = ${a} ÷ ${b}`, `こたえは ${answer}`]),
     };
   }
   const answer = b * k;
@@ -192,6 +215,10 @@ function genRatio(rng: Rng): Problem {
       `${a} が ${a * k} に なったので ${k}ばい`,
       `${b} × ${k} = ${answer}`,
     ],
+    hints: genericHints([
+      `${a} が ${a * k} に なったので ${k}ばい`,
+      `${b} × ${k} = ${answer}`,
+    ]),
   };
 }
 
@@ -216,6 +243,11 @@ function genSpeed(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`速さ = 道のり ÷ 時間`, `${distance} ÷ ${time} = ${speed}km/時`],
+      hints: [
+        `速さ・道のり・時間の かんけいを おもいだそう`,
+        `速さ = 道のり ÷ 時間 だったね`,
+        `${distance} ÷ ${time} を けいさんすると…`,
+      ],
     };
   }
   if (kind === 1) {
@@ -233,6 +265,11 @@ function genSpeed(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`道のり = 速さ × 時間`, `${speed} × ${time} = ${distance}km`],
+      hints: [
+        `速さ・道のり・時間の かんけいを おもいだそう`,
+        `道のり = 速さ × 時間 だったね`,
+        `${speed} × ${time} を けいさんすると…`,
+      ],
     };
   }
   return {
@@ -249,6 +286,11 @@ function genSpeed(rng: Rng): Problem {
     ]),
     hint: null,
     explain: [`時間 = 道のり ÷ 速さ`, `${distance} ÷ ${speed} = ${time}時間`],
+    hints: [
+      `速さ・道のり・時間の かんけいを おもいだそう`,
+      `時間 = 道のり ÷ 速さ だったね`,
+      `${distance} ÷ ${speed} を けいさんすると…`,
+    ],
   };
 }
 
@@ -275,6 +317,11 @@ function genCircleArea(rng: Rng): Problem {
         `${r} × ${r} = ${r * r}`,
         `${r * r} × 3.14 = ${answer}cm²`,
       ],
+      hints: genericHints([
+        `円の 面せき = 半けい × 半けい × 3.14`,
+        `${r} × ${r} = ${r * r}`,
+        `${r * r} × 3.14 = ${answer}cm²`,
+      ]),
     };
   }
   const answer = dec(PI * r * 2, 2);
@@ -296,6 +343,11 @@ function genCircleArea(rng: Rng): Problem {
       `直けい = ${r} × 2 = ${r * 2}`,
       `${r * 2} × 3.14 = ${answer}cm`,
     ],
+    hints: genericHints([
+      `円周 = 直けい × 3.14`,
+      `直けい = ${r} × 2 = ${r * 2}`,
+      `${r * 2} × 3.14 = ${answer}cm`,
+    ]),
   };
 }
 
@@ -325,6 +377,11 @@ function genProportion(rng: Rng): Problem {
       `x が ${k}ばい なら y も ${k}ばい`,
       `${y1} × ${k} = ${answer}`,
     ],
+    hints: genericHints([
+      `y ÷ x = ${unit} (きまった数)`,
+      `x が ${k}ばい なら y も ${k}ばい`,
+      `${y1} × ${k} = ${answer}`,
+    ]),
   };
 }
 
@@ -348,6 +405,7 @@ function genScale(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`かくだい図は へんの 長さが ${k}ばい`, `${side} × ${k} = ${answer}cm`],
+      hints: genericHints([`かくだい図は へんの 長さが ${k}ばい`, `${side} × ${k} = ${answer}cm`]),
     };
   }
   const big = side * k;
@@ -365,6 +423,7 @@ function genScale(rng: Rng): Problem {
     ]),
     hint: null,
     explain: [`しゅくず は へんの 長さが 1/${k}`, `${big} ÷ ${k} = ${side}cm`],
+    hints: genericHints([`しゅくず は へんの 長さが 1/${k}`, `${big} ÷ ${k} = ${side}cm`]),
   };
 }
 
@@ -390,6 +449,10 @@ function genCombination(rng: Rng): Problem {
         `1人目は ${n}とおり、2人目は ${n - 1}とおり…`,
         `${Array.from({ length: n }, (_, i) => n - i).join(" × ")} = ${answer}`,
       ],
+      hints: genericHints([
+        `1人目は ${n}とおり、2人目は ${n - 1}とおり…`,
+        `${Array.from({ length: n }, (_, i) => n - i).join(" × ")} = ${answer}`,
+      ]),
     };
   }
   const n = randInt(rng, 4, 6);
@@ -412,6 +475,11 @@ function genCombination(rng: Rng): Problem {
       `対せんは 入れかえても おなじなので ÷2`,
       `こたえは ${answer}試合`,
     ],
+    hints: genericHints([
+      `${n} × ${n - 1} = ${n * (n - 1)} (じゅんばんを 区べつした 数)`,
+      `対せんは 入れかえても おなじなので ÷2`,
+      `こたえは ${answer}試合`,
+    ]),
   };
 }
 

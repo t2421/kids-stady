@@ -7,6 +7,7 @@ import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
 import { dec, frac, gcd } from "./numbers";
+import { genericHints } from "./hints";
 
 /* 億・兆 (くらいの しくみ) */
 function genBigNumber(rng: Rng): Problem {
@@ -31,6 +32,10 @@ function genBigNumber(rng: Rng): Problem {
         `1億 = 1万 が 10000こ分`,
         `${n}億 = 1万 × ${answer}`,
       ],
+      hints: genericHints([
+        `1億 = 1万 が 10000こ分`,
+        `${n}億 = 1万 × ${answer}`,
+      ]),
     };
   }
   if (kind === 1) {
@@ -49,6 +54,7 @@ function genBigNumber(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`1億 = 1000万 × 10`, `${n}億 = 1000万 × ${n * 10}`],
+      hints: genericHints([`1億 = 1000万 × 10`, `${n}億 = 1000万 × ${n * 10}`]),
     };
   }
   const n = randInt(rng, 2, 9);
@@ -65,6 +71,10 @@ function genBigNumber(rng: Rng): Problem {
       `億 → 兆 は くらいが 4つ上がる`,
       `10 × 10 × 10 × 10 = 10000ばい`,
     ],
+    hints: genericHints([
+      `億 → 兆 は くらいが 4つ上がる`,
+      `10 × 10 × 10 × 10 = 10000ばい`,
+    ]),
   };
 }
 
@@ -92,6 +102,11 @@ function genDiv2Digit(rng: Rng): Problem {
       `${divisor} × ${answer} = ${dividend}`,
       `だから こたえは ${answer}`,
     ],
+    hints: genericHints([
+      `${divisor} を 何こ あつめると ${dividend} に なる?`,
+      `${divisor} × ${answer} = ${dividend}`,
+      `だから こたえは ${answer}`,
+    ]),
   };
 }
 
@@ -120,6 +135,11 @@ function genRound(rng: Rng): Problem {
       `${Math.floor((value % unit) / (unit / 10)) >= 5 ? "5いじょう だから くり上げる" : "4いか だから きりすてる"}`,
       `こたえは ${answer}`,
     ],
+    hints: genericHints([
+      `${toHundred ? "十" : "百"}のくらいの ${Math.floor((value % unit) / (unit / 10))} を 見る`,
+      `${Math.floor((value % unit) / (unit / 10)) >= 5 ? "5いじょう だから くり上げる" : "4いか だから きりすてる"}`,
+      `こたえは ${answer}`,
+    ]),
   };
 }
 
@@ -148,6 +168,11 @@ function genDecimal(rng: Rng): Problem {
         `あわせて 0.01が ${a + b}こ`,
         `くらいを そろえて ${answer}`,
       ],
+      hints: genericHints([
+        `0.01が ${a}こと ${b}こ`,
+        `あわせて 0.01が ${a + b}こ`,
+        `くらいを そろえて ${answer}`,
+      ]),
     };
   }
   const a = randInt(rng, 60, 320);
@@ -171,6 +196,11 @@ function genDecimal(rng: Rng): Problem {
       `0.01が ${a}こ - ${b}こ = ${a - b}こ`,
       `こたえは ${answer}`,
     ],
+    hints: genericHints([
+      `くらいを そろえて ひっさんする`,
+      `0.01が ${a}こ - ${b}こ = ${a - b}こ`,
+      `こたえは ${answer}`,
+    ]),
   };
 }
 
@@ -205,6 +235,11 @@ function genFractionSame(rng: Rng): Problem {
         `${n1} + ${n2} = ${n1 + n2}`,
         `こたえは ${answer}`,
       ],
+      hints: genericHints([
+        `分母は そのまま、分子だけ たす`,
+        `${n1} + ${n2} = ${n1 + n2}`,
+        `こたえは ${answer}`,
+      ]),
     };
   }
   const n1 = randInt(rng, 3, d);
@@ -228,6 +263,11 @@ function genFractionSame(rng: Rng): Problem {
       `${n1} - ${n2} = ${n1 - n2}`,
       `こたえは ${answer}`,
     ],
+    hints: genericHints([
+      `分母は そのまま、分子だけ ひく`,
+      `${n1} - ${n2} = ${n1 - n2}`,
+      `こたえは ${answer}`,
+    ]),
   };
 }
 
@@ -251,6 +291,7 @@ function genAngle(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`一ちょくせん = 180°`, `180 - ${a} = ${answer}°`],
+      hints: genericHints([`一ちょくせん = 180°`, `180 - ${a} = ${answer}°`]),
     };
   }
   if (kind === 1) {
@@ -274,6 +315,7 @@ function genAngle(rng: Rng): Problem {
         ]),
         hint: null,
         explain: [`三角形の 角の和は 180°`, `180 - 90 - ${c} = ${90 - c}°`],
+        hints: genericHints([`三角形の 角の和は 180°`, `180 - 90 - ${c} = ${90 - c}°`]),
       };
     }
     return {
@@ -290,6 +332,7 @@ function genAngle(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`三角形の 角の和は 180°`, `180 - ${a} - ${b} = ${answer}°`],
+      hints: genericHints([`三角形の 角の和は 180°`, `180 - ${a} - ${b} = ${answer}°`]),
     };
   }
   const a = randInt(rng, 5, 33) * 10;
@@ -308,6 +351,7 @@ function genAngle(rng: Rng): Problem {
     ]),
     hint: null,
     explain: [`一まわり = 360°`, `360 - ${a} = ${answer}°`],
+    hints: genericHints([`一まわり = 360°`, `360 - ${a} = ${answer}°`]),
   };
 }
 
@@ -331,6 +375,7 @@ function genArea(rng: Rng): Problem {
       ]),
       hint: null,
       explain: [`長方形の 面せき = たて × よこ`, `${h} × ${w} = ${answer}cm²`],
+      hints: genericHints([`長方形の 面せき = たて × よこ`, `${h} × ${w} = ${answer}cm²`]),
     };
   }
   const s = randInt(rng, 3, 15);
@@ -349,6 +394,7 @@ function genArea(rng: Rng): Problem {
     ]),
     hint: null,
     explain: [`正方形の 面せき = 1ぺん × 1ぺん`, `${s} × ${s} = ${answer}cm²`],
+    hints: genericHints([`正方形の 面せき = 1ぺん × 1ぺん`, `${s} × ${s} = ${answer}cm²`]),
   };
 }
 
@@ -377,6 +423,10 @@ function genGraph(rng: Rng): Problem {
         `${values[0]} + ${values[1]} + ${values[2]} = ${answer}`,
         `ひょうの 数を ぜんぶ たす`,
       ],
+      hints: genericHints([
+        `${values[0]} + ${values[1]} + ${values[2]} = ${answer}`,
+        `ひょうの 数を ぜんぶ たす`,
+      ]),
     };
   }
   const max = Math.max(...values);
@@ -399,6 +449,10 @@ function genGraph(rng: Rng): Problem {
       `いちばん多いのは ${max}こ、少ないのは ${min}こ`,
       `${max} - ${min} = ${answer}こ`,
     ],
+    hints: genericHints([
+      `いちばん多いのは ${max}こ、少ないのは ${min}こ`,
+      `${max} - ${min} = ${answer}こ`,
+    ]),
   };
 }
 

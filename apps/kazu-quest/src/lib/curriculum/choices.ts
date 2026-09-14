@@ -3,7 +3,7 @@
  * よくある間違いを優先する: ±1 / くりあがり忘れ (±10) / オペランドエコー。
  */
 
-import type { Rng } from "./types";
+import type { MistakePattern, Rng } from "./types";
 import { shuffle } from "./types";
 
 export type ChoiceKind = "count" | "add" | "sub" | "compare" | "mul" | "convert" | "time";
@@ -71,6 +71,80 @@ export function makeChoices(
   const wrong = shuffle(rng, candidates).slice(0, 2);
   const all = shuffle(rng, [answer, ...wrong]);
   return [String(all[0]), String(all[1]), String(all[2])];
+}
+
+/*
+ * makeChoices と同じ候補生成ロジックを使いつつ、どの「よくある間違い」の
+ * ルールが その候補を作ったかを覚えておき、MistakePattern として一緒に返す
+ * (LP-03)。makeChoices 自体は変えない — 既存の呼び出し元はそのまま動く。
+ * 乱数消費の順番・回数は makeChoices と完全に同じにしてあるので、
+ * 同じ (rng, answer, kind, operands) からは同じ choices が出る。
+ */
+export function makeChoicesTagged(
+  rng: Rng,
+  answer: number,
+  kind: ChoiceKind,
+  operands: number[] = [],
+): { choices: [string, string, string]; tags: [MistakePattern, MistakePattern, MistakePattern] } {
+  const candidates: { value: number; tag: MistakePattern }[] = [];
+  const push = (n: number, tag: MistakePattern) => {
+    if (
+      Number.isInteger(n) &&
+      n >= 0 &&
+      n !== answer &&
+      !candidates.some((c) => c.value === n)
+    ) {
+      candidates.push({ value: n, tag });
+    }
+  };
+
+  if (kind === "mul") {
+    /* 九九: となりの段・となりのかず (a×(b±1), (a±1)×b) */
+    const [a, b] = operands;
+    if (a && b) {
+      push(a * (b + 1), "neighborRow");
+      push(a * (b - 1), "neighborRow");
+      push((a + 1) * b, "neighborRow");
+      push((a - 1) * b, "neighborRow");
+    }
+    push(answer + 1, "offByOne");
+    push(answer - 1, "offByOne");
+  } else if (kind === "convert") {
+    /* 単位換算: 桁の間違い (×10/÷10)、たし忘れ */
+    push(answer * 10, "placeShift");
+    push(Math.round(answer / 10), "placeShift");
+    push(answer + 10, "other");
+    push(answer - 10, "other");
+    for (const o of operands) push(o, "echoOperand");
+    push(answer + 1, "offByOne");
+    push(answer - 1, "offByOne");
+  } else {
+    push(answer + 1, "offByOne");
+    push(answer - 1, "offByOne");
+    if (kind === "add" || kind === "sub") {
+      push(answer + 10, "forgotCarry");
+      push(answer - 10, "forgotBorrow");
+      for (const o of operands) push(o, "echoOperand"); /* 式の数をそのまま答えてしまう */
+    }
+    if (kind === "time") {
+      push(answer + 30, "other");
+      push(answer - 30, "other");
+    }
+    push(answer + 2, "other");
+    push(answer - 2, "other");
+  }
+  /* 予備 (まだ2個に満たない場合の埋め) */
+  for (let d = 3; candidates.length < 2 && d < 10; d++) {
+    push(answer + d, "other");
+    push(answer - d, "other");
+  }
+
+  const wrong = shuffle(rng, candidates).slice(0, 2);
+  const all = shuffle(rng, [{ value: answer, tag: "other" as MistakePattern }, ...wrong]);
+  return {
+    choices: [String(all[0].value), String(all[1].value), String(all[2].value)],
+    tags: [all[0].tag, all[1].tag, all[2].tag],
+  };
 }
 
 /*

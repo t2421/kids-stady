@@ -1,15 +1,19 @@
 "use client";
 
 import type { Problem } from "@/lib/curriculum";
-import { cherryTop, textHint } from "@/lib/curriculum/practice";
+import type { MistakePattern } from "@/lib/curriculum/types";
+import { diagnose } from "@/lib/curriculum/diagnose";
+import { cherryTop } from "@/lib/curriculum/practice";
 import { CherryDiagram } from "@/components/CherryDiagram";
 import { actionButton, UI_COLORS } from "@/components/uiTheme";
 
 /*
  * とっくん (practice) 専用の補助 UI。MathPromptPanel から使う。
- * - MathHintBody: 「ヒント」で開く本文。CherryHint は さくらんぼ図、それ以外は
- *   explain の先頭行を文章で見せる (答えは出さない)
- * - MathExplain: 不正解のあと、解説を全文見せてから「つぎへ」で結果を返す
+ * - MathHintButton / MathHintBody: 段階ヒント (LP-03)。押すたびに
+ *   problem.hints[0] → [1] → [2] と1段ずつ深まり、あらわれた段は消えずに
+ *   積み重なる (data-testid="math-hint" の data-level が いま見えている最大の段)
+ * - MathExplain: 不正解のあと、解説を全文見せ、diagnose() で誤答パターンの
+ *   一言も添えてから「つぎへ」で結果を返す (正解は通常の短い祝福)
  * ボタンは ≥56px (iPad タッチ第一)。
  */
 
@@ -25,66 +29,106 @@ const HINT_BOX: React.CSSProperties = {
   gap: 8,
 };
 
-export function MathHintButton({ onTap }: { onTap: () => void }) {
+const MAX_HINT_LEVEL = 3;
+
+export function MathHintButton({
+  level,
+  onTap,
+}: {
+  level: number;
+  onTap: () => void;
+}) {
+  const done = level >= MAX_HINT_LEVEL;
   return (
     <button
       type="button"
       data-testid="math-hint"
-      onClick={onTap}
+      data-level={level}
+      disabled={done}
+      onClick={done ? undefined : onTap}
       style={{
         ...actionButton(UI_COLORS.navy),
         minHeight: 56,
         alignSelf: "center",
         marginBottom: 12,
         padding: "8px 28px",
+        opacity: done ? 0.6 : 1,
       }}
     >
-      ヒント
+      {done ? "ヒント (ぜんぶ)" : `ヒント${level > 0 ? ` (${level}/${MAX_HINT_LEVEL})` : ""}`}
     </button>
   );
 }
 
-export function MathHintBody({ problem }: { problem: Problem }) {
-  const text = textHint(problem);
+export function MathHintBody({ problem, level }: { problem: Problem; level: number }) {
+  const stages = problem.hints.slice(0, level);
   return (
-    <div data-testid="math-hint-body" style={HINT_BOX}>
-      <span
-        style={{
-          fontFamily: "var(--kids-font)",
-          fontSize: 18,
-          fontWeight: 700,
-          color: UI_COLORS.textSub,
-        }}
-      >
-        ヒント
-      </span>
-      {problem.hint?.type === "cherry" ? (
-        <CherryDiagram top={cherryTop(problem.hint)} split={problem.hint.split} />
-      ) : (
-        <span
-          style={{
-            fontFamily: "var(--kids-font)",
-            fontSize: 24,
-            fontWeight: 700,
-            color: "#ffffff",
-            whiteSpace: "pre-wrap",
-            textAlign: "center",
-          }}
-        >
-          {text ?? "おちついて かんがえてみよう"}
-        </span>
-      )}
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {stages.map((text, i) => (
+        <div key={i} data-testid="math-hint-body" data-stage={i + 1} style={HINT_BOX}>
+          <span
+            style={{
+              fontFamily: "var(--kids-font)",
+              fontSize: 18,
+              fontWeight: 700,
+              color: UI_COLORS.textSub,
+            }}
+          >
+            ヒント {i + 1}
+          </span>
+          {i === 0 && problem.hint?.type === "cherry" ? (
+            <CherryDiagram top={cherryTop(problem.hint)} split={problem.hint.split} />
+          ) : null}
+          <span
+            style={{
+              fontFamily: "var(--kids-font)",
+              fontSize: 24,
+              fontWeight: 700,
+              color: "#ffffff",
+              whiteSpace: "pre-wrap",
+              textAlign: "center",
+            }}
+          >
+            {text}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
 
+/* 誤答パターンごとの、責めない一言 (LP-03 §1.1 の13種すべてをカバー) */
+const MISTAKE_FEEDBACK: Record<MistakePattern, string> = {
+  offByOne: "おしい! 1つ ちがいだよ",
+  forgotCarry: "くりあがりを わすれていないかな?",
+  forgotBorrow: "くりさがりを わすれていないかな?",
+  echoOperand: "もんだいの すうじを そのまま えらんじゃったかな?",
+  neighborRow: "となりの だんと まちがえたかも",
+  placeShift: "くらいが 1つ ずれているよ",
+  addedDenominators: "ぶんぼは たしちゃ だめだよ",
+  noCommonDenominator: "ぶんぼを そろえてから けいさんしよう",
+  swappedBase: "どちらが もとの かずか たしかめよう",
+  reversedDivision: "わる かずと わられる かずが さかさまかも",
+  doubleCounted: "おなじものを 2かい かぞえていないかな?",
+  unitConfusion: "たんいに ちゅうい してみよう",
+  other: "もういちど かんがえてみよう",
+};
+
+export function mistakeFeedbackText(pattern: MistakePattern): string {
+  return MISTAKE_FEEDBACK[pattern] ?? MISTAKE_FEEDBACK.other;
+}
+
 export function MathExplain({
   problem,
+  chosen,
   onNext,
 }: {
   problem: Problem;
+  /* MathPromptResult.chosen。時間切れ (null) は誤答診断をしない */
+  chosen: string | null;
   onNext: () => void;
 }) {
+  const pattern = chosen !== null ? diagnose(problem, chosen) : null;
   return (
     <div data-testid="math-explain" style={{ ...HINT_BOX, alignItems: "stretch" }}>
       <span
@@ -114,6 +158,20 @@ export function MathExplain({
           <li key={i}>{line}</li>
         ))}
       </ol>
+      {pattern && (
+        <div
+          data-testid="mistake-feedback"
+          style={{
+            fontFamily: "var(--kids-font)",
+            fontSize: 18,
+            fontWeight: 700,
+            color: UI_COLORS.textSub,
+            textAlign: "center",
+          }}
+        >
+          {mistakeFeedbackText(pattern)}
+        </div>
+      )}
       <button
         type="button"
         data-testid="math-explain-next"

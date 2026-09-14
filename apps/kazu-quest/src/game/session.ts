@@ -8,6 +8,7 @@ import { AVATARS, createProfile, getActiveId } from "../lib/profiles";
 import type { SaveData } from "../lib/save";
 import { defaultSave, loadSave, persistSave } from "../lib/save";
 import { addPlaytime } from "../lib/playtime";
+import { initMasteryFromFlags } from "../lib/mastery";
 
 interface SessionState {
   profileId: string | null;
@@ -19,10 +20,15 @@ const state: SessionState = {
   save: defaultSave(),
 };
 
-/* タイトル画面 (プロフィール確定後) に呼ぶ */
+/*
+ * タイトル画面 (プロフィール確定後) に呼ぶ。ここで一度だけ既存プレイヤーの
+ * mastery 巻き戻し防止 (initMasteryFromFlags) を適用する — 冪等なので毎回
+ * 呼んでも安全だが、getSave() 側では呼ばない (呼び出しのたびに走らせない)
+ */
 export function startSession(profileId: string | null): void {
   state.profileId = profileId;
   state.save = profileId ? loadSave(profileId) : defaultSave();
+  state.save = initMasteryFromFlags(state.save);
 }
 
 /*

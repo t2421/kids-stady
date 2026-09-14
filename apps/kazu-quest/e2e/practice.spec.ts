@@ -50,19 +50,23 @@ test("practice: hint, explanation on a wrong answer, then the spell test", async
   await expect(practiceBanner(page)).toBeVisible({ timeout: 10_000 });
   await expect(practiceBanner(page)).toContainText("とっくん: ヒキダマ");
 
-  /* 1問目: タイマーなし、ヒントを開ける */
+  /* 1問目: タイマーなし、ヒントを3段ぶん開ける (段は消えずに積み重なる) */
   await waitForQuestion(page);
-  await expect(page.locator('[data-testid="math-hint"]')).toBeVisible();
-  const hintBox = await page.locator('[data-testid="math-hint"]').boundingBox();
+  const hintButton = page.locator('[data-testid="math-hint"]');
+  await expect(hintButton).toBeVisible();
+  const hintBox = await hintButton.boundingBox();
   expect(hintBox?.height ?? 0).toBeGreaterThanOrEqual(56);
-  await page.locator('[data-testid="math-hint"]').click();
-  await expect(page.locator('[data-testid="math-hint-body"]')).toBeVisible();
-  await expect(page.locator('[data-testid="math-hint"]')).toHaveCount(0);
+  for (const level of [1, 2, 3]) {
+    await hintButton.click();
+    await expect(hintButton).toHaveAttribute("data-level", String(level));
+    await expect(page.locator('[data-testid="math-hint-body"]')).toHaveCount(level);
+  }
 
-  /* わざと まちがえる → 解説が全文出て「つぎへ」で進む */
+  /* わざと まちがえる → 解説 + まちがいの型の一言が出て「つぎへ」で進む */
   await wrongChoice(page).click();
   await expect(page.locator('[data-testid="math-explain-next"]')).toBeVisible();
   await expect(page.locator('[data-testid="math-explain"]')).toContainText("かいせつ");
+  await expect(page.locator('[data-testid="mistake-feedback"]')).toBeVisible();
   await expect(practiceBanner(page)).toContainText("もんだい 1/5");
   await page.locator('[data-testid="math-explain-next"]').click();
   await expect(practiceBanner(page)).toContainText("もんだい 2/5", { timeout: 10_000 });

@@ -92,6 +92,11 @@ export function changeProblem(challenge: ChangeChallenge): Problem {
     op: "-",
     answer: challenge.answer,
     choices: challenge.choices,
+    hints: [
+      `はらった 金がくから ねだんを ひくよ`,
+      `${challenge.paid} から ねだんを ひいてみよう`,
+      `${challenge.paid} − ${challenge.paid - challenge.change} を けいさんすると…`,
+    ],
     hint: null,
     explain: [
       `はらった ${challenge.paid}G から ねだんを ひく。`,
