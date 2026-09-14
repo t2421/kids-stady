@@ -213,7 +213,7 @@ renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」�
 
 ## 4. 波3: 流れ (LP-08 → LP-09 → LP-10 / LP-11)
 
-#### LP-08 [L] LessonScreen (導入 → 概念 → 例題 → 穴埋め) — 状態: 未 (依存: LP-01, LP-03, LP-05〜07 のうち最低 LP-05)
+#### LP-08 [L] LessonScreen (導入 → 概念 → 例題 → 穴埋め) — 状態: 済 (依存: LP-01, LP-03, LP-05〜07 のうち最低 LP-05)
 
 - **目的**: `open-lesson` で開く React 画面。`entry` で途中からも開ける
 - **触るファイル**: `src/components/LessonScreen.tsx` (新、≤ 350 行。ページ送り・図・穴埋めは
@@ -245,7 +245,7 @@ renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」�
   Vitest (昇段判定・自動付与)
 - **スコープ外**: 章ゲートの変更 (LP-20)
 
-#### LP-10 [M] 前提チェック (readiness) と案内 — 状態: 未 (依存: LP-08)
+#### LP-10 [M] 前提チェック (readiness) と案内 — 状態: 済 (依存: LP-08)
 
 - **目的**: レッスン開始前に前提単元から 3 問 (Lv2)。2 問以上で進む。不足なら「さきに ○○ を
   おさらいしよう」→ 前提のレッスンへ (前提が can 以上なら省略)
@@ -255,7 +255,14 @@ renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」�
   案内される経路: `setFlag` 等で g1_add_nc を none にして g1_add_carry を開く)
 - **受け入れ条件**: Vitest + E2E。前提が can 以上のときは readiness 画面が出ない
 
-#### LP-11 [M] 単元マップ・おさらい・さきどり・保護者向け — 状態: 未 (依存: LP-04, LP-08)
+#### LP-11 [M] 単元マップ・おさらい・さきどり・保護者向け — 状態: 一部済 (依存: LP-04, LP-08)
+
+> **実装済み**: `openReview`/`openPreview` の実体 (`ReviewScreen.tsx`/`PreviewMenu.tsx`/
+> `src/lib/review.ts`)、かけらの付与 (mastered 到達時に `kakera_<grade>` を +1、
+> `src/content/items.ts` に6種登録)。E2E 4件・単体テスト緑
+> **未実装 (別タスクへ持ち越し)**: (1) の単元マップ画面・せいせきタブ配線、
+> かけら6つでの呪文強化 (+20%)、(5) 共有学習ログへの mastery 書き出し。
+> 各ほこら/まなびやNPCへの「おさらい」「さきどり」選択肢の追加 (LP-18 の導線整備と合わせて行う想定)
 
 - **目的**: (1) せいせきタブに単元マップ (学年 × 単元、4 色、タップで状態と次の復習日)、
   (2) `openReview`: 期日の来た単元から最大 3 単元 × 5 問 → `onReviewResult`、(3) `openPreview`:
@@ -270,6 +277,22 @@ renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」�
 - **受け入れ条件**: E2E: レッスン合格 → `advanceClock(1日)` → ほこら「おさらい」→ 5 問正解 →
   `advanceClock(3日)` → もう一度 → mastered、かけら +1、単元マップのセルが金。Vitest (かけら・強化)
 - **スコープ外**: 先生キャラの見た目 (LP-18)
+
+#### LP-11b [S] 単元マップ・かけら強化・共有学習ログ (LP-11 の残り) — 状態: 未 (依存: LP-11)
+
+- **目的**: LP-11 で未実装のまま残した3点を仕上げる: (1) 単元マップ画面
+  (`src/components/MasteryMap.tsx`、学年×単元のマス目を4色で。せいせきタブから開ける)、
+  (2) `masteredShardCount(save) >= 6` の章について呪文 power +20% (`src/lib/battle/` の
+  純関数、テストで検証)、(3) 共有学習ログへ mastery を書く (`shared/learning-core/learning.ts`
+  に任意フィールドを足し `docs/save-data.md` §4 を更新。mathematics/keisan-shooter が
+  無視しても壊れないこと必須 — 両アプリの既存テストを回して確認)
+- **触るファイル**: `src/components/MasteryMap.tsx` (新)、`StatsScreen.tsx` (タブ追加、既存のタブ
+  構造を壊さない)、`src/lib/review.ts` の `masteredShardCount` を利用、`shared/learning-core/learning.ts`、
+  `docs/save-data.md`
+- **受け入れ条件**: Vitest (かけら6個での強化判定、学習ログの書き込みと後方互換)。
+  E2E: せいせきタブから単元マップが開き、mastered のセルが金。`apps/mathematics`/`apps/keisan-shooter`
+  の既存テストが無傷 (共有ログの形式変更が他アプリを壊さないことの確認)
+- **スコープ外**: 各ほこら/まなびやNPCへの「おさらい」「さきどり」の選択肢追加 (LP-18 が導線整備と合わせて行う)
 
 ---
 

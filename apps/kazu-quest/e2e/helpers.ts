@@ -26,6 +26,13 @@ declare global {
       setMastery(skillId: string, state: "none" | "practicing" | "can" | "mastered"): void;
       /* TEMPORARY (LP-08 E2E 用): open-lesson を直接叩いて LessonScreen を開く */
       openLesson(skillId: string): void;
+      /* TEMPORARY (LP-10 E2E 用): open-readiness を直接叩いて ReadinessScreen を開く */
+      openReadiness(skillId: string, prerequisites: string[]): void;
+      /* TEMPORARY (LP-11 E2E 用): open-review を直接叩いて ReviewScreen を開く
+         (期日の来た単元は reviewSelection(getSave()) で選ばれる) */
+      openReview(): void;
+      /* TEMPORARY (LP-11 E2E 用): open-preview を直接叩いて PreviewMenu を開く */
+      openPreview(): void;
       /* 間隔復習の期日到来を待たずに時計を進める (src/lib/clock.ts のオフセット) */
       advanceClock(ms: number): void;
       giveItem(itemId: string, count?: number): void;

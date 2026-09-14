@@ -36,6 +36,7 @@ const { handleSpellTest, PRACTICE_BEFORE_TEST_PROMPT } = await import(
 );
 const { getSave, updateSave } = await import("../src/game/session");
 const { defaultSave } = await import("../src/lib/save");
+const { readinessRequired } = await import("../src/content/lessons/prereqs");
 
 function mockUi(): UiScene {
   return {
@@ -210,24 +211,108 @@ describe("handleSpellTest (LP-09: レッスンがある単元への委譲)", () 
   });
 });
 
-describe("handleOpenReview / handleOpenPreview", () => {
-  it("どちらも じゅんびちゅう メッセージで advance する (LP-11 まで暫定)", () => {
+describe("handleOpenLesson: readiness ゲート (LP-10)", () => {
+  it("前提が無い/すでに can 以上の単元 (g1_add_nc) は open-readiness を経由せず open-lesson を直接発火する", () => {
+    updateSave(() => defaultSave());
     const ui = mockUi();
     const advance = vi.fn();
+    const onOpenReadiness = vi.fn();
+    const onOpenLesson = vi.fn();
+    EventBus.on("open-readiness", onOpenReadiness);
+    EventBus.on("open-lesson", onOpenLesson);
+
+    handleOpenLesson(ui, "g1_add_nc", advance);
+
+    expect(onOpenReadiness).not.toHaveBeenCalled();
+    expect(onOpenLesson).toHaveBeenCalledWith({ skillId: "g1_add_nc", entry: "story" });
+
+    EventBus.off("open-readiness", onOpenReadiness);
+    EventBus.off("open-lesson", onOpenLesson);
+  });
+
+  /*
+   * handleOpenLesson の readiness 分岐そのもの (前提不足 → open-readiness →
+   * 不合格なら弱点前提のレッスンへ回り道) は、現状 curriculum 内で
+   * prerequisites を持つ LessonDef が1件も無い (LP-12〜17 が波4で足す) ため、
+   * EventBus 経由で end-to-end に再現しようとすると g1_add_nc.ts のような
+   * テスト専用フィクスチャを増やすことになる (タスク仕様が明示的に避けるよう
+   * 指示している)。代わりに、handleOpenLesson が分岐判定に使う純関数
+   * readinessRequired (prereqs.ts) を直接検証する — こちらは LessonDef の
+   * 登録に関係なく既定の前提グラフ (defaultPrerequisites) だけで動く
+   * (詳しいケースは tests/prereqs.test.ts)。
+   */
+  it("readinessRequired: g1_add_carry の前提 (g1_add_nc) が未習得なら不足として返る", () => {
+    updateSave(() => defaultSave());
+    expect(readinessRequired(getSave(), "g1_add_carry")).toEqual(["g1_add_nc"]);
+  });
+
+  it("readinessRequired: 前提が can になれば不足が消える (= handleOpenLesson は open-lesson へ直行するはず)", () => {
+    updateSave((s) => ({
+      ...defaultSave(),
+      mastery: { ...s.mastery, g1_add_nc: { state: "can", reviewDue: null, streak: 0, passedAt: null } },
+    }));
+    expect(readinessRequired(getSave(), "g1_add_carry")).toEqual([]);
+  });
+});
+
+describe("handleOpenReview (LP-11)", () => {
+  it("期日の来た単元 (reviewSelection) を open-review で渡し、review-finished で advance する", () => {
+    updateSave(() => ({
+      ...defaultSave(),
+      mastery: {
+        g1_add_nc: { state: "can", reviewDue: Date.now() - 1000, streak: 0, passedAt: null },
+      },
+    }));
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpen = vi.fn();
+    EventBus.on("open-review", onOpen);
+
     handleOpenReview(ui, advance);
-    expect(ui.showMessage).toHaveBeenCalledWith(
-      ["じゅんびちゅう…"],
-      expect.any(Function),
-    );
+
+    expect(ui.showMessage).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalledWith({ skillIds: ["g1_add_nc"] });
+    expect(advance).not.toHaveBeenCalled();
+
+    EventBus.emit("review-finished", { results: [{ skillId: "g1_add_nc", correct: 5, total: 5 }] });
     expect(advance).toHaveBeenCalledTimes(1);
 
-    const ui2 = mockUi();
-    const advance2 = vi.fn();
-    handleOpenPreview(ui2, advance2);
-    expect(ui2.showMessage).toHaveBeenCalledWith(
-      ["じゅんびちゅう…"],
-      expect.any(Function),
-    );
-    expect(advance2).toHaveBeenCalledTimes(1);
+    EventBus.off("open-review", onOpen);
+  });
+
+  it("期日の来た単元が無ければ空配列で open-review を発火する", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpen = vi.fn();
+    EventBus.on("open-review", onOpen);
+
+    handleOpenReview(ui, advance);
+    expect(onOpen).toHaveBeenCalledWith({ skillIds: [] });
+
+    EventBus.emit("review-finished", { results: [] });
+    expect(advance).toHaveBeenCalledTimes(1);
+
+    EventBus.off("open-review", onOpen);
+  });
+});
+
+describe("handleOpenPreview (LP-11)", () => {
+  it("open-preview を発火し、preview-closed で advance する", () => {
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpen = vi.fn();
+    EventBus.on("open-preview", onOpen);
+
+    handleOpenPreview(ui, advance);
+
+    expect(ui.showMessage).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(advance).not.toHaveBeenCalled();
+
+    EventBus.emit("preview-closed");
+    expect(advance).toHaveBeenCalledTimes(1);
+
+    EventBus.off("open-preview", onOpen);
   });
 });

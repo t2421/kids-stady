@@ -42,6 +42,24 @@ const LessonScreen = dynamic(
   { ssr: false },
 );
 
+/* 前提チェック (LP-10): EventBus "open-readiness" で開く、client のみ */
+const ReadinessScreen = dynamic(
+  () => import("@/components/ReadinessScreen").then((m) => m.ReadinessScreen),
+  { ssr: false },
+);
+
+/* おさらい (LP-11): EventBus "open-review" で開く、client のみ */
+const ReviewScreen = dynamic(
+  () => import("@/components/ReviewScreen").then((m) => m.ReviewScreen),
+  { ssr: false },
+);
+
+/* さきどり (LP-11): EventBus "open-preview" で開く、client のみ */
+const PreviewMenu = dynamic(
+  () => import("@/components/PreviewMenu").then((m) => m.PreviewMenu),
+  { ssr: false },
+);
+
 const ProfileGate = dynamic(
   () => import("@/components/ProfileGate").then((m) => m.ProfileGate),
   { ssr: false },
@@ -103,6 +121,9 @@ export default function Home() {
       <DrillQuestScreen />
       <ReviewQuestScreen />
       <LessonScreen />
+      <ReadinessScreen />
+      <ReviewScreen />
+      <PreviewMenu />
       <GameUiOverlay />
       <StatusPanelOverlay />
       <StatsScreen />

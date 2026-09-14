@@ -373,6 +373,31 @@ SHOPS["ch6-nokoribi-shop"] = {
   itemIds: ["jouyakusou", "kaifukuNoTama", "seiNoShizuku", "hikariNoKen", "maryokuNoRobe"],
 };
 
+/*
+ * 数晶のかけら (学びの設計 LP-11): 単元が mastered になるたびに、その単元の
+ * 学年 (= 章) の かけらを 1 個もらう。店には並ばない (交換所等でのまとめ役は
+ * 別タスクのスコープ)。src/lib/shard.ts が付与ロジックを持つ
+ */
+const CHAPTER_LABELS: Record<number, string> = {
+  1: "章1",
+  2: "章2",
+  3: "章3",
+  4: "章4",
+  5: "章5",
+  6: "章6",
+};
+for (const [chapterStr, label] of Object.entries(CHAPTER_LABELS)) {
+  const chapter = Number(chapterStr);
+  const id = `kakera_${chapter}`;
+  ITEMS[id] = {
+    id,
+    name: `${label}の かけら`,
+    kind: "key",
+    price: 0,
+    description: "たんげんを マスターすると もらえる",
+  };
+}
+
 export function getItem(id: string): ItemDef | undefined {
   return ITEMS[id];
 }

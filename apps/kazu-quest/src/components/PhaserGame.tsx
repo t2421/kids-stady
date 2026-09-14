@@ -10,6 +10,7 @@ import { installSfxUnlock } from "@/game/audio/sfx";
 import { currentAnswer } from "@/components/currentProblem";
 import { advanceClock as advanceClockOffset, now } from "@/lib/clock";
 import { REVIEW_INTERVALS_MS } from "@/lib/mastery";
+import { reviewSelection } from "@/lib/review";
 import type { MasteryState } from "@/lib/save";
 import { EventBus } from "@/game/EventBus";
 import type Phaser from "phaser";
@@ -85,6 +86,26 @@ export function PhaserGame() {
          */
         openLesson: (skillId: string) => {
           EventBus.emit("open-lesson", { skillId, entry: "story" });
+        },
+        /*
+         * TEMPORARY (LP-10 E2E 用): handleOpenLesson の readiness ゲート
+         * (readinessRequired) を経由せず、ReadinessScreen.tsx を単体で検証するために
+         * open-readiness を直接叩く。ゲート判定そのものは prereqs.test.ts /
+         * lessonFlow.test.ts の pure function テストで別に検証している
+         */
+        openReadiness: (skillId: string, prerequisites: string[]) => {
+          EventBus.emit("open-readiness", { skillId, prerequisites });
+        },
+        /*
+         * E2E (LP-11): ほこら/まなびやの「おさらい」「さきどり」を、フィールドの
+         * openReview/openPreview effect (handleOpenReview/handleOpenPreview) を
+         * 経由せず EventBus 直叩きで開く。openLesson/openReadiness と同じ発想
+         */
+        openReview: () => {
+          EventBus.emit("open-review", { skillIds: reviewSelection(getSave()) });
+        },
+        openPreview: () => {
+          EventBus.emit("open-preview");
         },
         learnSpell: (spellId: string) => {
           updateSave((s) => ({
