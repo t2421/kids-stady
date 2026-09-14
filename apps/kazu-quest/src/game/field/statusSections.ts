@@ -11,12 +11,31 @@ import { memberName, memberStats } from "../../lib/battle/members";
 import { equippedStats, SLOT_LABELS } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem } from "../../content/items";
+import type { ItemDef, SpellDef } from "../../content/types";
 import { formatPlaytime } from "../../lib/format";
 import { buildMistakeRows, type MistakeRow } from "./mistakeRows";
 
 export type { MistakeRow };
 
+/* じゅもんタブの 1 行。kind/target はフィールド回復 (FieldHealControls) の判定用 */
+export interface SpellRow {
+  id: string;
+  name: string;
+  mpCost: number;
+  kind: SpellDef["kind"];
+  target: SpellDef["target"];
+}
+
+/* もちものタブの 1 行 (パーティ共有) */
+export interface ItemRow {
+  id: string;
+  name: string;
+  count: number;
+  kind: ItemDef["kind"];
+}
+
 export interface MemberStatus {
+  memberId: string;
   name: string;
   level: number;
   hp: number;
@@ -30,16 +49,16 @@ export interface MemberStatus {
   nextNeed: number;
   /* そうびタブ用: 部位ラベル → 装備名 ("なし" を含む) */
   equipment: { label: string; name: string }[];
-  /* じゅもんタブ用: 1行 = 1呪文 ("タシリア MP2") */
-  spells: string[];
+  /* じゅもんタブ用: 1行 = 1呪文 */
+  spells: SpellRow[];
 }
 
 export interface StatusData {
   gold: number;
   /* なかまボタンで1人ずつ切り替えて表示する */
   members: MemberStatus[];
-  /* もちものは パーティ共有。1行 = 1アイテム ("やくそう ×5") */
-  items: string[];
+  /* もちものは パーティ共有。1行 = 1アイテム */
+  items: ItemRow[];
   /* つよさタブの脚注: "1じかん 5ふん" (lib/format.formatPlaytime) */
   playtime: string;
   /* ノートタブ: 戦闘で間違えた問題、新しい順 (field/mistakeRows.ts) */
@@ -54,6 +73,7 @@ export function buildStatusData(save: SaveData): StatusData | null {
     const base = memberStats(m.memberId, m.level);
     const stats = equippedStats(m);
     return {
+      memberId: m.memberId,
       name: memberName(m.memberId),
       level: m.level,
       hp: Math.min(m.hp, base.maxHp),
@@ -71,13 +91,24 @@ export function buildStatusData(save: SaveData): StatusData | null {
       spells: m.learnedSpells
         .map((id) => getSpell(id))
         .filter((s): s is NonNullable<typeof s> => !!s)
-        .map((s) => `${s.name} MP${s.mpCost}`),
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          mpCost: s.mpCost,
+          kind: s.kind,
+          target: s.target,
+        })),
     };
   });
 
   const items = Object.entries(save.inventory.items)
     .filter(([, count]) => count > 0)
-    .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
+    .map(([id, count]) => ({
+      id,
+      name: getItem(id)?.name ?? id,
+      count,
+      kind: getItem(id)?.kind ?? "key",
+    }));
 
   return {
     gold: save.inventory.gold,

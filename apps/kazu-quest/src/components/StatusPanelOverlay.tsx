@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventBus } from "@/game/EventBus";
-import type { StatusData } from "@/game/field/statusSections";
+import { buildStatusData, type StatusData } from "@/game/field/statusSections";
 import { getProfileId, getSave } from "@/game/session";
 import { loadLearning } from "@/lib/learning";
 import { buildStats } from "@/lib/stats";
 import { actionButton, dqWindow, pillButton, UI_COLORS } from "@/components/uiTheme";
 import { MistakeNoteList } from "@/components/MistakeNoteList";
 import { StatsBody } from "@/components/StatsScreen";
+import { FieldHealControls } from "@/components/FieldHealControls";
 /* Phaser 非依存の音モジュールなので React から直接 import してよい (sfx.ts 冒頭参照) */
 import { isSoundEnabled, playSfx, setSoundEnabled } from "@/game/audio/sfx";
 
@@ -17,6 +18,9 @@ import { isSoundEnabled, playSfx, setSoundEnabled } from "@/game/audio/sfx";
  * なかま切替で1画面1トピックにする。DOM 描画なので折り返し・はみ出しは
  * CSS に任せる (設計変更 2026-07-27)。iPad メイン: 全操作タップ完結、
  * ボタンは指向けサイズ、パネル内の誤タップでは閉じない。
+ * じゅもん/もちもの タブはフィールド回復 (FieldHealControls) を含む。回復呪文の
+ * 出題中 (pending) は とじる・キー操作・背景タップを封じ、パネルが消えて
+ * math-result の受け手がいなくなる事故を防ぐ。
  */
 
 const TABS = ["つよさ", "そうび", "じゅもん", "もちもの", "ノート", "せいせき"] as const;
@@ -59,8 +63,12 @@ export function StatusPanelOverlay() {
   const [tab, setTab] = useState(0);
   const [member, setMember] = useState(0);
   const [sound, setSound] = useState(true);
+  /* 回復呪文の算数プロンプトが開いている間 true (とじる を封じる) */
+  const [pending, setPending] = useState(false);
   const stateRef = useRef<typeof state>(null);
   stateRef.current = state;
+  const pendingRef = useRef(false);
+  pendingRef.current = pending;
   /* パネルを開いた瞬間の時刻。開く前に発火した同一キーイベントが
      (リスナー間のマイクロタスクで再レンダーが挟まり) ここへ届いて
      即closeしてしまうのを防ぐ */
@@ -68,9 +76,18 @@ export function StatusPanelOverlay() {
 
   const close = useCallback(() => {
     const current = stateRef.current;
-    if (!current) return;
+    if (!current || pendingRef.current) return;
     setState(null);
     EventBus.emit("ui-status-closed", { id: current.id });
+  }, []);
+
+  /* 回復・まちがいノート追加などでセーブが変わったら、同じ id のまま表示データを組み直す */
+  const refresh = useCallback(() => {
+    setState((s) => {
+      if (!s) return s;
+      const data = buildStatusData(getSave());
+      return data ? { ...s, data } : s;
+    });
   }, []);
 
   useEffect(() => {
@@ -79,6 +96,7 @@ export function StatusPanelOverlay() {
       setState(r);
       setTab(0);
       setMember(0);
+      setPending(false);
       setSound(isSoundEnabled());
     };
     EventBus.on("ui-status", onOpen);
@@ -92,6 +110,8 @@ export function StatusPanelOverlay() {
       const target = e.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA"].includes(target.tagName)) return;
       if (!stateRef.current) return;
+      /* 出題中は MathPromptPanel / Keypad がキーを受ける。ここで閉じたり切り替えたりしない */
+      if (pendingRef.current) return;
       /* パネルが開く前に発火したイベントは対象外 */
       if (e.timeStamp <= openedAtRef.current) return;
       const key = e.key.toLowerCase();
@@ -274,28 +294,13 @@ export function StatusPanelOverlay() {
           )}
 
           {(tab === 2 || tab === 3) && (
-            <div style={{ padding: "4px 10px" }}>
-              {(tab === 2 ? m.spells : data.items).length === 0 ? (
-                <div style={{ ...lineFont, textAlign: "center", marginTop: 40 }}>
-                  {tab === 2
-                    ? "まだ おぼえていない。まなびやで テストに ちょうせん しよう!"
-                    : "なにも もっていない。"}
-                </div>
-              ) : (
-                <div
-                  style={{
-                    columnCount: 2,
-                    columnGap: 40,
-                  }}
-                >
-                  {(tab === 2 ? m.spells : data.items).map((line) => (
-                    <div key={line} style={{ ...lineFont, padding: "7px 0" }}>
-                      {line}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <FieldHealControls
+              data={data}
+              member={m}
+              mode={tab === 2 ? "spells" : "items"}
+              onChanged={refresh}
+              onPendingChange={setPending}
+            />
           )}
 
           {tab === 4 && <MistakeNoteList rows={data.mistakes} />}
@@ -303,34 +308,36 @@ export function StatusPanelOverlay() {
           {tab === STATS_TAB && stats && <StatsBody data={stats} />}
         </div>
 
-        {/* 下段の操作 */}
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button
-            style={actionButton("#1a4a72")}
-            onClick={() => {
-              close();
-              EventBus.emit("request-profile-gate");
-            }}
-          >
-            ちがう ひとが あそぶ
-          </button>
-          <button
-            style={actionButton("#2f6b3a")}
-            onClick={() => {
-              close();
-              EventBus.emit("request-equip-menu");
-            }}
-          >
-            そうびを かえる
-          </button>
-          <button
-            data-testid="status-close"
-            style={{ ...actionButton("#8a2f1c"), marginLeft: "auto", minWidth: 170 }}
-            onClick={close}
-          >
-            とじる
-          </button>
-        </div>
+        {/* 下段の操作 (回復呪文の出題中は隠す — どれも閉じる操作なので) */}
+        {!pending && (
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              style={actionButton("#1a4a72")}
+              onClick={() => {
+                close();
+                EventBus.emit("request-profile-gate");
+              }}
+            >
+              ちがう ひとが あそぶ
+            </button>
+            <button
+              style={actionButton("#2f6b3a")}
+              onClick={() => {
+                close();
+                EventBus.emit("request-equip-menu");
+              }}
+            >
+              そうびを かえる
+            </button>
+            <button
+              data-testid="status-close"
+              style={{ ...actionButton("#8a2f1c"), marginLeft: "auto", minWidth: 170 }}
+              onClick={close}
+            >
+              とじる
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

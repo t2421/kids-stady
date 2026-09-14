@@ -121,8 +121,8 @@ describe("inputModeFor", () => {
     expect(inputModeFor("battle", "g6_ratio")).toBe("choices");
   });
 
-  it("小1〜2 は3択、小3以降はテンキー (test / drill / practice)", () => {
-    for (const context of ["test", "drill", "practice"]) {
+  it("小1〜2 は3択、小3以降はテンキー (test / drill / practice / field)", () => {
+    for (const context of ["test", "drill", "practice", "field"]) {
       expect(inputModeFor(context, "g1_add_nc")).toBe("choices");
       expect(inputModeFor(context, "g2_kuku")).toBe("choices");
       expect(inputModeFor(context, "g3_div")).toBe("keypad");

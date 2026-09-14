@@ -81,6 +81,27 @@ export function PhaserGame() {
             }),
           }));
         },
+        /* E2E (fieldHeal.spec): HP/MP を直接書く。0〜最大値に丸める */
+        setHp: (memberId: string, hp: number) => {
+          updateSave((s) => ({
+            ...s,
+            party: s.party.map((m) =>
+              m.memberId === memberId
+                ? { ...m, hp: Math.max(0, Math.min(memberStats(m.memberId, m.level).maxHp, hp)) }
+                : m,
+            ),
+          }));
+        },
+        setMp: (memberId: string, mp: number) => {
+          updateSave((s) => ({
+            ...s,
+            party: s.party.map((m) =>
+              m.memberId === memberId
+                ? { ...m, mp: Math.max(0, Math.min(memberStats(m.memberId, m.level).maxMp, mp)) }
+                : m,
+            ),
+          }));
+        },
         /* アイテムを直接足す (KQ-31 メダル交換所の E2E 用)。runner の giveItem と同じ意味論 */
         giveItem: (itemId: string, count = 1) => {
           updateSave((s) => ({

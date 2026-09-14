@@ -37,7 +37,8 @@ export interface MathPromptRequest {
   /* 組み立て済みの問題 (お店のおつりチャレンジなど)。あれば生成しない */
   problem?: Problem;
   timeLimitMs: number | null;
-  context: "battle" | "test" | "drill" | "practice";
+  /* field: ステータスパネルからの回復呪文 (時間無制限、入力方式は drill と同じ学年ルール) */
+  context: "battle" | "test" | "drill" | "practice" | "field";
 }
 
 export interface MathPromptResult {

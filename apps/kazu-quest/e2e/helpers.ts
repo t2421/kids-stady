@@ -23,6 +23,9 @@ declare global {
       learnSpell(spellId: string): void;
       setFlag(flag: string, value?: number | boolean): void;
       giveItem(itemId: string, count?: number): void;
+      /* HP/MP を直接書く (fieldHeal.spec)。0〜最大値に丸められる */
+      setHp(memberId: string, hp: number): void;
+      setMp(memberId: string, mp: number): void;
       advanceToChapter(chapter: number): { mapId: string; spawn: string };
       /* 出題中の正解 (テンキー入力用。DOM には出ない — KQ-12) */
       currentAnswer(): string | null;
@@ -37,6 +40,7 @@ declare global {
           level: number;
           exp: number;
           hp: number;
+          mp: number;
           learnedSpells: string[];
         }[];
         totalCorrect: number;

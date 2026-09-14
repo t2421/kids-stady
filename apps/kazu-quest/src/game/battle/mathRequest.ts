@@ -9,7 +9,7 @@ import { autosave, getProfileId, updateSave } from "../session";
 import { recordAnswer } from "../../lib/save";
 import { recordLearning } from "../../lib/learning";
 import type { MistakeEntry } from "../../lib/mistakes";
-import { recordMistake } from "../../lib/mistakes";
+import { mistakeEntryFromResult, recordMistake } from "../../lib/mistakes";
 import type { Problem } from "../../lib/curriculum/types";
 
 /*
@@ -131,6 +131,34 @@ export function requestFieldQuiz(
     skillId,
     timeLimitMs: null,
     context: "drill",
+  });
+}
+
+/*
+ * フィールドの回復呪文 (ステータスパネルの じゅもん → つかう)。時間無制限、
+ * 呪文の skillIds から苦手重み付けで 1 問。テレメトリは戦闘と同様に記録し、
+ * 不正解は まちがいノートにも積む (戦闘中のノート battleMistakes には入れない)。
+ */
+export function requestFieldSpellMath(
+  skillIds: string[],
+  onOutcome: (correct: boolean) => void,
+): void {
+  const requestId = `field-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const onResult = (result: MathPromptResultEvent) => {
+    if (result.requestId !== requestId) return;
+    EventBus.off("math-result", onResult);
+    if (!result.correct) {
+      updateSave((s) => recordMistake(s, mistakeEntryFromResult(result)));
+    }
+    recordOutcome(result);
+    onOutcome(result.correct);
+  };
+  EventBus.on("math-result", onResult);
+  EventBus.emit("math-prompt", {
+    requestId,
+    skillIds,
+    timeLimitMs: null,
+    context: "field",
   });
 }
 

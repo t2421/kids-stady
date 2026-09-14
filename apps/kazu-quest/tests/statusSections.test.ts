@@ -43,10 +43,11 @@ describe("buildStatusData", () => {
       label: "ぶき",
       name: "どうのつるぎ",
     });
-    expect(data.members[0].spells.some((s) => s.startsWith("ヒキダマ MP"))).toBe(
-      true,
-    );
-    expect(data.items).toEqual(["やくそう ×2"]);
+    expect(data.members[0].spells.map((s) => [s.name, s.mpCost, s.kind])).toEqual([
+      ["ヒキダマ", 2, "attack"],
+      ["タシリア", 2, "heal"],
+    ]);
+    expect(data.items).toEqual([{ id: "yakusou", name: "やくそう", count: 2, kind: "heal" }]);
   });
 
   it("keeps spells per member in a multi-member party", () => {
@@ -65,9 +66,11 @@ describe("buildStatusData", () => {
     const data = buildStatusData(party)!;
     expect(data.members).toHaveLength(2);
     expect(data.members[0].name).toBe("ゆうしゃ");
-    expect(data.members[0].spells).toEqual(["ヒキダマ MP2"]);
+    expect(data.members[0].memberId).toBe("hero");
+    expect(data.members[0].spells.map((s) => s.id)).toEqual(["hikidama"]);
     expect(data.members[1].name).toBe("タスク");
-    expect(data.members[1].spells).toEqual(["タシリア MP2"]);
+    expect(data.members[1].memberId).toBe("tasuku");
+    expect(data.members[1].spells.map((s) => s.id)).toEqual(["tashiria"]);
   });
 
   it("returns null without a hero", () => {
