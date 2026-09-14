@@ -5,24 +5,41 @@ import { EventBus } from "@/game/EventBus";
 import { getLesson } from "@/content/lessons/index";
 import type { LessonDef } from "@/content/lessons/types";
 import { autosave, updateSave } from "@/game/session";
-import { onLessonStarted } from "@/lib/mastery";
+import { onLessonStarted, onTestResult } from "@/lib/mastery";
+import { testPassed } from "@/lib/curriculum/lessonPractice";
 import { dqWindow, UI_COLORS } from "@/components/uiTheme";
 import { LessonNextButton, LessonPageBody } from "@/components/lessonShared";
 import { LessonWorkedExample } from "@/components/LessonWorkedExample";
 import { LessonFaded } from "@/components/LessonFaded";
+import { LessonPractice } from "@/components/LessonPractice";
+import { LessonTest } from "@/components/LessonTest";
 
 /*
- * まなびや: レッスン画面 (LP-08)。EventBus "open-lesson" {skillId, entry} で開く。
- * 導入 (story) → 概念 (concept) → れい (workedExample) → 穴埋め (faded) の
- * 4段階を1つずつ「つぎへ」で進める全画面オーバーレイ (DQ風二重枠)。
- * entry で途中から開ける (§1.3): "story"/省略 = story から、"concept" = concept
- * から、"faded"/"practice"/"test" = faded から (れんしゅう・テストは LP-09 が
- * 引き継ぐまでの暫定入口)。
- * 完了したら "lesson-finished" {skillId, outcome: "passed", correct, total} を
- * 返す — outcome は穴埋めに合否ゲートが無いので常に "passed" (LP-09 が接続するまで)。
+ * まなびや: レッスン画面 (LP-08 → LP-09)。EventBus "open-lesson" {skillId, entry}
+ * で開く。entry で途中からも開ける。全体の流れ (§1.1/§4 LP-09):
+ *
+ *   story → concept → workedExample (れい) → faded (穴埋め)
+ *     → practiceLv1 → practiceLv2 → practiceLv3 (3問連続正解で次のLvへ。
+ *       間違えても Lv は落とさず、ヒントが1段ずつ深くなる)
+ *     → test (10問・Lv2/Lv3半々)
+ *       → 8問以上正解: 合格。"lesson-finished" {outcome:"passed"} を返して終了
+ *       → 8問未満: altExplain (べつの説明) → practiceLv1 に戻ってやりなおし
+ *         ("lesson-finished" は出さない — 合格するまでレッスンは終わらない)
+ *
+ * 呪文の習得 (learnSpell) はここでは行わない — spellTestFlow.ts が
+ * "lesson-finished" {outcome:"passed"} を受けて行う (単元テストと呪文習得の
+ * 責務分離。LP-09 §4 の「シンプルな統合」)。ここで行うのは mastery の更新だけ。
  */
 
-type Stage = "story" | "concept" | "workedExample" | "faded";
+type PracticeStage = "practiceLv1" | "practiceLv2" | "practiceLv3";
+type Stage =
+  | "story"
+  | "concept"
+  | "workedExample"
+  | "faded"
+  | PracticeStage
+  | "test"
+  | "altExplain";
 type EntryPoint = "story" | "concept" | "faded" | "practice" | "test";
 
 interface OpenLessonPayload {
@@ -41,24 +58,38 @@ interface OpenState {
   skillId: string;
   lesson: LessonDef;
   stage: Stage;
-  /* story/concept ステージ内の 0-based ページ番号。workedExample/faded は自前で持つ */
+  /* story/concept/altExplain ステージ内の 0-based ページ番号。
+   * workedExample/faded/練習Lv1-3/test は自前で持つ */
   pageIndex: number;
 }
 
 const STAGE_ORDER: Stage[] = ["story", "concept", "workedExample", "faded"];
+const PRACTICE_STAGES: PracticeStage[] = ["practiceLv1", "practiceLv2", "practiceLv3"];
 
 function stageForEntry(entry: EntryPoint | undefined): Stage {
   switch (entry) {
     case "concept":
       return "concept";
     case "faded":
-    case "practice":
-    case "test":
       return "faded";
+    case "practice":
+      return "practiceLv1";
+    case "test":
+      return "test";
     case "story":
     default:
       return "story";
   }
+}
+
+function levelForPracticeStage(stage: PracticeStage): 1 | 2 | 3 {
+  return (PRACTICE_STAGES.indexOf(stage) + 1) as 1 | 2 | 3;
+}
+
+/* Lv1→Lv2→Lv3 の次。Lv3 が終わったらテストへ */
+function stageAfterPractice(stage: PracticeStage): Stage {
+  const idx = PRACTICE_STAGES.indexOf(stage);
+  return idx + 1 < PRACTICE_STAGES.length ? PRACTICE_STAGES[idx + 1] : "test";
 }
 
 export function LessonScreen() {
@@ -85,9 +116,12 @@ export function LessonScreen() {
     };
   }, []);
 
-  const finish = (correct: number, total: number) => {
+  /* テスト合格。mastery を can に進めてからレッスンを閉じる */
+  const finishPassed = (correct: number, total: number) => {
     const current = stateRef.current;
     if (!current) return;
+    updateSave((save) => onTestResult(save, current.skillId, true));
+    autosave();
     setState(null);
     const result: LessonFinishedPayload = {
       skillId: current.skillId,
@@ -96,6 +130,16 @@ export function LessonScreen() {
       total,
     };
     EventBus.emit("lesson-finished", result);
+  };
+
+  /* テスト不合格。mastery は onTestResult(false) に任せ (初回不合格だけ
+   * practicing に進む)、画面は閉じずに altExplain → れんしゅうへ戻す */
+  const restartAfterFailedTest = () => {
+    const current = stateRef.current;
+    if (!current) return;
+    updateSave((save) => onTestResult(save, current.skillId, false));
+    autosave();
+    setState((s) => (s ? { ...s, stage: "altExplain", pageIndex: 0 } : s));
   };
 
   const advanceWithinPages = (pageCount: number) => {
@@ -138,8 +182,63 @@ export function LessonScreen() {
         onDone={() => setState((s) => (s ? { ...s, stage: "faded", pageIndex: 0 } : s))}
       />
     );
+  } else if (state.stage === "faded") {
+    body = (
+      <LessonFaded
+        lesson={state.lesson}
+        onDone={() =>
+          setState((s) => (s ? { ...s, stage: "practiceLv1", pageIndex: 0 } : s))
+        }
+      />
+    );
+  } else if (state.stage === "altExplain") {
+    const pages = state.lesson.altExplain;
+    body = (
+      <>
+        <LessonPageBody index={state.pageIndex} page={pages[state.pageIndex]} />
+        <LessonNextButton
+          onClick={() => {
+            setState((s) => {
+              if (!s) return s;
+              if (s.pageIndex + 1 < pages.length) {
+                return { ...s, pageIndex: s.pageIndex + 1 };
+              }
+              return { ...s, stage: "practiceLv1", pageIndex: 0 };
+            });
+          }}
+        />
+      </>
+    );
+  } else if (state.stage === "test") {
+    body = (
+      <LessonTest
+        key="test"
+        lesson={state.lesson}
+        onDone={(correct, total) => {
+          if (testPassed(correct)) {
+            finishPassed(correct, total);
+            return;
+          }
+          restartAfterFailedTest();
+        }}
+      />
+    );
   } else {
-    body = <LessonFaded lesson={state.lesson} onDone={finish} />;
+    /* practiceLv1 / practiceLv2 / practiceLv3 */
+    const practiceStage = state.stage;
+    const level = levelForPracticeStage(practiceStage);
+    body = (
+      <LessonPractice
+        key={practiceStage}
+        lesson={state.lesson}
+        level={level}
+        onLevelComplete={() =>
+          setState((s) =>
+            s ? { ...s, stage: stageAfterPractice(practiceStage), pageIndex: 0 } : s,
+          )
+        }
+      />
+    );
   }
 
   return (

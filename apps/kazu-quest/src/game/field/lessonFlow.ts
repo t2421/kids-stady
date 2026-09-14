@@ -1,5 +1,5 @@
 /*
- * まなびやの「学びの設計」レッスンの流れ (LP-08)。openLesson/openReview/openPreview
+ * まなびやの「学びの設計」レッスンの流れ (LP-08〜09)。openLesson/openReview/openPreview
  * effect から FieldScene.runCommands が呼ぶ。実体の画面は React 側 LessonScreen.tsx
  * (EventBus 経由でのみやり取りする — spellTestFlow.ts と同じ構造)。
  *
@@ -7,13 +7,16 @@
  *
  * レッスンが未登録の単元 (LP-12〜17 がまだ埋めていない) は「じゅんびちゅう…」で
  * 済ませる。openReview/openPreview は LP-11 が実体を差し込むまで同じ扱い。
+ *
+ * LessonFinishedPayload は spellTestFlow.ts も使う (呪文の学習テスト対象単元に
+ * レッスンがあるとき、とっくん/テストの代わりにレッスンへ丸ごと委譲する — LP-09 §4)。
  */
 
 import { EventBus } from "../EventBus";
 import { hasLesson } from "../../content/lessons/index";
 import type { UiScene } from "../scenes/UiScene";
 
-interface LessonFinishedPayload {
+export interface LessonFinishedPayload {
   skillId: string;
   outcome: "passed" | "failed" | "aborted";
   correct: number;

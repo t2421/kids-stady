@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import type { UiScene } from "../src/game/scenes/UiScene";
 
 /*
- * lessonFlow.ts の分岐テスト (LP-08)。lessonFlow.ts は "../EventBus" 経由で
- * Phaser の Events.EventEmitter を使うが、`phaser` パッケージは読み込み時に
- * ブラウザ判定で `window` を触るため、vitest の既定 (node) 環境では
- * `import { Events } from "phaser"` の時点で落ちる (jsdom 等は入れていない —
- * docs/kazu-quest-learning-tasks.md の方針どおり最小依存を保つ)。
+ * lessonFlow.ts / spellTestFlow.ts の分岐テスト (LP-08〜09)。どちらも
+ * "../EventBus" 経由で Phaser の Events.EventEmitter を使うが、`phaser`
+ * パッケージは読み込み時にブラウザ判定で `window` を触るため、vitest の既定
+ * (node) 環境では `import { Events } from "phaser"` の時点で落ちる (jsdom 等は
+ * 入れていない — docs/kazu-quest-learning-tasks.md の方針どおり最小依存を保つ)。
  * ここでは "../src/game/EventBus" を軽量な自前 pub/sub にモックし、
- * lessonFlow.ts のロジックだけを Phaser 抜きで検証する。
+ * 両ファイルのロジックだけを Phaser 抜きで検証する。
  */
 vi.mock("../src/game/EventBus", () => {
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
@@ -31,10 +31,23 @@ const { EventBus } = await import("../src/game/EventBus");
 const { handleOpenLesson, handleOpenPreview, handleOpenReview } = await import(
   "../src/game/field/lessonFlow"
 );
+const { handleSpellTest, PRACTICE_BEFORE_TEST_PROMPT } = await import(
+  "../src/game/field/spellTestFlow"
+);
+const { getSave, updateSave } = await import("../src/game/session");
+const { defaultSave } = await import("../src/lib/save");
 
 function mockUi(): UiScene {
   return {
     showMessage: vi.fn((_pages: string[], onDone: () => void) => onDone()),
+  } as unknown as UiScene;
+}
+
+/* showChoice も持つ版 (従来の とっくん/テスト 分岐の検証用) */
+function mockUiWithChoice(): UiScene {
+  return {
+    showMessage: vi.fn((_pages: string[], onDone: () => void) => onDone()),
+    showChoice: vi.fn((_prompt: string, _onChoice: (yes: boolean) => void) => {}),
   } as unknown as UiScene;
 }
 
@@ -93,6 +106,107 @@ describe("handleOpenLesson", () => {
       total: 2,
     });
     expect(advance).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("handleSpellTest (LP-09: レッスンがある単元への委譲)", () => {
+  it("学習テスト対象単元にレッスンがある呪文 (tashiria → g1_add_nc) は従来のとっくん/テストを使わず open-lesson に委譲する", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUiWithChoice();
+    const advance = vi.fn();
+    const onOpenLesson = vi.fn();
+    EventBus.on("open-lesson", onOpenLesson);
+
+    handleSpellTest(ui, "tashiria", advance);
+
+    /* 従来の「とっくんしてから テストする?」は出さず、open-lesson を発火する */
+    expect(ui.showChoice).not.toHaveBeenCalled();
+    expect(onOpenLesson).toHaveBeenCalledWith({ skillId: "g1_add_nc", entry: "story" });
+    expect(advance).not.toHaveBeenCalled();
+
+    EventBus.off("open-lesson", onOpenLesson);
+  });
+
+  it("レッスンの lesson-finished {outcome:\"passed\"} を合格として扱い、learnSpell + advance する", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUiWithChoice();
+    const advance = vi.fn();
+
+    handleSpellTest(ui, "tashiria", advance);
+    expect(getSave().party[0].learnedSpells).not.toContain("tashiria");
+
+    EventBus.emit("lesson-finished", {
+      skillId: "g1_add_nc",
+      outcome: "passed",
+      correct: 8,
+      total: 10,
+    });
+
+    expect(getSave().party[0].learnedSpells).toContain("tashiria");
+    expect(getSave().flags["learned.tashiria"]).toBe(true);
+    expect(ui.showMessage).toHaveBeenCalled();
+    expect(advance).toHaveBeenCalledTimes(1);
+  });
+
+  it("別 skillId の lesson-finished では反応しない", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUiWithChoice();
+    const advance = vi.fn();
+
+    handleSpellTest(ui, "tashiria", advance);
+    EventBus.emit("lesson-finished", {
+      skillId: "g1_sub_nc",
+      outcome: "passed",
+      correct: 8,
+      total: 10,
+    });
+
+    expect(getSave().party[0].learnedSpells).not.toContain("tashiria");
+    expect(advance).not.toHaveBeenCalled();
+  });
+
+  it("レッスンが無い単元の呪文 (hikidama → g1_sub_nc) は従来どおり とっくん/テストの確認を出す", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUiWithChoice();
+    const advance = vi.fn();
+    const onOpenLesson = vi.fn();
+    EventBus.on("open-lesson", onOpenLesson);
+
+    handleSpellTest(ui, "hikidama", advance);
+
+    expect(onOpenLesson).not.toHaveBeenCalled();
+    expect(ui.showChoice).toHaveBeenCalledWith(
+      PRACTICE_BEFORE_TEST_PROMPT,
+      expect.any(Function),
+    );
+
+    EventBus.off("open-lesson", onOpenLesson);
+  });
+
+  it("すでに習得済みの呪文はレッスン/テストどちらも開かず advance する", () => {
+    const base = defaultSave();
+    updateSave(() => ({
+      ...base,
+      party: base.party.map((m, i) =>
+        i === 0 ? { ...m, learnedSpells: ["tashiria"] } : m,
+      ),
+    }));
+    const ui = mockUiWithChoice();
+    const advance = vi.fn();
+    const onOpenLesson = vi.fn();
+    EventBus.on("open-lesson", onOpenLesson);
+
+    handleSpellTest(ui, "tashiria", advance);
+
+    expect(onOpenLesson).not.toHaveBeenCalled();
+    expect(ui.showChoice).not.toHaveBeenCalled();
+    expect(ui.showMessage).toHaveBeenCalledWith(
+      ["その じゅもんは もう おぼえているよ!"],
+      expect.any(Function),
+    );
+    expect(advance).toHaveBeenCalledTimes(1);
+
+    EventBus.off("open-lesson", onOpenLesson);
   });
 });
 

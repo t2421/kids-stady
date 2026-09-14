@@ -9,13 +9,21 @@
  *   "open-spell-practice" {spellId} → "spell-practice-finished" {spellId}
  *   "open-spell-test"     {spellId} → "spell-test-finished"     {spellId, passed, correct, total}
  * 不合格時の不正解は useQuestionLoop が まちがいノートに積む。
+ *
+ * LP-09: その呪文の学習テスト対象単元 (learnTest.skillIds[0]) に LessonDef が
+ * あるなら、上のとっくん/テストではなく handleOpenLesson (lessonFlow.ts) の
+ * レッスン (story→concept→れい→穴埋め→れんしゅう→テスト) へ丸ごと委譲する。
+ * まだレッスンが無い ~45 の呪文は、このファイルの従来どおりの流れのまま
+ * (章1 golden path E2E が無変更で緑であることの前提)。
  */
 
 import { EventBus } from "../EventBus";
 import { autosave, getSave, updateSave } from "../session";
 import { getSpell } from "../../content/spells";
+import { hasLesson } from "../../content/lessons/index";
 import type { SpellPracticeResult } from "../../lib/curriculum/practice";
 import { learnSpell } from "../../lib/learnSpell";
+import type { LessonFinishedPayload } from "./lessonFlow";
 import type { UiScene } from "../scenes/UiScene";
 
 export interface SpellTestResult {
@@ -65,6 +73,38 @@ function runSpellPractice(spellId: string, onDone: () => void): void {
   EventBus.emit("open-spell-practice", { spellId });
 }
 
+/*
+ * その呪文の学習テスト対象単元にレッスンがあれば、とっくん/テストの代わりに
+ * handleOpenLesson と同じ契約 ("open-lesson" → "lesson-finished") でレッスンへ
+ * 丸ごと委譲する。lesson-finished {outcome:"passed"} を合格として扱い、既存の
+ * learnSpell/autosave をそのまま使う。レッスン側は不合格では lesson-finished を
+ * 出さない (合格するまで続く) ので、"passed" 以外がここに来るのは想定外
+ * (aborted 等) — 安全側で習得はせず advance だけする
+ */
+function delegateToLesson(
+  ui: UiScene,
+  spellId: string,
+  lessonSkillId: string,
+  advance: () => void,
+): void {
+  const onFinished = (result: LessonFinishedPayload) => {
+    if (result.skillId !== lessonSkillId) return;
+    EventBus.off("lesson-finished", onFinished);
+    if (result.outcome !== "passed") {
+      advance();
+      return;
+    }
+    updateSave((s) => learnSpell(s, spellId));
+    autosave();
+    ui.showMessage(
+      passedPages({ spellId, passed: true, correct: result.correct, total: result.total }),
+      advance,
+    );
+  };
+  EventBus.on("lesson-finished", onFinished);
+  EventBus.emit("open-lesson", { skillId: lessonSkillId, entry: "story" });
+}
+
 /* まなびや: とっくんの有無を聞いてからテスト。合格なら習得、不合格なら やりなおしを提案 */
 export function handleSpellTest(
   ui: UiScene,
@@ -76,6 +116,13 @@ export function handleSpellTest(
   );
   if (alreadyLearned) {
     ui.showMessage(["その じゅもんは もう おぼえているよ!"], advance);
+    return;
+  }
+
+  const spell = getSpell(spellId);
+  const lessonSkillId = spell?.learnTest.skillIds[0];
+  if (lessonSkillId && hasLesson(lessonSkillId)) {
+    delegateToLesson(ui, spellId, lessonSkillId, advance);
     return;
   }
 
