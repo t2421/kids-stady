@@ -25,7 +25,9 @@ kids-stady/
 ├── docs/
 │   ├── adding-a-new-app.md    # アプリの追加手順
 │   ├── save-data.md           # localStorage セーブデータ契約
-│   └── mathematics-design-plan.md
+│   ├── mathematics-design-plan.md
+│   ├── kazu-quest-design-plan.md   # カズクエ設計の正典
+│   └── kazu-quest-roadmap.md       # カズクエ残作業のタスク分解 (Sonnet 移譲用)
 └── .github/workflows/deploy.yml  # GitHub Pages へのビルド&デプロイ
 ```
 
