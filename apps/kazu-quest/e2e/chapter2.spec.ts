@@ -27,7 +27,7 @@ test("chapter 2 golden path: ship → tasuku joins → learn ククダマ → to
   await page.evaluate(() => {
     window.__KAZUQUEST_DEBUG__!.setFlag("c1.metKing");
     window.__KAZUQUEST_DEBUG__!.setFlag("c1.orb1");
-    window.__KAZUQUEST_DEBUG__!.grantLevel(15);
+    window.__KAZUQUEST_DEBUG__!.grantLevel(25);
   });
   await warp(page, "ch1-capital-castle", "start");
   await teleport(page, 6, 3, "up");

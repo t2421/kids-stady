@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventCommand } from "../src/content/types";
-import { defaultSave } from "../src/lib/save";
-import { evalCond, startRun, step } from "../src/lib/events/runner";
+import { defaultSave, type SaveData } from "../src/lib/save";
+import { evalCond, levelSignPages, startRun, step } from "../src/lib/events/runner";
 
 describe("evalCond", () => {
   const flags = { done: true, count: 3, zero: 0, off: false };
@@ -169,6 +169,18 @@ describe("event runner", () => {
     expect(r.state.save.flags.after).toBe(true);
   });
 
+  it("openReviewQuest surfaces as a UI effect then continues", () => {
+    const commands: EventCommand[] = [
+      { type: "openReviewQuest" },
+      { type: "setFlag", flag: "after" },
+    ];
+    let r = step(startRun(commands, defaultSave()));
+    expect(r.effect).toEqual({ kind: "openReviewQuest" });
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
   it("transfer aborts remaining commands", () => {
     const commands: EventCommand[] = [
       { type: "transfer", mapId: "dev-field", spawn: "from-village" },
@@ -186,5 +198,175 @@ describe("event runner", () => {
     const commands: EventCommand[] = [{ type: "giveGold", amount: 100 }];
     step(startRun(commands, base));
     expect(base.inventory.gold).toBe(0);
+  });
+});
+
+describe("exchange (メダル交換所)", () => {
+  const withMedals = (n: number): SaveData => {
+    const base = defaultSave();
+    return {
+      ...base,
+      inventory: { ...base.inventory, items: { ...base.inventory.items, hiramekiMedal: n } },
+    };
+  };
+  const trade: EventCommand = {
+    type: "exchange",
+    itemId: "hiramekiMedal",
+    count: 3,
+    give: { itemId: "kawaNoYoroi" },
+    onDone: [{ type: "message", pages: ["こうかん せいりつ!"] }],
+    onShort: [{ type: "message", pages: ["メダルが たりないよ。"] }],
+  };
+
+  it("enough: removes count, gives the item, runs onDone", () => {
+    let r = step(startRun([trade, { type: "setFlag", flag: "after" }], withMedals(5)));
+    expect(r.effect).toEqual({ kind: "message", pages: ["こうかん せいりつ!"] });
+    expect(r.state.save.inventory.items.hiramekiMedal).toBe(2);
+    expect(r.state.save.inventory.items.kawaNoYoroi).toBe(1);
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
+  it("not enough: nothing changes, runs onShort", () => {
+    const r = step(startRun([trade], withMedals(2)));
+    expect(r.effect).toEqual({ kind: "message", pages: ["メダルが たりないよ。"] });
+    expect(r.state.save.inventory.items.hiramekiMedal).toBe(2);
+    expect(r.state.save.inventory.items.kawaNoYoroi).toBeUndefined();
+  });
+
+  it("exact: spends everything and drops the emptied key", () => {
+    const r = step(startRun([trade], withMedals(3)));
+    expect(r.effect?.kind).toBe("message");
+    expect("hiramekiMedal" in r.state.save.inventory.items).toBe(false);
+    expect(r.state.save.inventory.items.kawaNoYoroi).toBe(1);
+  });
+
+  it("give.count stacks onto an existing stock; missing branches just continue", () => {
+    const base = withMedals(4);
+    const withArmor: SaveData = {
+      ...base,
+      inventory: { ...base.inventory, items: { ...base.inventory.items, kawaNoYoroi: 2 } },
+    };
+    const r = step(
+      startRun(
+        [
+          { type: "exchange", itemId: "hiramekiMedal", count: 1, give: { itemId: "kawaNoYoroi", count: 2 } },
+          { type: "exchange", itemId: "hiramekiMedal", count: 99, give: { itemId: "yakusou" } },
+          { type: "setFlag", flag: "after" },
+        ],
+        withArmor,
+      ),
+    );
+    expect(r.done).toBe(true);
+    expect(r.state.save.inventory.items.kawaNoYoroi).toBe(4);
+    expect(r.state.save.inventory.items.hiramekiMedal).toBe(3);
+    expect(r.state.save.inventory.items.yakusou).toBeUndefined();
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
+  it("does not mutate the input save", () => {
+    const base = withMedals(3);
+    step(startRun([trade], base));
+    expect(base.inventory.items.hiramekiMedal).toBe(3);
+    expect(base.inventory.items.kawaNoYoroi).toBeUndefined();
+  });
+});
+
+describe("levelSign (ボス前の すいしょうレベル看板)", () => {
+  const withHeroLevel = (level: number) => {
+    const base = defaultSave();
+    return {
+      ...base,
+      party: base.party.map((m) => (m.memberId === "hero" ? { ...m, level } : m)),
+    };
+  };
+
+  it("below the recommended level: 3 pages ending with the まなびや nudge", () => {
+    const commands: EventCommand[] = [
+      { type: "levelSign", level: 10 },
+      { type: "setFlag", flag: "after" },
+    ];
+    let r = step(startRun(commands, withHeroLevel(4)));
+    expect(r.effect).toEqual({
+      kind: "message",
+      pages: [
+        "たてふだ: 『この さきは つよい てき。すいしょう Lv 10』",
+        "いまの ゆうしゃは Lv 4。",
+        "まず まなびやか おだいで きたえよう!",
+      ],
+    });
+    expect(r.done).toBe(false);
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
+  it("at or above the recommended level: ready message", () => {
+    const r = step(startRun([{ type: "levelSign", level: 10 }], withHeroLevel(10)));
+    expect(r.effect?.kind).toBe("message");
+    if (r.effect?.kind !== "message") throw new Error("unreachable");
+    expect(r.effect.pages[1]).toBe("いまの ゆうしゃは Lv 10。");
+    expect(r.effect.pages[2]).toBe("じゅんびは ばっちりだ!");
+    const above = levelSignPages(10, withHeroLevel(12));
+    expect(above[2]).toBe("じゅんびは ばっちりだ!");
+  });
+
+  it("does not touch the save", () => {
+    const base = withHeroLevel(3);
+    const r = step(startRun([{ type: "levelSign", level: 10 }], base));
+    expect(r.state.save).toEqual(base);
+  });
+});
+
+describe("ending (本編クリア)", () => {
+  it("ending effect を返し、ランを終了する", () => {
+    const commands: EventCommand[] = [
+      { type: "message", pages: ["おしまい"] },
+      { type: "setFlag", flag: "c6.clear" },
+      { type: "ending" },
+      { type: "message", pages: ["ここは表示されない"] },
+    ];
+    const r1 = step(startRun(commands, defaultSave()));
+    expect(r1.effect).toEqual({ kind: "message", pages: ["おしまい"] });
+    const r2 = step(r1.state);
+    expect(r2.effect).toEqual({ kind: "ending" });
+    expect(r2.done).toBe(false);
+    expect(r2.state.save.flags["c6.clear"]).toBe(true);
+    /* 後続の UI コマンドは打ち切られる */
+    const r3 = step(r2.state);
+    expect(r3.done).toBe(true);
+    expect(r3.effect).toBeNull();
+  });
+
+  it("ending の後ろに残るデータ操作 (onceFlag の setFlag など) は適用する", () => {
+    const commands: EventCommand[] = [
+      { type: "ending" },
+      { type: "message", pages: ["表示されない"] },
+      { type: "setFlag", flag: "c6.bossDefeated" },
+      { type: "giveGold", amount: 10 },
+    ];
+    const r = step(startRun(commands, defaultSave()));
+    expect(r.effect).toEqual({ kind: "ending" });
+    expect(r.state.save.flags["c6.bossDefeated"]).toBe(true);
+    expect(r.state.save.inventory.gold).toBe(10);
+    expect(r.state.stack).toEqual([]);
+  });
+
+  it("choice の枝の中の ending でも外側フレームのデータ操作を拾う", () => {
+    const commands: EventCommand[] = [
+      {
+        type: "choice",
+        prompt: "おわる?",
+        yes: [{ type: "ending" }],
+        no: [],
+      },
+      { type: "setFlag", flag: "outer" },
+    ];
+    const r1 = step(startRun(commands, defaultSave()));
+    expect(r1.effect?.kind).toBe("choice");
+    const r2 = step(r1.state, { choice: "yes" });
+    expect(r2.effect).toEqual({ kind: "ending" });
+    expect(r2.state.save.flags.outer).toBe(true);
   });
 });

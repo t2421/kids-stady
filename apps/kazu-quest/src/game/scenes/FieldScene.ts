@@ -23,12 +23,18 @@ import {
   handleHealInn,
   handleSavePoint,
   handleDrillBoard,
+  handleReviewQuest,
   handleShop,
   handleSpellTest,
 } from "../field/effectHandlers";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
 import { INTERACT_COOLDOWN_MS, STEP_MS } from "../field/timing";
+import { tapStepFor } from "../field/tapStep";
+import { playSfx } from "../audio/sfx";
+import { playBgm } from "../audio/bgm";
+import { songForTheme } from "../../content/music";
+import { markGameCleared } from "../../lib/ending";
 
 const ZOOM = 3;
 
@@ -66,6 +72,9 @@ export class FieldScene extends Scene {
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: Record<"W" | "A" | "S" | "D", Phaser.Input.Keyboard.Key>;
   private pointerHeld = false;
+  /* 一瞬のタップでも 1 歩動くよう pointerdown 時にキューする (KQ-09)。
+     update() が 1 度だけ消費し、指が離れていても歩く */
+  private pendingTapStep: Dir | null = null;
   private ui!: UiScene;
   private rng = mulberry32((Math.random() * 2 ** 32) >>> 0);
   private stepsToEncounter = Infinity;
@@ -130,6 +139,7 @@ export class FieldScene extends Scene {
 
     EventBus.emit("current-scene-ready", this);
     EventBus.emit("map-entered", { mapId: this.map.id, name: this.map.name });
+    playBgm(songForTheme(this.map.theme, this.map.encounterTableId === null));
 
     /* dev: ?battle= 指定があれば即戦闘 (ビジュアルデバッグ用) */
     const debugMonsters = consumeDebugBattle();
@@ -153,6 +163,8 @@ export class FieldScene extends Scene {
       this.battleStarting ||
       this.isUiBusy()
     ) {
+      /* 動けないフレームで溜まったタップは捨てる (イベント明けに古い1歩が出ないように) */
+      this.pendingTapStep = null;
       return;
     }
     const dir = this.readDirection();
@@ -200,6 +212,7 @@ export class FieldScene extends Scene {
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       if (this.isUiBusy()) return;
       if (this.tryPointerInteract(pointer)) return;
+      this.queueTapStep(pointer);
       this.pointerHeld = true;
     });
     this.input.on("pointerup", () => (this.pointerHeld = false));
@@ -222,6 +235,7 @@ export class FieldScene extends Scene {
      */
     const onWake = (_sys: unknown, data?: BattleResult) => {
       this.battleStarting = false;
+      playBgm(songForTheme(this.map.theme, this.map.encounterTableId === null));
       EventBus.emit("field-ready");
       if (data) this.onBattleResult(data);
     };
@@ -268,11 +282,30 @@ export class FieldScene extends Scene {
 
   /* ---------- 移動 ---------- */
 
+  /* タップしたタイルの方向へ 1 歩をキューする。歩行中・イベント中のタップは
+     押し続け (pointerHeld) に任せ、キューしない */
+  private queueTapStep(pointer: Phaser.Input.Pointer) {
+    if (this.moving || this.transferring || this.runActive || this.battleStarting) {
+      return;
+    }
+    const world = pointer.positionToCamera(
+      this.cameras.main,
+    ) as Phaser.Math.Vector2;
+    const tx = Math.floor(world.x / TILE_SIZE);
+    const ty = Math.floor(world.y / TILE_SIZE);
+    this.pendingTapStep = tapStepFor(this.gridX, this.gridY, tx, ty);
+  }
+
+  /* 1 フレームに返す方向は 1 つ (キーボード > キューした1歩 > 押し続け)。
+     キューは読んだ時点で必ず消費するので、押し続け歩行と同じ歩を二重に踏まない */
   private readDirection(): Dir | null {
+    const queued = this.pendingTapStep;
+    this.pendingTapStep = null;
     if (this.cursors.up.isDown || this.wasd.W.isDown) return "up";
     if (this.cursors.down.isDown || this.wasd.S.isDown) return "down";
     if (this.cursors.left.isDown || this.wasd.A.isDown) return "left";
     if (this.cursors.right.isDown || this.wasd.D.isDown) return "right";
+    if (queued) return queued;
     if (this.pointerHeld) {
       const world = this.input.activePointer.positionToCamera(
         this.cameras.main,
@@ -520,6 +553,7 @@ export class FieldScene extends Scene {
   }
 
   private runEvent(event: MapEvent) {
+    if (event.art === "chest") playSfx("treasure");
     const commands: EventCommand[] = event.onceFlag
       ? [...event.commands, { type: "setFlag", flag: event.onceFlag }]
       : event.commands;
@@ -620,6 +654,9 @@ export class FieldScene extends Scene {
         case "openDrillBoard":
           handleDrillBoard(this.ui, () => advance());
           break;
+        case "openReviewQuest":
+          handleReviewQuest(this.ui, () => advance());
+          break;
         case "openShop":
           handleShop(this.ui, effect.shopId, () => advance());
           break;
@@ -629,10 +666,29 @@ export class FieldScene extends Scene {
             advance({ quizCorrect: correct }),
           );
           break;
+        case "ending":
+          this.finishRun();
+          this.startEnding();
+          break;
       }
     };
 
     advance();
+  }
+
+  /*
+   * 本編クリア (KQ-22): cleared に 6 を積み、再開位置を ホシオキの ほこら に
+   * 移して書き出してから EndingScene へ。Ui は止めておく (次の Field が起動し直す)
+   */
+  private startEnding() {
+    if (this.transferring) return;
+    this.transferring = true;
+    updateSave(markGameCleared);
+    autosave();
+    fadeOutThen(this, () => {
+      this.scene.stop("Ui");
+      this.scene.start("Ending");
+    });
   }
 
   private finishRun() {
@@ -645,6 +701,7 @@ export class FieldScene extends Scene {
   private transferTo(mapId: string, spawn: string) {
     if (this.transferring) return;
     this.transferring = true;
+    playSfx("door");
     const target = getMapDef(mapId);
     const point = target.spawns[spawn] ?? Object.values(target.spawns)[0];
     updateSave((save) => ({
@@ -666,6 +723,11 @@ export class FieldScene extends Scene {
 
   debugWarp(mapId: string, spawn: string): void {
     this.transferTo(mapId, spawn);
+  }
+
+  /* 性能監査 (KQ-40): 現マップの地形タイル Image 数 */
+  debugSpriteCount(): number {
+    return this.view?.tileCount ?? 0;
   }
 
   debugTeleport(x: number, y: number, facing: string): void {

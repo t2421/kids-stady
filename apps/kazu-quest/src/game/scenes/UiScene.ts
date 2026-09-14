@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import type { StatusData } from "../field/statusSections";
+import { playSfx } from "../audio/sfx";
 
 /*
  * 会話UIブリッジ。Canvas の手動レイアウトは崩れやすいため、描画は
@@ -48,7 +49,10 @@ export class UiScene extends Scene {
   }
 
   showMessage(pages: string[], onDone: () => void): void {
-    this.request("ui-message", "ui-message-done", { pages }, () => onDone());
+    this.request("ui-message", "ui-message-done", { pages }, () => {
+      playSfx("cursor");
+      onDone();
+    });
   }
 
   showChoice(prompt: string, onResult: (yes: boolean) => void): void {
@@ -56,7 +60,10 @@ export class UiScene extends Scene {
       "ui-choice",
       "ui-choice-done",
       { prompt },
-      (r) => onResult(r.yes),
+      (r) => {
+        playSfx("confirm");
+        onResult(r.yes);
+      },
     );
   }
 
@@ -73,7 +80,10 @@ export class UiScene extends Scene {
       "ui-list",
       "ui-list-done",
       { prompt, options },
-      (r) => onResult(r.index),
+      (r) => {
+        playSfx(r.index === null ? "cancel" : "confirm");
+        onResult(r.index);
+      },
     );
   }
 

@@ -346,3 +346,41 @@ MONSTER_ART.sunanezumi = {
   palette: { k: "#241d16", g: "#c9a468", G: "#8f6f43", l: "#e8d3a0", p: "#e0906a", P: "#f2c0a0", w: "#fff8e6", y: "#edc43f" },
   rows: MONSTER_ART.kazunezumi.rows,
 };
+
+/* ---------- 終章「ムゲンのらせん」(KQ-30b) — 金と ぞうげ色、青みどりの 色ちがい ---------- */
+
+MONSTER_ART.rasenKeshigomun = {
+  palette: { k: "#1a1030", w: "#fff6d8", W: "#e0d3a8", l: "#ffffff", b: "#3fd6d0", B: "#1c8f96", c: "#9ff0ea", p: "#f2cf5b" },
+  rows: MONSTER_ART.keshigomun.rows,
+};
+
+MONSTER_ART.rasenBat = {
+  palette: { k: "#1a1030", b: "#1c8f96", B: "#3fd6d0", l: "#9ff0ea", w: "#fff6d8", y: "#f2cf5b" },
+  rows: MONSTER_ART.mojibakeBat.rows,
+};
+
+MONSTER_ART.rasenDaruman = {
+  palette: { k: "#1a1030", w: "#fff6d8", W: "#e0d3a8", b: "#1c8f96", o: "#f2cf5b", r: "#3fd6d0", t: "#c9932a" },
+  rows: MONSTER_ART.yukiDaruman.rows,
+};
+
+MONSTER_ART.rasenSnake = {
+  palette: { k: "#1a1030", g: "#c9932a", G: "#f2cf5b", y: "#3fd6d0", w: "#fff6d8" },
+  rows: MONSTER_ART.tsuubunSnake.rows,
+};
+
+MONSTER_ART.rasenCube = {
+  palette: { k: "#1a1030", w: "#c9932a", W: "#f2cf5b" },
+  rows: MONSTER_ART.taisekiCube.rows,
+};
+
+/* ∞竜ムゲニア — 金の うろこ、青みどりの つばさ、しっぽが ∞ の かたちに まいている 隠しボス */
+MONSTER_ART.mugenia = {
+  palette: { k: "#1a1030", G: "#f2cf5b", T: "#1c8f96", t: "#3fd6d0", r: "#ff3c5a", w: "#fff6d8" },
+  rows: [
+    "..kk........kk..", ".kGGk......kGGk.", ".kGkkkkkkkkkkGk.", "kkkGGGGGGGGGGkkk",
+    "kTkGrkGGGGkrGkTk", "kTTkGGGGGGGGkTTk", "kTtTkGwwwwGkTtTk", "kTtTTkkkkkkTTtTk",
+    ".kTtTkGGGGkTtTk.", ".kTTkGwwwwGkTTk.", "..kkkGwwwwGkkk..", "....kGGwwGGk....",
+    "....kkGGGGkk....", "...kGGkkkkGGk...", "..kGkkGkkGkkGk..", "...kkk.kk.kkk...",
+  ],
+};

@@ -1,7 +1,7 @@
 /*
  * ステータスパネルの表示内容を組み立てる (純関数 — Vitest 対象)。
  * 表示は UiScene.showStatusPanel が行う。タブ (つよさ・そうび・
- * じゅもん・もちもの) ごとに収まる構造化データを返す。
+ * じゅもん・もちもの・ノート) ごとに収まる構造化データを返す。
  */
 
 import type { SaveData } from "../../lib/save";
@@ -12,6 +12,9 @@ import { equippedStats, SLOT_LABELS } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem } from "../../content/items";
 import { formatPlaytime } from "../../lib/format";
+import { buildMistakeRows, type MistakeRow } from "./mistakeRows";
+
+export type { MistakeRow };
 
 export interface MemberStatus {
   name: string;
@@ -39,6 +42,8 @@ export interface StatusData {
   items: string[];
   /* つよさタブの脚注: "1じかん 5ふん" (lib/format.formatPlaytime) */
   playtime: string;
+  /* ノートタブ: 戦闘で間違えた問題、新しい順 (field/mistakeRows.ts) */
+  mistakes: MistakeRow[];
 }
 
 export function buildStatusData(save: SaveData): StatusData | null {
@@ -79,5 +84,6 @@ export function buildStatusData(save: SaveData): StatusData | null {
     members,
     items,
     playtime: formatPlaytime(save.playtimeMs),
+    mistakes: buildMistakeRows(save.mistakes),
   };
 }

@@ -4,24 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import { EventBus } from "@/game/EventBus";
 import type { MathPromptResult } from "@/components/MathPromptPanel";
 import { recordAnswer } from "@/lib/save";
+import { mistakeEntryFromResult, recordMistake } from "@/lib/mistakes";
+import { questionRequest, type QuestionSession } from "@/lib/questionSession";
 import { updateSave, autosave } from "@/game/session";
 
 /*
- * 「N問 出題して ○×を集める」共通ループ (まなびやテスト・おだいドリル)。
+ * 「N問 出題して ○×を集める」共通ループ (まなびやテスト・おだいドリル・とっくん)。
  * open イベントを受けたら MathPromptPanel に1問ずつ依頼し、全問終了で
  * onFinished を呼ぶ。全回答は recordAnswer で苦手分析に記録する。
- * 時間無制限 (timeLimitMs: null — 設計 A4)。
+ * 習得テスト (context "test") の不正解は まちがいノートにも積む (KQ-11)。
+ * 時間無制限 (timeLimitMs: null — 設計 A4)。セッションの形は lib/questionSession。
  */
 
-export interface QuestionSession {
-  /* requestId の照合キー ("{prefix}{key}-{index}") */
-  key: string;
-  questions: number;
-  context: "test" | "drill";
-  /* どちらか一方: skillId 固定出題 / skillIds から苦手重み付け */
-  skillId?: string;
-  skillIds?: string[];
-}
+export type { QuestionSession } from "@/lib/questionSession";
 
 export interface QuestionLoopState {
   session: QuestionSession;
@@ -47,13 +42,7 @@ export function useQuestionLoop<P>(
 
   useEffect(() => {
     const ask = (s: QuestionLoopState) => {
-      EventBus.emit("math-prompt", {
-        requestId: `${prefix}${s.session.key}-${s.index}`,
-        skillId: s.session.skillId,
-        skillIds: s.session.skillIds,
-        timeLimitMs: null,
-        context: s.session.context,
-      });
+      EventBus.emit("math-prompt", questionRequest(prefix, s.session, s.index));
     };
 
     const onOpen = (payload: P) => {
@@ -70,9 +59,18 @@ export function useQuestionLoop<P>(
       if (!current) return;
       if (!result.requestId.startsWith(`${prefix}${current.session.key}-`)) return;
 
-      updateSave((save) =>
-        recordAnswer(save, result.problem.skillId, result.correct, result.elapsedMs),
-      );
+      const isTestMistake = current.session.context === "test" && !result.correct;
+      updateSave((save) => {
+        const scored = recordAnswer(
+          save,
+          result.problem.skillId,
+          result.correct,
+          result.elapsedMs,
+        );
+        return isTestMistake
+          ? recordMistake(scored, mistakeEntryFromResult(result))
+          : scored;
+      });
       autosave();
 
       const next: QuestionLoopState = {

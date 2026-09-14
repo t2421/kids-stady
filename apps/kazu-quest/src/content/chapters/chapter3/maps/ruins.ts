@@ -34,6 +34,37 @@ export const CH3_RUINS_1: MapDef = {
       commands: [{ type: "transfer", mapId: "ch3-world", spawn: "from-ruins" }],
     },
     {
+      id: "ruins1-locked-chest",
+      x: 12,
+      y: 1,
+      trigger: "inspect",
+      art: "chest",
+      onceFlag: "c3.lockedChestRuins",
+      commands: [
+        {
+          type: "message",
+          pages: ["すうじの カギが かかっている。もんだいに こたえると あく。"],
+        },
+        {
+          type: "quiz",
+          skillId: "g3_big_number",
+          onCorrect: [
+            { type: "message", pages: ["カチッ! カギが あいた!", "じょうやくそうを 3つ てにいれた!"] },
+            { type: "giveItem", itemId: "jouyakusou", count: 3 },
+            { type: "setFlag", flag: "c3.lockedChestRuins" },
+          ],
+          onWrong: [
+            {
+              type: "message",
+              pages: ["カギは あかなかった。もういちど ちょうせん できる。"],
+            },
+            /* transfer は残りのコマンドを打ち切る = onceFlag を消費せず再挑戦できる (宝箱の前に戻る) */
+            { type: "transfer", mapId: "ch3-ruins-1", spawn: "locked-chest" },
+          ],
+        },
+      ],
+    },
+    {
       id: "ruins1-in",
       x: 6,
       y: 0,
@@ -44,6 +75,8 @@ export const CH3_RUINS_1: MapDef = {
   spawns: {
     entrance: { x: 6, y: 8, facing: "up" },
     "from-inner": { x: 6, y: 1, facing: "down" },
+    /* すうじのカギつき宝箱の前 (不正解の再挑戦用) */
+    "locked-chest": { x: 11, y: 1, facing: "right" },
   },
 };
 

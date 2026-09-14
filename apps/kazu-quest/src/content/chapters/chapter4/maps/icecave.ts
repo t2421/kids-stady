@@ -124,6 +124,14 @@ export const CH4_ICECAVE_2: MapDef = {
       ],
     },
     {
+      id: "icecave2-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 22 }],
+    },
+    {
       id: "icecave2-golem",
       x: 6,
       y: 5,

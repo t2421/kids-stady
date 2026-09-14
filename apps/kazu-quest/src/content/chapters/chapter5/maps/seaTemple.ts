@@ -101,6 +101,14 @@ export const CH5_SEA_2: MapDef = {
       commands: [{ type: "transfer", mapId: "ch5-sea-1", spawn: "from-inner" }],
     },
     {
+      id: "sea2-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 29 }],
+    },
+    {
       id: "sea-guardian",
       x: 6,
       y: 3,

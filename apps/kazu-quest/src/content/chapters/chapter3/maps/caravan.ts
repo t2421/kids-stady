@@ -5,6 +5,7 @@
 
 import type { MapDef } from "../../../types";
 import { CH3_TOWN_LEGEND } from "../legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 export const CH3_CARAVAN: MapDef = {
@@ -90,14 +91,7 @@ export const CH3_CARAVAN: MapDef = {
       dialog: [
         {
           pages: ["たびの ぶじを めがみスーリアに いのりましょう。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

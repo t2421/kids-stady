@@ -237,4 +237,33 @@ export const TOWN_TILES: Record<string, PixelArt> = {
       "ggggggggggyggggg", "ggglgggggggggggg", "gggggggggggggDgg", "gggggggggggggggg",
     ],
   },
+  /* とけい塔 (上段: 赤い とんがり屋根 + とけいの文字盤。3じ を さしている) */
+  clockTower: {
+    palette: {
+      g: "#398447",
+      k: "#4a4d55", d: "#747982", s: "#989ea8", S: "#b7bdc5",
+      r: "#b84529", R: "#d75b38", l: "#ed8055", y: "#f1c644",
+      w: "#f6f0d8", n: "#1a222e",
+    },
+    rows: [
+      "gggggggyyggggggg", "ggggggkrrkgggggg", "gggggkrRRrkggggg", "ggggkrRRRRrkgggg",
+      "gggkrrRRRRrrkggg", "ggkllllllllllkgg", "ggkSSSSSSSSSSkgg", "ggkSkwwwwwwkSkgg",
+      "ggkSwwwnwwwwSkgg", "ggkSwwwnnnwwSkgg", "ggkSwwwwwwwwSkgg", "ggkSwwwwwwwwSkgg",
+      "ggkSkwwwwwwkSkgg", "ggkSSSSSSSSSSkgg", "ggkssddssddsskgg", "ggkddssddssddkgg",
+    ],
+  },
+  /* とけい塔 (下段: 石づみの塔身と 木の扉。しらべると とけいの問題) */
+  clockTowerBase: {
+    palette: {
+      g: "#398447", G: "#4fa35a", D: "#2d6d3a",
+      k: "#4a4d55", d: "#747982", s: "#989ea8",
+      t: "#7a5533", T: "#a97648",
+    },
+    rows: [
+      "ggkssddssddsskgg", "ggkddssddssddkgg", "ggkssddssddsskgg", "ggkddssddssddkgg",
+      "ggkssdkkkkdsskgg", "ggkddkttttkddkgg", "ggksskttttksskgg", "ggkddkttttkddkgg",
+      "ggkssktttTksskgg", "ggkddkttttkddkgg", "ggksskttttksskgg", "ggkddkttttkddkgg",
+      "ggksskttttksskgg", "ggkkkkkkkkkkkkgg", "ggDDDDDDDDDDDDgg", "gggggGgggggggggg",
+    ],
+  },
 };

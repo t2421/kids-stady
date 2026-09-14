@@ -1,6 +1,7 @@
 /* ミナトスの建物内部 (宿・道具屋・まなびや・ほこら) */
 
 import type { MapDef } from "../../../types";
+import { shrineMenu } from "../../shrineMenu";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
 
 function exitEvents(
@@ -194,25 +195,11 @@ export const CH2_MINATOS_SHRINE: MapDef = {
             "タスクを つれていって くれたのじゃな。よろしく たのむぞ。",
             "ここは めがみスーリアの ほこら。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
         {
           pages: ["ここは めがみスーリアの ほこら。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

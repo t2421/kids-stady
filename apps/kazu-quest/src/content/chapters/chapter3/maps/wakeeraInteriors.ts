@@ -2,6 +2,7 @@
 
 import type { MapDef } from "../../../types";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 function exitEvents(
@@ -185,27 +186,13 @@ export const CH3_WAKEERA_SHRINE: MapDef = {
             "アマリダを たおしたのですね。さばくに へいわが もどります。",
             "めがみスーリアの ごかごが ありますように。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
         {
           pages: [
             "ここは めがみスーリアの ほこら。さばくの たびびとを まもっています。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

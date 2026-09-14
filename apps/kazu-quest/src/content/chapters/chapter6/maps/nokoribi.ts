@@ -5,6 +5,7 @@
 
 import type { MapDef } from "../../../types";
 import { CH6_TOWN_LEGEND } from "../legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 export const CH6_NOKORIBI: MapDef = {
@@ -92,14 +93,7 @@ export const CH6_NOKORIBI: MapDef = {
       dialog: [
         {
           pages: ["めがみスーリアの こえは ここまで とどきます。きろくしますか。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

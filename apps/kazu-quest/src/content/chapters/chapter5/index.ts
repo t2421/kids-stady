@@ -64,6 +64,7 @@ export const CHAPTER5: ChapterDef = {
     "c5.bossDefeated": "魔王マイナドスを 倒した",
     "c5.orb5": "数晶・伍を 取り戻した",
     "c5.clear": "第5章クリア (女王に報告済み・ゼロのあなが開く)",
+    "c5.quizNpc": "クイズずきの もんだいに せいかいし ひらめきメダルを もらった (KQ-31)",
     "learned.percenFlare": "パーセンフレア習得 (テスト合格)",
     "learned.tsuubunSlash": "ツウブンスラッシュ習得 (テスト合格)",
     "learned.shousuuStorm": "ショウスウストーム習得 (テスト合格)",

@@ -130,3 +130,9 @@ ACTOR_ART.gauss = {
   palette: { k: "#171820", h: "#7d6b58", m: "#a8a29a", M: "#e0dbd2", s: "#d9a682", S: "#f2c8a0", b: "#8f2f3f", B: "#5c1d2a", l: "#c04a5a", y: "#f1c644", w: "#f7f1de" },
   rows: ACTOR_ART.hero.rows,
 };
+
+/* かねきき の おばあさん (第1章 — 白い髪に むらさきの着物。村人の色違い) */
+ACTOR_ART.granny = {
+  palette: { k: "#1c1b17", h: "#d9d4cc", H: "#f2efe8", s: "#e5aa7b", S: "#ffd0a2", g: "#6b4a8a", G: "#4a3161", l: "#9a7ab8", b: "#c98a3a" },
+  rows: ACTOR_ART.villager.rows,
+};

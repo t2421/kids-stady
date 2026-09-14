@@ -2,6 +2,7 @@
 
 import type { MapDef } from "../../../types";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 function exitEvents(
@@ -185,25 +186,11 @@ export const CH4_MAJORIA_SHRINE: MapDef = {
             "デシマロンを たおしたのですね。ゆきも やわらかく なりました。",
             "めがみスーリアが あなたを みまもって います。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
         {
           pages: ["ここは めがみスーリアの ほこら。こごえた たびびとを むかえます。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

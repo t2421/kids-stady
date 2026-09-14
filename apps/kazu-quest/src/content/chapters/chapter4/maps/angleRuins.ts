@@ -279,6 +279,14 @@ export const CH4_RUINS_DEEP: MapDef = {
       ],
     },
     {
+      id: "ruins-deep-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 24 }],
+    },
+    {
       id: "boss-decimaron",
       x: 6,
       y: 2,

@@ -50,9 +50,12 @@ const MEMBER_JOIN_CHAPTER: Record<string, number> = {
   little: 4,
 };
 
+/* 店がある最後の章。終章 (7) には町がないので 章6の装備で挑む想定 */
+const LAST_SHOP_CHAPTER = 6;
+
 /* 章 N 時点のメンバー構成 (呪文・装備込み) */
 export function partyForChapter(chapter: number): SimMemberSpec[] {
-  const equipment = bestShopEquipment(chapter);
+  const equipment = bestShopEquipment(Math.min(chapter, LAST_SHOP_CHAPTER));
   return Object.entries(MEMBER_JOIN_CHAPTER)
     .filter(([, joinAt]) => joinAt <= chapter)
     .map(([memberId]) => ({
@@ -62,16 +65,15 @@ export function partyForChapter(chapter: number): SimMemberSpec[] {
     }));
 }
 
-const CLEAR_LEVEL: Record<number, number> = { 1: 7, 2: 12, 3: 19, 4: 26, 5: 33, 6: 40 };
-/* 章頭Lv: 章1は初期値、章2〜4は仲間の加入Lv、章5〜6は前章クリア +1 */
-const START_LEVEL: Record<number, number> = { 1: 1, 2: 6, 3: 13, 4: 20, 5: 27, 6: 34 };
+/* 終章 (7) は本編クリア (Lv40) 後の裏ダンジョン。らせん4層ぶんの雑魚で +5 の想定 (KQ-30b) */
+const CLEAR_LEVEL: Record<number, number> = { 1: 7, 2: 12, 3: 19, 4: 26, 5: 33, 6: 40, 7: 45 };
+/* 章頭Lv: 章1は初期値、章2〜4は仲間の加入Lv、章5〜7は前章クリア +1 */
+const START_LEVEL: Record<number, number> = { 1: 1, 2: 6, 3: 13, 4: 20, 5: 27, 6: 34, 7: 41 };
 const MID_BOSS_OFFSET = 2;
 
-/* 2026-09-14 の測定結果 (docs/kazu-quest-balance.md)。想定Lv−3 でも勝率 100% の章が大半。
-   装備なしでも 100% なので装備だけの問題ではなく、ボスの HP/atk がレベル曲線
-   (heroStats: atk 4+2Lv, def 2+Lv) に対して低い。1刻み探索では Lv1〜17 で 70% に届く */
-const TOO_EASY =
-  "想定Lv−3 でも勝率 100% (装備なしでも 100%) — ボス HP/atk がレベル曲線に対して低い。ボス数値 (と装備 def) の見直しが必要";
+/* 2026-09-14 (KQ-07) の初回測定では章1〜6 のボスが想定Lv−3 でも勝率 100% だったため、
+   KQ-08 で該当ボスの HP/atk を引き上げた (def は据え置き: 子どもにダメージ数字が見えるように)。
+   現在 flags は空。再び破綻したら該当シナリオに理由を書いて skip する */
 
 function scenario(
   chapter: number,
@@ -93,18 +95,19 @@ function scenario(
 }
 
 export const BALANCE_SCENARIOS: BalanceScenario[] = [
-  scenario(1, ["dekaInkugumo"], "mid", { tooEasy: TOO_EASY }),
+  scenario(1, ["dekaInkugumo"], "mid"),
   scenario(1, ["eraser"], "final"),
-  scenario(2, ["blotta"], "final", { tooEasy: TOO_EASY }),
-  scenario(3, ["wakemaeGolem"], "mid", { tooEasy: TOO_EASY }),
-  scenario(3, ["amarida"], "final", { tooEasy: TOO_EASY }),
-  scenario(4, ["kooriGolem"], "mid", { tooEasy: TOO_EASY }),
-  scenario(4, ["decimaron"], "final", { tooEasy: TOO_EASY }),
-  scenario(5, ["kumoNoBanjin"], "mid", { tooEasy: TOO_EASY }),
-  scenario(5, ["shinkaiNoNushi"], "mid", { tooEasy: TOO_EASY }),
-  scenario(5, ["minados"], "final", { tooEasy: TOO_EASY }),
-  scenario(6, ["maboroshiHero"], "mid", { tooEasy: TOO_EASY }),
+  scenario(2, ["blotta"], "final"),
+  scenario(3, ["wakemaeGolem"], "mid"),
+  scenario(3, ["amarida"], "final"),
+  scenario(4, ["kooriGolem"], "mid"),
+  scenario(4, ["decimaron"], "final"),
+  scenario(5, ["kumoNoBanjin"], "mid"),
+  scenario(5, ["shinkaiNoNushi"], "mid"),
+  scenario(5, ["minados"], "final"),
+  scenario(6, ["maboroshiHero"], "mid"),
   scenario(6, ["zerom", "zeromTrue"], "final"),
+  scenario(7, ["mugenia"], "final"),
 ];
 
 export function scenarioMonsters(s: BalanceScenario): MonsterDef[][] {

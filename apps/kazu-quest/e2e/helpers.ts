@@ -19,14 +19,19 @@ declare global {
       teleport(x: number, y: number, facing: string): void;
       warp(mapId: string, spawn: string): void;
       grantLevel(level: number): void;
+      grantGold(amount: number): void;
       learnSpell(spellId: string): void;
       setFlag(flag: string, value?: number | boolean): void;
+      giveItem(itemId: string, count?: number): void;
       advanceToChapter(chapter: number): { mapId: string; spawn: string };
+      /* 出題中の正解 (テンキー入力用。DOM には出ない — KQ-12) */
+      currentAnswer(): string | null;
       getSave(): {
         chapter: { current: number; cleared: number[] };
         flags: Record<string, number | boolean>;
         inventory: { gold: number; items: Record<string, number> };
         location: { mapId: string; x: number; y: number };
+        checkpoint: { mapId: string; spawn: string };
         party: {
           memberId: string;
           level: number;
@@ -37,6 +42,8 @@ declare global {
         totalCorrect: number;
         totalWrong: number;
         skillStats: Record<string, { c: number; w: number }>;
+        mistakes: { skillId: string; text: string; answer: string; chosen: string }[];
+        settings: { sound: boolean };
       };
     };
   }
@@ -109,7 +116,27 @@ export async function warp(page: Page, mapId: string, spawn: string) {
   throw new Error(`warp ${mapId}/${spawn} に失敗`);
 }
 
-/* プロフィール作成 → タイトル → フィールド (ハジマリ村) */
+/*
+ * タイトルメニュー (KQ-22) からフィールドへ。セーブがあれば「つづきから」、
+ * なければ「はじめから」(新規プロフィールは確認なしで即開始)。
+ * touch.spec はキー/クリック API を使わないので、操作を tap にも切り替えられる
+ */
+export async function startFromTitleMenu(page: Page, press: "click" | "tap" = "click") {
+  await waitForScene(page, "Title");
+  await page
+    .locator('[data-testid="title-menu"]')
+    .waitFor({ state: "visible", timeout: 15_000 });
+  const cont = page.locator('[data-testid="title-continue"]');
+  const target = (await cont.isVisible())
+    ? cont
+    : page.locator('[data-testid="title-newgame"]');
+  if (press === "tap") await target.tap();
+  else await target.click();
+  await waitForScene(page, "Field");
+  await page.waitForTimeout(500);
+}
+
+/* プロフィール作成 → タイトルメニュー → フィールド (ハジマリ村) */
 export async function startGame(page: Page) {
   await page.goto("/");
   /* 初回はプロフィールゲート (作成モード) が出る → そのまま はじめる */
@@ -125,10 +152,7 @@ export async function startGame(page: Page) {
   await page
     .locator('[data-testid="profile-gate"]')
     .waitFor({ state: "hidden", timeout: 10_000 });
-  await waitForScene(page, "Title");
-  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
-  await waitForScene(page, "Field");
-  await page.waitForTimeout(500);
+  await startFromTitleMenu(page);
 }
 
 /*
@@ -206,8 +230,57 @@ export async function advanceDialog(page: Page) {
 export const correctChoice = (page: Page) =>
   page.locator('[data-testid="math-choice"][data-answer="1"]');
 
-/* 戦闘を「たたかう + 問題に正解」で終わらせる (通常攻撃も出題される) */
-export async function grindBattleUntilField(page: Page, maxSteps = 120) {
+/* テンキー (KQ-12: 小3以降のテスト・おだい・とっくん) の表示欄 */
+export const keypadDisplay = (page: Page) =>
+  page.locator('[data-testid="keypad-display"]');
+
+/* いま答えられる状態か (3択なら正解ボタン、テンキーなら「0」キーが押せる) */
+export async function isAnswerable(page: Page): Promise<boolean> {
+  const btn = correctChoice(page);
+  if ((await btn.isVisible()) && (await btn.isEnabled())) return true;
+  const zero = page.locator('[data-testid="keypad-key"][data-key="0"]');
+  return (await zero.isVisible()) && (await zero.isEnabled());
+}
+
+/*
+ * 出題パネルに1問だけ正解する。3択なら正解ボタン、テンキーなら
+ * __KAZUQUEST_DEBUG__.currentAnswer() の文字列を1文字ずつタップして「こたえる」。
+ * 呼ぶ前に isAnswerable で答えられる状態を確認すること。
+ */
+export async function answerCorrectOnce(page: Page) {
+  const btn = correctChoice(page);
+  if (await btn.isVisible()) {
+    await btn.click({ timeout: 2_000 }).catch(() => {});
+    return;
+  }
+  const answer = await page.evaluate(
+    () => window.__KAZUQUEST_DEBUG__!.currentAnswer(),
+  );
+  if (answer === null) throw new Error("出題中の問題がない");
+  for (const ch of answer) {
+    await page
+      .locator(`[data-testid="keypad-key"][data-key="${ch}"]`)
+      .click({ timeout: 2_000 });
+  }
+  await page.locator('[data-testid="keypad-submit"]').click({ timeout: 2_000 });
+}
+
+/* 出題パネル (3択 or テンキー) が答えられる状態になるまで待つ */
+export async function waitForAnswerable(page: Page, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await isAnswerable(page)) return;
+    await page.waitForTimeout(200);
+  }
+  throw new Error("出題パネルが答えられる状態にならない");
+}
+
+/*
+ * 戦闘を「たたかう + 問題に正解」で終わらせ、sceneKey がアクティブになるまで回す
+ * (通常攻撃も出題される)。戦闘後に Field へ戻るのが普通だが、
+ * ラスボス戦のように Ending へ進む場合は sceneKey を変える
+ */
+export async function grindBattleUntil(page: Page, sceneKey: string, maxSteps = 120) {
   const btn = correctChoice(page);
   for (let i = 0; i < maxSteps; i++) {
     /* フィードバック表示中は disabled になるので、押せるときだけ短命クリック */
@@ -219,37 +292,96 @@ export async function grindBattleUntilField(page: Page, maxSteps = 120) {
       await page.keyboard.press("z");
       await page.waitForTimeout(700);
     }
-    const backInField = await page.evaluate(
-      () => window.__KAZUQUEST_GAME__!.scene.isActive("Field"),
+    const reached = await page.evaluate(
+      (k) => window.__KAZUQUEST_GAME__!.scene.isActive(k),
+      sceneKey,
     );
-    if (backInField) return;
+    if (reached) return;
   }
   throw new Error("戦闘が終わらない");
 }
 
+export async function grindBattleUntilField(page: Page, maxSteps = 120) {
+  await grindBattleUntil(page, "Field", maxSteps);
+}
+
 /*
- * まなびやテストを最初の choice = はい で受け、全問正解で通す。
- * 問題数はコンテンツ (spell.learnTest.questions) 依存なので固定せず、
- * 進捗バナー (spell-test-banner) が消えるまで正解を押し続ける。
+ * ダイアログを送り続けて、sceneKey がアクティブになるまで待つ
+ * (会話の最後でシーンが切り替わるイベント用。ページ数に依存しない)
  */
-export async function takeSpellTestAllCorrect(page: Page, maxQuestions = 40) {
-  const btn = correctChoice(page);
-  const banner = page.locator('[data-testid="spell-test-banner"]');
-  await page.keyboard.press("z");
-  for (let i = 0; i < 30; i++) {
-    if (await btn.isVisible()) break;
+export async function advanceDialogUntilScene(page: Page, sceneKey: string, maxPresses = 80) {
+  for (let i = 0; i < maxPresses; i++) {
+    await page.waitForTimeout(350);
+    const reached = await page.evaluate(
+      (k) => window.__KAZUQUEST_GAME__!.scene.isActive(k),
+      sceneKey,
+    );
+    if (reached) return;
     await page.keyboard.press("z");
-    await page.waitForTimeout(500);
   }
-  /* 1問あたり最大 5 回のポーリング (正解フィードバック中は disabled) */
+  throw new Error(`${sceneKey} に切り替わらない`);
+}
+
+/* 習得テストの前に出る「とっくんしてから テストする?」(KQ-11) の見分け用テキスト */
+export const PRACTICE_PROMPT_TEXT = "とっくんしてから";
+
+/* とっくんの choice が出ていれば はい(0) / いいえ(1) をタップして true */
+export async function answerPracticePrompt(page: Page, yes: boolean) {
+  const prompt = page.getByText(PRACTICE_PROMPT_TEXT);
+  if (!(await prompt.isVisible().catch(() => false))) return false;
+  await page.locator('[data-testid="ui-option"]').nth(yes ? 0 : 1).click();
+  await page.waitForTimeout(400);
+  return true;
+}
+
+/*
+ * 出題バナー (spell-test-banner / spell-practice-banner …) が消えるまで
+ * 正解し続ける (3択 / テンキーの両対応 — answerCorrectOnce)。
+ * 1問あたり最大 5 回のポーリング (正解フィードバック中は disabled)
+ */
+export async function answerAllCorrectUntilHidden(
+  page: Page,
+  bannerTestId: string,
+  maxQuestions = 40,
+) {
+  const banner = page.locator(`[data-testid="${bannerTestId}"]`);
   for (let i = 0; i < maxQuestions * 5; i++) {
     if (!(await banner.isVisible())) return;
-    if ((await btn.isVisible()) && (await btn.isEnabled())) {
-      await btn.click({ timeout: 2_000 }).catch(() => {});
+    if (await isAnswerable(page)) {
+      await answerCorrectOnce(page);
       await page.waitForTimeout(900);
     } else {
       await page.waitForTimeout(300);
     }
   }
-  throw new Error("しゅうとくテストが終わらない");
+  throw new Error(`${bannerTestId} が終わらない`);
+}
+
+/*
+ * 学者の前で z → 最初の choice = はい で習得テストを受け、
+ * 「とっくんしてから テストする?」は いいえ で飛ばして、1問目が出るまで待つ。
+ */
+export async function startSpellTest(page: Page) {
+  await page.keyboard.press("z");
+  for (let i = 0; i < 30; i++) {
+    if ((await correctChoice(page).isVisible()) || (await keypadDisplay(page).isVisible())) {
+      return;
+    }
+    if (await answerPracticePrompt(page, false)) continue;
+    await page.keyboard.press("z");
+    await page.waitForTimeout(500);
+  }
+  throw new Error("しゅうとくテストが始まらない");
+}
+
+/*
+ * まなびやテストを最初の choice = はい で受け、全問正解で通す。
+ * 「とっくんしてから テストする?」は いいえ で飛ばす (とっくんは practice.spec で検証)。
+ * 問題数はコンテンツ (spell.learnTest.questions) 依存なので固定せず、
+ * 進捗バナー (spell-test-banner) が消えるまで正解を押し続ける。
+ * 小3以降の呪文はテンキーで答える (KQ-12)。
+ */
+export async function takeSpellTestAllCorrect(page: Page, maxQuestions = 40) {
+  await startSpellTest(page);
+  await answerAllCorrectUntilHidden(page, "spell-test-banner", maxQuestions);
 }

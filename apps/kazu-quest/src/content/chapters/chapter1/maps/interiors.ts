@@ -4,6 +4,7 @@
  */
 
 import type { MapDef } from "../../../types";
+import { shrineMenu } from "../../shrineMenu";
 import { CASTLE_LEGEND, INTERIOR_LEGEND } from "../legends";
 
 function exitEvents(
@@ -128,6 +129,14 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
       art: "king",
       movement: "static",
       dialog: [
+        {
+          /* 本編クリア後 (KQ-22): ピタゴラの称号をたたえる */
+          if: { flag: "c6.clear", op: "set" },
+          pages: [
+            "おお… 数ゆうしゃ ピタゴラよ! 2つの せかいに 数を もどした えいゆうじゃ!",
+            "6つの すうしょうが かがやく かぎり、この くにの かずは もう うばわれぬ。ゆっくり やすむがよい。",
+          ],
+        },
         {
           if: { flag: "c1.orb1", op: "set" },
           pages: [
@@ -320,14 +329,7 @@ export const CH1_CAPITAL_SHRINE: MapDef = {
       dialog: [
         {
           pages: ["ここは めがみスーリアの ほこら。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

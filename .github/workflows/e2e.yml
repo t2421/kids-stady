@@ -1,0 +1,116 @@
+name: E2E (kazu-quest)
+
+# 既定は Chromium のスモークサブセットのみ (push / PR)。
+# 全章 (golden path) は Actions の「Run workflow」から suite=full で手動起動する。
+on:
+  pull_request:
+    paths:
+      - "apps/kazu-quest/**"
+      - ".github/workflows/e2e.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/kazu-quest/**"
+      - ".github/workflows/e2e.yml"
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "実行するスイート (smoke: スモークのみ / full: 全 spec)"
+        type: choice
+        default: smoke
+        options:
+          - smoke
+          - full
+
+permissions:
+  contents: read
+
+# 同一 ref の古い実行は打ち切る (PR の連続 push 対策)
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    # full は全章を通すので 45 分枠。smoke はビルド込みで 25 分あれば足りる
+    timeout-minutes: ${{ inputs.suite == 'full' && 45 || 25 }}
+    defaults:
+      run:
+        working-directory: apps/kazu-quest
+    env:
+      # GitHub が既に CI=true を入れるが明示する。
+      # playwright.config.ts の reuseExistingServer: !process.env.CI により
+      # webServer が必ず `npm run build` からフルビルドする。
+      CI: "true"
+      # NEXT_PUBLIC_BASE_PATH は設定しない — E2E はルート (/) で配信する
+      # (deploy.yml のサブパス設定とは意図的に分けている)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/kazu-quest/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Resolve Playwright version
+        id: pw
+        run: |
+          version="$(node -p "require('./package-lock.json').packages['node_modules/@playwright/test'].version")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      # キャッシュヒット時はブラウザ本体は不要だが、OS 側の依存パッケージは毎回入れる
+      - name: Install Playwright Chromium (+ OS deps)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright OS deps only (cache hit)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      # ---- smoke (既定) ----------------------------------------------------
+      - name: Smoke — smoke + orientation
+        if: inputs.suite != 'full'
+        run: npx playwright test e2e/smoke.spec.ts e2e/orientation.spec.ts --reporter=line,html
+
+      # touch.spec.ts (iPad プロジェクト) は別タスクで追加予定。存在するときだけ実行する。
+      # レポート出力先を分けて 1 本目の HTML レポートを上書きしない。
+      - name: Smoke — touch (ipad project, if present)
+        if: inputs.suite != 'full'
+        env:
+          PLAYWRIGHT_HTML_REPORT: playwright-report/touch
+        run: |
+          if [ -f e2e/touch.spec.ts ]; then
+            npx playwright test e2e/touch.spec.ts --project=ipad \
+              --reporter=line,html --output=test-results/touch
+          else
+            echo "e2e/touch.spec.ts not found — skipping touch smoke"
+          fi
+
+      # ---- full (workflow_dispatch: suite=full) -----------------------------
+      - name: Full suite — all specs
+        if: inputs.suite == 'full'
+        run: npx playwright test --reporter=line,html
+
+      # ---- artifacts ---------------------------------------------------------
+      - name: Upload test results & report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ inputs.suite || 'smoke' }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/kazu-quest/test-results/
+            apps/kazu-quest/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

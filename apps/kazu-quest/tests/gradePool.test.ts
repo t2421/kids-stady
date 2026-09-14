@@ -34,10 +34,18 @@ describe("chapterQuestionGrades", () => {
     expect(chapterQuestionGrades(fakeChapter({ grade: 6, questionGrades: [1, 2, 2] }))).toEqual([1, 2]);
   });
 
-  it("chapters 1..6 resolve to exactly their own grade (behaviour unchanged)", () => {
-    for (const chapter of CHAPTERS) {
+  it("chapters without questionGrades resolve to exactly their own grade (behaviour unchanged)", () => {
+    const plain = CHAPTERS.filter((c) => c.questionGrades === undefined);
+    expect(plain.map((c) => c.id)).toEqual([1, 2, 3, 4, 5, 6]);
+    for (const chapter of plain) {
       expect(chapterQuestionGrades(chapter)).toEqual([chapter.grade]);
     }
+  });
+
+  it("the final chapter (ムゲンのらせん) mixes every grade 1..6", () => {
+    const ch7 = CHAPTERS.find((c) => c.id === 7);
+    expect(ch7).toBeDefined();
+    expect(chapterQuestionGrades(ch7!)).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
 

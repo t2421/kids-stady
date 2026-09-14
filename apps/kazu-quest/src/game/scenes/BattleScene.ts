@@ -4,7 +4,7 @@ import { applyVictory, createBattle, submitRound } from "../../lib/battle/battle
 import { getMonster } from "../../content/monsters";
 import { getItem } from "../../content/items";
 import { getSpell } from "../../content/spells";
-import { getChapter } from "../../content/chapters";
+import { chapterForMap, getChapter } from "../../content/chapters";
 import type { SpellDef } from "../../content/types";
 import { mulberry32 } from "../../lib/curriculum/types";
 import { autosave, getSave, tickPlaytime, updateSave } from "../session";
@@ -12,7 +12,11 @@ import { monsterTextureKey } from "../textures";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { EventBus } from "../EventBus";
 import { BattleMenu } from "../battle/BattleMenu";
-import { requestBattleMath } from "../battle/mathRequest";
+import {
+  beginBattleMistakes,
+  requestBattleMath,
+  takeBattleMistakes,
+} from "../battle/mathRequest";
 import { getMapDef, hasMap } from "../../content/maps";
 import {
   addEnemyShadow,
@@ -27,6 +31,8 @@ import {
   spawnVictorySparkles,
 } from "../battle/battleFx";
 import { SPELLS } from "../../content/spells";
+import { playSfx } from "../audio/sfx";
+import { playBgm } from "../audio/bgm";
 
 /*
  * DQ式一人称ターン制バトル。FieldScene を sleep したまま起動し、
@@ -101,6 +107,8 @@ export class BattleScene extends Scene {
     this.enemySprites.clear();
     this.pendingSpellFxId = null;
     this.pendingCrit = false;
+    /* まちがいノート: この戦闘ぶんの蓄積を空にする */
+    beginBattleMistakes();
   }
 
   create() {
@@ -118,6 +126,8 @@ export class BattleScene extends Scene {
     keyboard.on("keydown-X", () => this.cancelMenu());
 
     this.updateStatus();
+    playSfx("encounter");
+    playBgm(this.launch.boss ? "boss" : "battle");
     this.showIntro();
     EventBus.emit("current-scene-ready", this);
   }
@@ -291,6 +301,7 @@ export class BattleScene extends Scene {
   private moveCursor(delta: number) {
     if (this.busy) return;
     this.menu.move(delta);
+    playSfx("cursor");
   }
 
   private confirm() {
@@ -300,6 +311,7 @@ export class BattleScene extends Scene {
 
   private cancelMenu() {
     if (this.busy) return;
+    if (this.menuKind !== "root") playSfx("cancel");
     if (this.menuKind === "item" || this.menuKind === "spell") this.showRootMenu();
   }
 
@@ -314,6 +326,7 @@ export class BattleScene extends Scene {
 
   private onMenuSelect(index: number) {
     if (this.busy) return;
+    playSfx("confirm");
     if (this.menuKind === "root") {
       this.onRootCommand(COMMANDS[index]);
     } else if (this.menuKind === "spell") {
@@ -356,7 +369,9 @@ export class BattleScene extends Scene {
     this.busy = true;
     this.menu.clear();
     this.msgText.setText(`${this.currentMember().name}の こうげき!`);
-    const chapter = getChapter(getSave().chapter.current);
+    /* いる場所の章を優先 (終章は chapter.current を進めずに入るため — KQ-30b) */
+    const save = getSave();
+    const chapter = chapterForMap(save.location.mapId) ?? getChapter(save.chapter.current);
     const skillIds = chapter?.attackSkillIds ?? ["g1_add_nc", "g1_sub_nc"];
     requestBattleMath("attack", skillIds, ATTACK_TIME_LIMIT_MS, (outcome) => {
       this.queueCommand({
@@ -453,6 +468,7 @@ export class BattleScene extends Scene {
       case "message":
         /* 「かいしんの いちげき!」の次の attack を強調表示する */
         if (event.text.includes("かいしんの いちげき")) this.pendingCrit = true;
+        if (event.text.includes("はずれて")) playSfx("miss");
         this.msgText.setText(event.text);
         this.time.delayedCall(750, next);
         break;
@@ -477,10 +493,12 @@ export class BattleScene extends Scene {
           this.pendingSpellFxId = spell.id;
         }
         this.cameras.main.flash(160, 255, 255, 190);
+        playSfx("spellCast");
         this.time.delayedCall(800, next);
         break;
       }
       case "spellFizzle":
+        playSfx("spellFizzle");
         this.msgText.setText(`${event.actorName}は ${event.spellName}を となえた…`);
         this.time.delayedCall(700, next);
         break;
@@ -492,6 +510,7 @@ export class BattleScene extends Scene {
             d.hp = Math.min(member.maxHp, d.hp + event.amount);
           }
           playHealFx(this);
+          playSfx("heal");
           spawnDamagePopup(
             this,
             GAME_WIDTH / 2,
@@ -515,6 +534,7 @@ export class BattleScene extends Scene {
         this.playVictory(event);
         break;
       case "defeat":
+        playSfx("defeat");
         this.time.delayedCall(600, () => this.endBattle({ outcome: "lost" }));
         break;
     }
@@ -539,6 +559,7 @@ export class BattleScene extends Scene {
 
       /* 着弾の瞬間の表示 (点滅・ノックバック・ダメージ数字) */
       const impact = (withWhiteBurst: boolean) => {
+        playSfx(crit ? "critical" : "hit");
         if (sprite) {
           if (withWhiteBurst) spawnImpactBurst(this, sprite.x, sprite.y);
           spawnDamagePopup(
@@ -579,6 +600,7 @@ export class BattleScene extends Scene {
     }
 
     /* 敵 → 味方: ツメあと + 画面シェイク + 赤フラッシュ */
+    playSfx("hit");
     playEnemyAttackFx(this);
     this.cameras.main.shake(180, 0.008);
     this.cameras.main.flash(160, 200, 40, 40);
@@ -596,6 +618,7 @@ export class BattleScene extends Scene {
   }
 
   private playVictory(event: Extract<BattleEvent, { type: "victory" }>) {
+    playSfx("victory");
     spawnVictorySparkles(this);
     const save = getSave();
     const result = applyVictory(save.party, this.battle, event.exp, event.gold);
@@ -609,13 +632,39 @@ export class BattleScene extends Scene {
     for (const up of result.levelUps) {
       lines.push(`レベルが ${up.to} に あがった! げんきも かいふくした!`);
     }
+    /* レベルアップの行が出るタイミング (1 行目の表示 1100ms 後) で鳴らす */
+    if (result.levelUps.length > 0) this.time.delayedCall(1100, () => playSfx("levelUp"));
     /* レベルアップの全回復を表示にも反映する */
     for (const member of result.party) {
       this.display.set(member.memberId, { hp: member.hp, mp: member.mp });
     }
     this.showLinesThen(lines, () =>
-      this.endBattle({ outcome: "won", winFlag: this.launch.winFlag }),
+      this.showMistakeNoteThen(() =>
+        this.endBattle({ outcome: "won", winFlag: this.launch.winFlag }),
+      ),
     );
+  }
+
+  /*
+   * まちがいノート (設計 A6): 勝利演出のあと・フィールド復帰の前に、この戦闘で
+   * 間違えた問題があれば React 側 (MistakeNoteOverlay) に見せ、「とじる」を待つ。
+   * busy のままなので戦闘メニューは反応せず、Field は sleep 中で入力を受けない。
+   * 全滅・逃走では呼ばない。
+   */
+  private showMistakeNoteThen(done: () => void) {
+    const entries = takeBattleMistakes();
+    if (entries.length === 0) {
+      done();
+      return;
+    }
+    const requestId = `note-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+    const onDone = (r: { requestId: string }) => {
+      if (r.requestId !== requestId) return;
+      EventBus.off("mistake-note-done", onDone);
+      done();
+    };
+    EventBus.on("mistake-note-done", onDone);
+    EventBus.emit("show-mistake-note", { requestId, entries });
   }
 
   private showLinesThen(lines: string[], done: () => void) {

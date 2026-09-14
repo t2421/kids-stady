@@ -89,6 +89,14 @@ export const CH5_SKY_TOP: MapDef = {
       commands: [{ type: "transfer", mapId: "ch5-sky-1", spawn: "from-inner" }],
     },
     {
+      id: "sky-top-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 29 }],
+    },
+    {
       id: "sky-guardian",
       x: 6,
       y: 4,

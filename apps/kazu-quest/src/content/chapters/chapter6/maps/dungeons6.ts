@@ -307,6 +307,14 @@ export const CH6_TRIAL: MapDef = {
       commands: [{ type: "transfer", mapId: "ch6-world", spawn: "from-trial" }],
     },
     {
+      id: "trial-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 36 }],
+    },
+    {
       id: "trial-guardian",
       x: 6,
       y: 3,

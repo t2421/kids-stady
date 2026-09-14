@@ -21,6 +21,14 @@ export const ITEMS: Record<string, ItemDef> = {
     price: 30,
     description: "もっていると モンスターに あいにくくなる",
   },
+  /* ふくしゅうのほこら の ほうび (KQ-13)。店には並ばない。交換所は KQ-31 */
+  hiramekiMedal: {
+    id: "hiramekiMedal",
+    name: "ひらめきメダル",
+    kind: "key",
+    price: 0,
+    description: "にがてを のりこえた あかし。あつめると いいことが あるかも",
+  },
   /* ---- そうび (ぶき・よろい・たて) ---- */
   hinokiNoBou: {
     id: "hinokiNoBou",

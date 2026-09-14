@@ -108,6 +108,38 @@ export const CH4_MAJORIA: MapDef = {
         },
       ],
     },
+    {
+      /* クイズずき (KQ-31): 1回だけ ひらめきメダル。何度でも挑戦できる */
+      id: "quiz-fan",
+      x: 17,
+      y: 1,
+      art: "snowVillager",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c4.quizNpc", op: "set" },
+          pages: ["また あそぼうね。"],
+        },
+        {
+          pages: [
+            "ぼくは クイズが だいすき! がいすうの もんだいを といてみる?",
+            "せいかいしたら ひらめきメダルを あげるよ!",
+          ],
+          then: [
+            {
+              type: "quiz",
+              skillId: "g4_round",
+              onCorrect: [
+                { type: "message", pages: ["せいかい! すごいね。はい、ひらめきメダル!"] },
+                { type: "giveItem", itemId: "hiramekiMedal", count: 1 },
+                { type: "setFlag", flag: "c4.quizNpc" },
+              ],
+              onWrong: [{ type: "message", pages: ["ざんねん! また ちょうせんしてね。"] }],
+            },
+          ],
+        },
+      ],
+    },
   ],
   events: [
     {

@@ -5,6 +5,7 @@
 
 import type { MapDef } from "../../../types";
 import { CH5_TOWN_LEGEND } from "../legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 export const CH5_BARGAIN: MapDef = {
@@ -91,14 +92,7 @@ export const CH5_BARGAIN: MapDef = {
       dialog: [
         {
           pages: ["たびの ぶじを めがみスーリアに いのりましょう。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },
@@ -200,14 +194,7 @@ export const CH5_BUNSUU: MapDef = {
       dialog: [
         {
           pages: ["しまの ほこらです。ぼうけんを きろくして いきますか。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

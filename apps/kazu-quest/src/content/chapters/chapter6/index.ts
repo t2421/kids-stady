@@ -71,6 +71,7 @@ export const CHAPTER6: ChapterDef = {
     "c6.bossDefeated": "冥王ゼロム (2形態) を倒した",
     "c6.orb6": "数晶・陸を 取り戻した",
     "c6.clear": "第6章クリア = カズクエ本編クリア (エンディング視聴済み)",
+    "c6.quizNpc": "クイズずきの もんだいに せいかいし ひらめきメダルを もらった (KQ-31)",
     "learned.speedStar": "スピードスター習得 (テスト合格)",
     "learned.enNoHadou": "エンノハドウ習得 (テスト合格)",
     "learned.bunsuuNova": "ブンスウノヴァ習得 (テスト合格)",

@@ -46,6 +46,37 @@ export const CH1_CAVE: MapDef = {
       ],
     },
     {
+      id: "cave-locked-chest",
+      x: 1,
+      y: 1,
+      trigger: "inspect",
+      art: "chest",
+      onceFlag: "c1.lockedChestCave",
+      commands: [
+        {
+          type: "message",
+          pages: ["すうじの カギが かかっている。もんだいに こたえると あく。"],
+        },
+        {
+          type: "quiz",
+          skillId: "g1_add_carry",
+          onCorrect: [
+            { type: "message", pages: ["カチッ! カギが あいた!", "どうのつるぎを てにいれた!"] },
+            { type: "giveItem", itemId: "douNoTsurugi" },
+            { type: "setFlag", flag: "c1.lockedChestCave" },
+          ],
+          onWrong: [
+            {
+              type: "message",
+              pages: ["カギは あかなかった。もういちど ちょうせん できる。"],
+            },
+            /* transfer は残りのコマンドを打ち切る = onceFlag を消費せず再挑戦できる (宝箱の前に戻る) */
+            { type: "transfer", mapId: "ch1-cave", spawn: "locked-chest" },
+          ],
+        },
+      ],
+    },
+    {
       id: "to-boss",
       x: 19,
       y: 11,
@@ -56,6 +87,8 @@ export const CH1_CAVE: MapDef = {
   spawns: {
     west: { x: 1, y: 8, facing: "right" },
     "from-boss": { x: 18, y: 11, facing: "left" },
+    /* すうじのカギつき宝箱の前 (不正解の再挑戦用) */
+    "locked-chest": { x: 1, y: 2, facing: "up" },
   },
 };
 
@@ -84,6 +117,14 @@ export const CH1_CAVE_BOSS: MapDef = {
       y: 7,
       trigger: "step",
       commands: [{ type: "transfer", mapId: "ch1-cave", spawn: "from-boss" }],
+    },
+    {
+      id: "cave-boss-level-sign",
+      x: 2,
+      y: 6,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 6 }],
     },
     {
       id: "boss-eraser",

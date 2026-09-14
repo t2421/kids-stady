@@ -3,9 +3,10 @@
  * 「星を おく」= すべての 数を まもる 人たちの さいごの とりで。
  */
 
-import type { MapDef } from "../../../types";
+import type { EventCommand, MapDef } from "../../../types";
 import { CH6_TOWN_LEGEND } from "../legends";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 export const CH6_HOSHIOKI: MapDef = {
@@ -86,6 +87,38 @@ export const CH6_HOSHIOKI: MapDef = {
           pages: [
             "はやさの回廊は 時が ゆがんだ ばしょ。速さの しきを わすれずに。",
             "道のり ÷ 時間 = 速さ。この 3つの かんけいが すべてです。",
+          ],
+        },
+      ],
+    },
+    {
+      /* クイズずき (KQ-31): 1回だけ ひらめきメダル。何度でも挑戦できる */
+      id: "quiz-fan",
+      x: 17,
+      y: 1,
+      art: "villager",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c6.quizNpc", op: "set" },
+          pages: ["また あそぼうね。"],
+        },
+        {
+          pages: [
+            "ぼくは クイズが だいすき! ばあいの かずの もんだいを といてみる?",
+            "せいかいしたら ひらめきメダルを あげるよ!",
+          ],
+          then: [
+            {
+              type: "quiz",
+              skillId: "g6_combination",
+              onCorrect: [
+                { type: "message", pages: ["せいかい! すごいね。はい、ひらめきメダル!"] },
+                { type: "giveItem", itemId: "hiramekiMedal", count: 1 },
+                { type: "setFlag", flag: "c6.quizNpc" },
+              ],
+              onWrong: [{ type: "message", pages: ["ざんねん! また ちょうせんしてね。"] }],
+            },
           ],
         },
       ],
@@ -298,6 +331,26 @@ export const CH6_HOSHIOKI_MANABIYA: MapDef = {
   spawns: { start: { x: 4, y: 4, facing: "up" } },
 };
 
+/*
+ * 終章の入口 (KQ-30b): はい → らせん1層へ / いいえ → いつもの ほこらメニュー。
+ * advanceChapter は使わない (chapter.current は 6 のまま)。入れ子の深さは 3 (上限 4)
+ */
+export const SPIRAL_ENTRANCE_PROMPT = "ムゲンのらせんに いどむ?";
+
+function spiralEntrance(): EventCommand[] {
+  return [
+    {
+      type: "choice",
+      prompt: SPIRAL_ENTRANCE_PROMPT,
+      yes: [
+        { type: "message", pages: ["らせんの かいだんが 足もとから のびていく…"] },
+        { type: "transfer", mapId: "ch7-spiral-1", spawn: "entrance" },
+      ],
+      no: shrineMenu(),
+    },
+  ];
+}
+
 export const CH6_HOSHIOKI_SHRINE: MapDef = {
   id: "ch6-hoshioki-shrine",
   name: "ホシオキの ほこら",
@@ -321,30 +374,35 @@ export const CH6_HOSHIOKI_SHRINE: MapDef = {
       movement: "static",
       dialog: [
         {
+          /* 終章クリア後: 称号を たたえ、もういちど らせんへ 入れる */
+          if: { flag: "c7.clear", op: "set" },
+          pages: [
+            "ムゲンの ゆうしゃ… その 名に ふさわしい たびでした。",
+            "らせんは いまも、あなたを まっています。",
+          ],
+          then: spiralEntrance(),
+        },
+        {
+          /* 本編クリア後 (KQ-22) = 終章「ムゲンのらせん」の入口 (KQ-30b) */
+          if: { flag: "c6.clear", op: "set" },
+          pages: [
+            "…このさきに まだ なにかが ある きがする。",
+            "ほこらの おくに、はてしなく つづく らせんの かいだんが あらわれました。",
+            "「ムゲンのらせん」— 1ねんせいから 6ねんせいまで、すべての 数の ちからが ためされる ばしょ。",
+          ],
+          then: spiralEntrance(),
+        },
+        {
           if: { flag: "c6.trialSeal", op: "set" },
           pages: [
             "3つの 印が そろいましたね。めがみスーリアが みまもって います。",
             "…どうか、いって らっしゃい。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
         {
           pages: ["ここは めがみスーリアの ほこら。下の せかいにも 光は とどきます。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

@@ -108,6 +108,38 @@ export const CH5_PERCEN: MapDef = {
         },
       ],
     },
+    {
+      /* クイズずき (KQ-31): 1回だけ ひらめきメダル。何度でも挑戦できる */
+      id: "quiz-fan",
+      x: 17,
+      y: 1,
+      art: "villager",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c5.quizNpc", op: "set" },
+          pages: ["また あそぼうね。"],
+        },
+        {
+          pages: [
+            "ぼくは クイズが だいすき! へいきんの もんだいを といてみる?",
+            "せいかいしたら ひらめきメダルを あげるよ!",
+          ],
+          then: [
+            {
+              type: "quiz",
+              skillId: "g5_average",
+              onCorrect: [
+                { type: "message", pages: ["せいかい! すごいね。はい、ひらめきメダル!"] },
+                { type: "giveItem", itemId: "hiramekiMedal", count: 1 },
+                { type: "setFlag", flag: "c5.quizNpc" },
+              ],
+              onWrong: [{ type: "message", pages: ["ざんねん! また ちょうせんしてね。"] }],
+            },
+          ],
+        },
+      ],
+    },
   ],
   events: [
     {

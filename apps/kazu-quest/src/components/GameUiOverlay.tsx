@@ -4,6 +4,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { EventBus } from "@/game/EventBus";
 import { dqWindow, optionButton } from "@/components/uiTheme";
 import { parseRuby, sliceRuby, stripRuby, visibleLength } from "@/lib/text/ruby";
+/* Phaser 非依存の音モジュールなので React から直接 import してよい (sfx.ts 冒頭参照) */
+import { playSfx } from "@/game/audio/sfx";
 
 /*
  * DQ風の会話UI (メッセージ / はい・いいえ / 選択リスト / マップ名トースト)。
@@ -105,6 +107,7 @@ export function GameUiOverlay() {
       }
       if (pageIndexRef.current + 1 < req.pages.length) {
         const next = pageIndexRef.current + 1;
+        playSfx("cursor");
         setPageIndex(next);
         startPage(req.pages[next]);
         return;
@@ -187,7 +190,10 @@ export function GameUiOverlay() {
         const delta = key === "arrowup" ? -1 : 1;
         const len =
           req.kind === "choice" ? 2 : req.kind === "list" ? req.options.length : 0;
-        if (len > 0) setSelected((s) => (s + delta + len) % len);
+        if (len > 0) {
+          playSfx("cursor");
+          setSelected((s) => (s + delta + len) % len);
+        }
       }
     };
     window.addEventListener("keydown", onKey);

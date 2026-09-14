@@ -237,6 +237,14 @@ export const CH6_ZEROM_THRONE: MapDef = {
       ],
     },
     {
+      id: "zerom-throne-level-sign",
+      x: 5,
+      y: 8,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 38 }],
+    },
+    {
       id: "boss-zerom",
       x: 6,
       y: 3,
@@ -299,6 +307,8 @@ export const CH6_ZEROM_THRONE: MapDef = {
           ],
         },
         { type: "setFlag", flag: "c6.clear" },
+        /* エンディング演出へ (KQ-22)。cleared に 6 を積み、再開位置は ホシオキの ほこら */
+        { type: "ending" },
       ],
     },
   ],

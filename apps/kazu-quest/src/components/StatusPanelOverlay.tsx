@@ -1,18 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventBus } from "@/game/EventBus";
 import type { StatusData } from "@/game/field/statusSections";
+import { getProfileId, getSave } from "@/game/session";
+import { loadLearning } from "@/lib/learning";
+import { buildStats } from "@/lib/stats";
 import { actionButton, dqWindow, pillButton, UI_COLORS } from "@/components/uiTheme";
+import { MistakeNoteList } from "@/components/MistakeNoteList";
+import { StatsBody } from "@/components/StatsScreen";
+/* Phaser 非依存の音モジュールなので React から直接 import してよい (sfx.ts 冒頭参照) */
+import { isSoundEnabled, playSfx, setSoundEnabled } from "@/game/audio/sfx";
 
 /*
- * ステータスパネル (メニュー)。タブ (つよさ・そうび・じゅもん・もちもの) と
+ * ステータスパネル (メニュー)。タブ (つよさ・そうび・じゅもん・もちもの・ノート・せいせき) と
  * なかま切替で1画面1トピックにする。DOM 描画なので折り返し・はみ出しは
  * CSS に任せる (設計変更 2026-07-27)。iPad メイン: 全操作タップ完結、
  * ボタンは指向けサイズ、パネル内の誤タップでは閉じない。
  */
 
-const TABS = ["つよさ", "そうび", "じゅもん", "もちもの"] as const;
+const TABS = ["つよさ", "そうび", "じゅもん", "もちもの", "ノート", "せいせき"] as const;
+/* パーティ共有のタブ (なかま切替を出さない) */
+const SHARED_TABS: readonly number[] = [3, 4, 5];
+/* せいせき (KQ-14): タブを開いたときに buildStats で集計する */
+const STATS_TAB = 5;
 
 const pill = (selected: boolean): React.CSSProperties => ({
   ...pillButton(selected),
@@ -47,6 +58,7 @@ export function StatusPanelOverlay() {
   const [state, setState] = useState<{ id: number; data: StatusData } | null>(null);
   const [tab, setTab] = useState(0);
   const [member, setMember] = useState(0);
+  const [sound, setSound] = useState(true);
   const stateRef = useRef<typeof state>(null);
   stateRef.current = state;
   /* パネルを開いた瞬間の時刻。開く前に発火した同一キーイベントが
@@ -67,6 +79,7 @@ export function StatusPanelOverlay() {
       setState(r);
       setTab(0);
       setMember(0);
+      setSound(isSoundEnabled());
     };
     EventBus.on("ui-status", onOpen);
     return () => {
@@ -89,6 +102,13 @@ export function StatusPanelOverlay() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [close]);
+
+  /* せいせき の集計はタブを開いたときだけ (パネルを開き直せば再計算) */
+  const stats = useMemo(() => {
+    if (!state || tab !== STATS_TAB) return null;
+    const profileId = getProfileId();
+    return buildStats(getSave(), profileId ? loadLearning(profileId) : null);
+  }, [state, tab]);
 
   if (!state) return null;
   const { data } = state;
@@ -130,7 +150,12 @@ export function StatusPanelOverlay() {
         {/* タブ + ゴールド */}
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           {TABS.map((label, i) => (
-            <button key={label} style={pill(i === tab)} onClick={() => setTab(i)}>
+            <button
+              key={label}
+              data-testid="status-tab"
+              style={pill(i === tab)}
+              onClick={() => setTab(i)}
+            >
               {label}
             </button>
           ))}
@@ -148,8 +173,8 @@ export function StatusPanelOverlay() {
           </span>
         </div>
 
-        {/* なかま切替 (もちもの はパーティ共有なので出さない) */}
-        {tab !== 3 && data.members.length > 1 && (
+        {/* なかま切替 (もちもの・ノート はパーティ共有なので出さない) */}
+        {!SHARED_TABS.includes(tab) && data.members.length > 1 && (
           <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
             {data.members.map((mm, i) => (
               <button
@@ -218,6 +243,23 @@ export function StatusPanelOverlay() {
                   >
                     あそんだ じかん: {data.playtime}
                   </div>
+                  {/* 設定: 効果音のおん/オフ (セーブの settings.sound に保存) */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14 }}>
+                    <span style={{ ...lineFont, fontSize: 15, color: UI_COLORS.textSub }}>おと</span>
+                    <button
+                      data-testid="sound-toggle"
+                      aria-pressed={sound}
+                      style={{ ...pillButton(sound), minHeight: 56, minWidth: 120 }}
+                      onClick={() => {
+                        const next = !sound;
+                        setSoundEnabled(next);
+                        setSound(next);
+                        if (next) playSfx("confirm");
+                      }}
+                    >
+                      {sound ? "おと: オン" : "おと: オフ"}
+                    </button>
+                  </div>
                 </>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -255,6 +297,10 @@ export function StatusPanelOverlay() {
               )}
             </div>
           )}
+
+          {tab === 4 && <MistakeNoteList rows={data.mistakes} />}
+
+          {tab === STATS_TAB && stats && <StatsBody data={stats} />}
         </div>
 
         {/* 下段の操作 */}

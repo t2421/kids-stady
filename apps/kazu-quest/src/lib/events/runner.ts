@@ -24,9 +24,12 @@ export type RunnerEffect =
   | { kind: "healInn"; price: number }
   | { kind: "openSpellTest"; spellId: string }
   | { kind: "openDrillBoard" }
+  | { kind: "openReviewQuest" }
   | { kind: "savePoint" }
   | { kind: "choice"; prompt: string }
-  | { kind: "quiz"; skillId: string };
+  | { kind: "quiz"; skillId: string }
+  /* 本編クリア → EndingScene。ランは終了 (残りのデータ操作は適用済み) */
+  | { kind: "ending" };
 
 export interface RunnerInput {
   choice?: "yes" | "no";
@@ -151,6 +154,49 @@ function applyData(save: SaveData, cmd: EventCommand): SaveData {
   }
 }
 
+/* 勇者 (party 先頭が原則だが memberId で探す) の現在レベル */
+function heroLevel(save: SaveData): number {
+  const hero = save.party.find((m) => m.memberId === "hero") ?? save.party[0];
+  return hero?.level ?? 1;
+}
+
+/* ボス前の看板 (levelSign): 推奨Lv と 現在Lv を並べ、足りなければ まなびやへ誘導する */
+export function levelSignPages(level: number, save: SaveData): string[] {
+  const current = heroLevel(save);
+  return [
+    `たてふだ: 『この さきは つよい てき。すいしょう Lv ${level}』`,
+    `いまの ゆうしゃは Lv ${current}。`,
+    current < level
+      ? "まず まなびやか おだいで きたえよう!"
+      : "じゅんびは ばっちりだ!",
+  ];
+}
+
+/*
+ * 交換 (exchange): itemId を count 個 減らし give を足す。足りるかの判定は呼び出し側。
+ * 0 個になったキーは消す (在庫一覧に「×0」の亡霊を残さない)
+ */
+function applyExchange(
+  save: SaveData,
+  cmd: Extract<EventCommand, { type: "exchange" }>,
+): SaveData {
+  const have = save.inventory.items[cmd.itemId] ?? 0;
+  const remaining = have - cmd.count;
+  const { [cmd.itemId]: _removed, ...rest } = save.inventory.items;
+  const items = remaining > 0 ? { ...rest, [cmd.itemId]: remaining } : rest;
+  const giveCount = cmd.give.count ?? 1;
+  return {
+    ...save,
+    inventory: {
+      ...save.inventory,
+      items: {
+        ...items,
+        [cmd.give.itemId]: (items[cmd.give.itemId] ?? 0) + giveCount,
+      },
+    },
+  };
+}
+
 const DATA_COMMANDS = new Set([
   "setFlag",
   "giveItem",
@@ -192,6 +238,16 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
 
     if (DATA_COMMANDS.has(cmd.type)) {
       save = applyData(save, cmd);
+      continue;
+    }
+
+    /* 交換: 在庫を見て onDone / onShort の枝を積む (UI は枝の中の message が担う) */
+    if (cmd.type === "exchange") {
+      const have = save.inventory.items[cmd.itemId] ?? 0;
+      const enough = have >= cmd.count;
+      if (enough) save = applyExchange(save, cmd);
+      const branch = enough ? cmd.onDone : cmd.onShort;
+      if (branch && branch.length > 0) stack.push({ commands: branch, index: 0 });
       continue;
     }
 
@@ -257,12 +313,46 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
           effect: { kind: "openDrillBoard" },
           done: false,
         };
+      case "openReviewQuest":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openReviewQuest" },
+          done: false,
+        };
       case "savePoint":
         return {
           state: { stack, save, pending: cmd },
           effect: { kind: "savePoint" },
           done: false,
         };
+      case "levelSign":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "message", pages: levelSignPages(cmd.level, save) },
+          done: false,
+        };
+      case "ending":
+        /*
+         * エンディングでランは終わる (FieldScene は EndingScene へ遷移する)。
+         * 後続の UI コマンドは捨てるが、データ操作 — 特に runEvent が末尾に
+         * 足す onceFlag の setFlag — は適用しておく。でないとボスイベントが
+         * 「未実行」のまま残り、戻ってきたとき再発火する
+         */
+        return {
+          state: { stack: [], save: drainDataCommands(stack, save), pending: null },
+          effect: { kind: "ending" },
+          done: false,
+        };
     }
   }
+}
+
+/* スタックに残ったコマンドのうち データ操作だけを順に適用する (UI コマンドは無視) */
+function drainDataCommands(stack: readonly Frame[], save: SaveData): SaveData {
+  return stack
+    .slice()
+    .reverse()
+    .flatMap((frame) => frame.commands.slice(frame.index))
+    .filter((cmd) => DATA_COMMANDS.has(cmd.type))
+    .reduce(applyData, save);
 }

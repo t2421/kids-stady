@@ -2,6 +2,7 @@
 
 import type { MapDef } from "../../../types";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 function exitEvents(
@@ -187,25 +188,11 @@ export const CH5_PERCEN_SHRINE: MapDef = {
             "魔王を たおしても、まだ 空気が おもい…",
             "めがみスーリアが 「ほんとうの たたかいは これから」と おっしゃいます。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
         {
           pages: ["ここは めがみスーリアの ほこら。ゆうしゃに ごかごを。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

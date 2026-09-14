@@ -5,6 +5,7 @@
 
 import type { MapDef } from "../../../types";
 import { CH4_TOWN_LEGEND } from "../legends";
+import { shrineMenu } from "../../shrineMenu";
 import { spellTestMenu } from "../../spellTestMenu";
 
 export const CH4_KOGOE: MapDef = {
@@ -90,14 +91,7 @@ export const CH4_KOGOE: MapDef = {
       dialog: [
         {
           pages: ["めがみスーリアに ぶじを いのりましょう。"],
-          then: [
-            {
-              type: "choice",
-              prompt: "ぼうけんを きろくする?",
-              yes: [{ type: "savePoint" }],
-              no: [],
-            },
-          ],
+          then: shrineMenu(),
         },
       ],
     },

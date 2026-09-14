@@ -35,6 +35,37 @@ export const CH3_PYRAMID_1: MapDef = {
       commands: [{ type: "transfer", mapId: "ch3-world", spawn: "from-pyramid" }],
     },
     {
+      id: "pyramid1-locked-chest",
+      x: 1,
+      y: 1,
+      trigger: "inspect",
+      art: "chest",
+      onceFlag: "c3.lockedChestPyramid",
+      commands: [
+        {
+          type: "message",
+          pages: ["すうじの カギが かかっている。もんだいに こたえると あく。"],
+        },
+        {
+          type: "quiz",
+          skillId: "g3_fraction",
+          onCorrect: [
+            { type: "message", pages: ["カチッ! カギが あいた!", "みかづきのたてを てにいれた!"] },
+            { type: "giveItem", itemId: "mikazukiNoTate" },
+            { type: "setFlag", flag: "c3.lockedChestPyramid" },
+          ],
+          onWrong: [
+            {
+              type: "message",
+              pages: ["カギは あかなかった。もういちど ちょうせん できる。"],
+            },
+            /* transfer は残りのコマンドを打ち切る = onceFlag を消費せず再挑戦できる (宝箱の前に戻る) */
+            { type: "transfer", mapId: "ch3-pyramid-1", spawn: "locked-chest" },
+          ],
+        },
+      ],
+    },
+    {
       id: "pyramid1-door",
       x: 6,
       y: 0,
@@ -72,6 +103,8 @@ export const CH3_PYRAMID_1: MapDef = {
   spawns: {
     entrance: { x: 6, y: 8, facing: "up" },
     "from-above": { x: 6, y: 1, facing: "down" },
+    /* すうじのカギつき宝箱の前 (不正解の再挑戦用) */
+    "locked-chest": { x: 1, y: 2, facing: "up" },
   },
 };
 
@@ -191,6 +224,14 @@ export const CH3_PYRAMID_3: MapDef = {
       ],
     },
     {
+      id: "pyramid3-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 15 }],
+    },
+    {
       id: "pyramid3-golem",
       x: 6,
       y: 3,
@@ -284,6 +325,14 @@ export const CH3_PYRAMID_TOP: MapDef = {
       commands: [
         { type: "transfer", mapId: "ch3-pyramid-3", spawn: "from-above" },
       ],
+    },
+    {
+      id: "pyramid-top-level-sign",
+      x: 5,
+      y: 7,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 17 }],
     },
     {
       id: "boss-amarida",

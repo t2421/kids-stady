@@ -49,6 +49,8 @@ export class MapView {
   private npcSprites = new Map<string, Phaser.GameObjects.Image>();
   private npcShadows = new Map<string, Phaser.GameObjects.Ellipse>();
   private eventSprites = new Map<string, Phaser.GameObjects.Image>();
+  /* 地形タイルの静的 Image (性能監査 KQ-40 の計数用。描画には関与しない) */
+  private tileImages: Phaser.GameObjects.Image[] = [];
   /* アニメーションするタイル: 2コマのテクスチャキーを持つ */
   private animTiles: { img: Phaser.GameObjects.Image; frames: [string, string] }[] =
     [];
@@ -74,6 +76,7 @@ export class MapView {
         const img = this.scene.add
           .image(...tileCenter(x, y), tileTextureKey(art))
           .setDepth(0);
+        this.tileImages.push(img);
         const animArt = TILE_ANIMATIONS[art];
         if (animArt) {
           this.animTiles.push({
@@ -153,6 +156,11 @@ export class MapView {
         this.npcShadows.delete(npc.id);
       }
     }
+  }
+
+  /* 置いた地形タイル Image の数 (window.__KAZUQUEST_PERF__.sprites が読む) */
+  get tileCount(): number {
+    return this.tileImages.length;
   }
 
   hasNpc(id: string): boolean {

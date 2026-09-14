@@ -8,6 +8,9 @@ import { EventBus } from "../EventBus";
 import { autosave, getProfileId, updateSave } from "../session";
 import { recordAnswer } from "../../lib/save";
 import { recordLearning } from "../../lib/learning";
+import type { MistakeEntry } from "../../lib/mistakes";
+import { recordMistake } from "../../lib/mistakes";
+import type { Problem } from "../../lib/curriculum/types";
 
 /*
  * 解答1件をアプリ内テレメトリと共有学習ログの両方へ記録する。
@@ -41,7 +44,39 @@ interface MathPromptResultEvent {
   correct: boolean;
   timedOut: boolean;
   elapsedMs: number;
-  problem: { skillId: string };
+  problem: { skillId: string; text: string; answer: string; explain: string[] };
+  /* タップした選択肢 (時間切れは null) — MathPromptPanel.MathPromptResult */
+  chosen: string | null;
+}
+
+/*
+ * まちがいノート: 今の戦闘で間違えた問題。BattleScene.init が
+ * beginBattleMistakes で空にし、勝利演出の後に takeBattleMistakes で
+ * 取り出してオーバーレイに渡す (セーブにも recordMistake で永続化する)。
+ */
+let battleMistakes: readonly MistakeEntry[] = [];
+
+export function beginBattleMistakes(): void {
+  battleMistakes = [];
+}
+
+export function takeBattleMistakes(): MistakeEntry[] {
+  const taken = [...battleMistakes];
+  battleMistakes = [];
+  return taken;
+}
+
+function trackMistake(result: MathPromptResultEvent): void {
+  const entry: MistakeEntry = {
+    ts: Date.now(),
+    skillId: result.problem.skillId,
+    text: result.problem.text,
+    answer: result.problem.answer,
+    chosen: result.chosen ?? "",
+    explain: [...result.problem.explain],
+  };
+  battleMistakes = [entry, ...battleMistakes];
+  updateSave((s) => recordMistake(s, entry));
 }
 
 export function requestBattleMath(
@@ -56,6 +91,8 @@ export function requestBattleMath(
     if (result.requestId !== requestId) return;
     EventBus.off("math-result", onResult);
 
+    /* 不正解 (時間切れ含む) はまちがいノートへ。autosave は recordOutcome が行う */
+    if (!result.correct) trackMistake(result);
     /* テレメトリ: 全解答箇所から記録 (設計 A6) */
     recordOutcome(result);
 
@@ -92,6 +129,29 @@ export function requestFieldQuiz(
   EventBus.emit("math-prompt", {
     requestId,
     skillId,
+    timeLimitMs: null,
+    context: "drill",
+  });
+}
+
+/*
+ * 組み立て済みの問題を 1 問だけ出す (お店のおつりチャレンジ / KQ-33)。
+ * カリキュラムの単元ではないので、テレメトリ・まちがいノートには記録しない。
+ */
+export function requestCustomQuiz(
+  problem: Problem,
+  onOutcome: (correct: boolean) => void,
+): void {
+  const requestId = `custom-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const onResult = (result: MathPromptResultEvent) => {
+    if (result.requestId !== requestId) return;
+    EventBus.off("math-result", onResult);
+    onOutcome(result.correct);
+  };
+  EventBus.on("math-result", onResult);
+  EventBus.emit("math-prompt", {
+    requestId,
+    problem,
     timeLimitMs: null,
     context: "drill",
   });

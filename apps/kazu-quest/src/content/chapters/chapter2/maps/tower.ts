@@ -5,7 +5,7 @@
  * 最上階に インクの魔女ブロッタ。
  */
 
-import type { MapDef } from "../../../types";
+import type { MapDef, MapEvent } from "../../../types";
 import { CH2_TOWER_LEGEND } from "../legends";
 
 /* フロアの雛形 (12x9)。c=柱 r=じゅうたん D=下り口 */
@@ -21,8 +21,44 @@ const FLOOR_GRID = [
   "WWWWWDWWWWWW",
 ];
 
+/* すうじのカギつき宝箱は 3かい にひとつだけ (塔で唯一の宝箱) */
+const LOCKED_CHEST_FLOOR = 3;
+
+const TOWER_LOCKED_CHEST: MapEvent = {
+  id: "tower-locked-chest",
+  x: 10,
+  y: 1,
+  trigger: "inspect",
+  art: "chest",
+  onceFlag: "c2.lockedChestTower",
+  commands: [
+    {
+      type: "message",
+      pages: ["すうじの カギが かかっている。もんだいに こたえると あく。"],
+    },
+    {
+      type: "quiz",
+      skillId: "g2_kuku",
+      onCorrect: [
+        { type: "message", pages: ["カチッ! カギが あいた!", "てつのつるぎを てにいれた!"] },
+        { type: "giveItem", itemId: "tetsuNoTsurugi" },
+        { type: "setFlag", flag: "c2.lockedChestTower" },
+      ],
+      onWrong: [
+        {
+          type: "message",
+          pages: ["カギは あかなかった。もういちど ちょうせん できる。"],
+        },
+        /* transfer は残りのコマンドを打ち切る = onceFlag を消費せず再挑戦できる (宝箱の前に戻る) */
+        { type: "transfer", mapId: "ch2-tower-3", spawn: "locked-chest" },
+      ],
+    },
+  ],
+};
+
 /* n階のフロアを生成 (階段クイズは その階の「だん」の雰囲気づけに dan を表示) */
 function towerFloor(floor: number, dan: number): MapDef {
+  const hasLockedChest = floor === LOCKED_CHEST_FLOOR;
   const nextMap = floor === 4 ? "ch2-tower-top" : `ch2-tower-${floor + 1}`;
   const downMap = floor === 1 ? "ch2-world" : `ch2-tower-${floor - 1}`;
   const downSpawn = floor === 1 ? "from-tower" : "from-above";
@@ -75,10 +111,13 @@ function towerFloor(floor: number, dan: number): MapDef {
           },
         ],
       },
+      ...(hasLockedChest ? [TOWER_LOCKED_CHEST] : []),
     ],
     spawns: {
       start: { x: 5, y: 7, facing: "up" },
       "from-above": { x: 6, y: 3, facing: "down" },
+      /* すうじのカギつき宝箱の前 (不正解の再挑戦用) */
+      ...(hasLockedChest ? { "locked-chest": { x: 10, y: 2, facing: "up" as const } } : {}),
     },
   };
 }
@@ -115,6 +154,14 @@ export const CH2_TOWER_TOP: MapDef = {
       y: 7,
       trigger: "step",
       commands: [{ type: "transfer", mapId: "ch2-tower-4", spawn: "from-above" }],
+    },
+    {
+      id: "tower-top-level-sign",
+      x: 4,
+      y: 6,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 10 }],
     },
     {
       id: "boss-blotta",

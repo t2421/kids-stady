@@ -5,6 +5,7 @@ import {
   RECENT_MS_CAP,
   addHistory,
   defaultSave,
+  hasSave,
   loadSave,
   normalizeSave,
   persistSave,
@@ -55,6 +56,13 @@ describe("normalizeSave", () => {
     expect(n.history).toEqual([
       { ts: 0, kind: "battle", chapter: 1, correct: 0, wrong: 0, avgAnswerMs: 0 },
     ]);
+  });
+
+  it("normalizes settings (sound defaults to true, keeps false)", () => {
+    expect(normalizeSave({}).settings).toEqual({ sound: true });
+    expect(normalizeSave({ settings: { sound: false } }).settings).toEqual({ sound: false });
+    expect(normalizeSave({ settings: { sound: "no" } }).settings).toEqual({ sound: true });
+    expect(normalizeSave({ settings: null }).settings).toEqual({ sound: true });
   });
 
   it("drops party members without memberId but keeps valid ones", () => {
@@ -129,5 +137,23 @@ describe("addHistory", () => {
     }
     expect(data.history).toHaveLength(HISTORY_CAP);
     expect(data.history[0].ts).toBe(10);
+  });
+});
+
+describe("hasSave", () => {
+  it("書き出す前は false、persistSave 後は true", () => {
+    expect(hasSave("p-new")).toBe(false);
+    persistSave("p-new", defaultSave());
+    expect(hasSave("p-new")).toBe(true);
+  });
+
+  it("別プロフィールのセーブには影響されない", () => {
+    persistSave("p-a", defaultSave());
+    expect(hasSave("p-b")).toBe(false);
+  });
+
+  it("壊れた JSON は 無い 扱い", () => {
+    localStorage.setItem(saveKey("p-broken"), "{not json");
+    expect(hasSave("p-broken")).toBe(false);
   });
 });

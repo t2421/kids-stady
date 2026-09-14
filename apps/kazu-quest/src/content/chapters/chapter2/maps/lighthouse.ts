@@ -58,10 +58,43 @@ export const CH2_LIGHTHOUSE_1: MapDef = {
         { type: "giveItem", itemId: "tetsuNoTate" },
       ],
     },
+    {
+      id: "lighthouse-locked-chest",
+      x: 1,
+      y: 1,
+      trigger: "inspect",
+      art: "chest",
+      onceFlag: "c2.lockedChestLighthouse",
+      commands: [
+        {
+          type: "message",
+          pages: ["すうじの カギが かかっている。もんだいに こたえると あく。"],
+        },
+        {
+          type: "quiz",
+          skillId: "g2_add_column",
+          onCorrect: [
+            { type: "message", pages: ["カチッ! カギが あいた!", "くさりかたびらを てにいれた!"] },
+            { type: "giveItem", itemId: "kusariKatabira" },
+            { type: "setFlag", flag: "c2.lockedChestLighthouse" },
+          ],
+          onWrong: [
+            {
+              type: "message",
+              pages: ["カギは あかなかった。もういちど ちょうせん できる。"],
+            },
+            /* transfer は残りのコマンドを打ち切る = onceFlag を消費せず再挑戦できる (宝箱の前に戻る) */
+            { type: "transfer", mapId: "ch2-lighthouse", spawn: "locked-chest" },
+          ],
+        },
+      ],
+    },
   ],
   spawns: {
     entrance: { x: 5, y: 7, facing: "up" },
     "from-top": { x: 5, y: 5, facing: "down" },
+    /* すうじのカギつき宝箱の前 (不正解の再挑戦用) */
+    "locked-chest": { x: 1, y: 2, facing: "up" },
   },
 };
 

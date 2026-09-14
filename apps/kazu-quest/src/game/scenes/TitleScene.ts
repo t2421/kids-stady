@@ -1,17 +1,22 @@
 import Phaser, { Scene } from "phaser";
 import { EventBus } from "../EventBus";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
-import { ensureSession, getSave } from "../session";
+import { autosave, ensureSession, getSave } from "../session";
 import { actorTextureKey } from "../textures";
 import { fadeOutThen } from "../transition";
+import { playBgm } from "../audio/bgm";
+import { setTitleActive } from "../titleState";
 
 export class TitleScene extends Scene {
+  private starting = false;
+
   constructor() {
     super("Title");
   }
 
   create() {
     this.buildScenery();
+    playBgm("title");
 
     this.add
       .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.26, "カズクエ", {
@@ -52,36 +57,31 @@ export class TitleScene extends Scene {
       .setOrigin(0.5)
       .setDepth(10);
 
-    const start = this.add
-      .text(GAME_WIDTH / 2, GAME_HEIGHT * 0.86, "▶ タップして ぼうけんに でる", {
-        fontFamily: "sans-serif",
-        fontSize: "28px",
-        fontStyle: "bold",
-        color: "#ffffff",
-        stroke: "#101a30",
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5)
-      .setDepth(10);
-
-    this.tweens.add({
-      targets: start,
-      alpha: { from: 1, to: 0.35 },
-      duration: 700,
-      yoyo: true,
-      repeat: -1,
+    /*
+     * 開始操作は DOM のタイトルメニュー (components/TitleMenu.tsx) が担う
+     * (つづきから / はじめから / せいせき — KQ-22)。プロフィール確定後に
+     * メニューが出て、"title-start" を受けたときだけ冒険を始める。
+     */
+    this.starting = false;
+    setTitleActive(true);
+    const onStart = () => this.startAdventure();
+    EventBus.on("title-start", onStart);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      EventBus.off("title-start", onStart);
+      setTitleActive(false);
     });
 
-    this.input.once("pointerdown", () => this.startAdventure());
-    this.input.keyboard?.once("keydown-ENTER", () => this.startAdventure());
-    this.input.keyboard?.once("keydown-SPACE", () => this.startAdventure());
-
     EventBus.emit("current-scene-ready", this);
+    EventBus.emit("title-ready");
   }
 
-  /* プロフィール選択UI (React) は M8 で挟まる。まずはセーブ位置から冒険再開 */
+  /* セーブ位置から冒険再開 (新規ゲームは TitleMenu 側で既定セーブに戻してから来る) */
   private startAdventure() {
+    if (this.starting) return;
+    this.starting = true;
     ensureSession();
+    /* 一度でも始めたら「つづきから」が出るように、開始時点を書き出しておく */
+    autosave();
     const save = getSave();
     fadeOutThen(this, () => {
       this.scene.start("Field", { mapId: save.location.mapId });

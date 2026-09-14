@@ -74,3 +74,25 @@ describe("buildStatusData", () => {
     expect(buildStatusData({ ...defaultSave(), party: [] })).toBeNull();
   });
 });
+
+describe("buildStatusData × mistakes (ノートタブ)", () => {
+  it("新しい順のまま単元ラベルを付けて返す", () => {
+    const save = {
+      ...defaultSave(),
+      mistakes: [
+        { ts: 2, skillId: "g1_count", text: "いくつ?", answer: "3", chosen: "", explain: ["かぞえる"] },
+        { ts: 1, skillId: "nope", text: "1+1", answer: "2", chosen: "3", explain: [] },
+      ],
+    };
+    const rows = buildStatusData(save)!.mistakes;
+    expect(rows.map((r) => r.ts)).toEqual([2, 1]);
+    expect(rows[0].skill).not.toBe("g1_count");
+    expect(rows[0].chosen).toBe("");
+    expect(rows[0].explain).toEqual(["かぞえる"]);
+    expect(rows[1].skill).toBe("nope");
+  });
+
+  it("空なら空", () => {
+    expect(buildStatusData(defaultSave())!.mistakes).toEqual([]);
+  });
+});

@@ -44,7 +44,13 @@ export type EventCommand =
   | { type: "openSpellTest"; spellId: string }
   /* おだいの けいじばん: 学年のドリルに挑戦してゴールドを稼ぐ */
   | { type: "openDrillBoard" }
+  /* ふくしゅうのほこら: 弱点スキル3つから10問 → ひらめきメダル + ゴールド (設計 A6) */
+  | { type: "openReviewQuest" }
   | { type: "savePoint" }
+  /* ボス前の すいしょうレベル看板: 推奨Lv と いまの勇者Lv を並べて見せる (入室制限はしない) */
+  | { type: "levelSign"; level: number }
+  /* エンディング (KQ-22): 本編クリアを確定して EndingScene へ。以降のコマンドは打ち切り */
+  | { type: "ending" }
   | { type: "choice"; prompt: string; yes: EventCommand[]; no: EventCommand[] }
   /* 算数クイズの扉 (九九の塔など)。正解/不正解で分岐する。時間無制限 */
   | {
@@ -52,6 +58,18 @@ export type EventCommand =
       skillId: string;
       onCorrect: EventCommand[];
       onWrong: EventCommand[];
+    }
+  /*
+   * メダル交換所 (KQ-31): itemId を count 個 もっていれば それを減らして give を渡し
+   * onDone を実行。足りなければ何も減らさず onShort を実行する
+   */
+  | {
+      type: "exchange";
+      itemId: string;
+      count: number;
+      give: { itemId: string; count?: number };
+      onDone?: EventCommand[];
+      onShort?: EventCommand[];
     };
 
 export interface DialogEntry {

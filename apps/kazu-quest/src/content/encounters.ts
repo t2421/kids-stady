@@ -250,6 +250,19 @@ ENCOUNTER_TABLES["ch6-zerom"] = {
   ],
 };
 
+ENCOUNTER_TABLES["ch7-spiral"] = {
+  id: "ch7-spiral",
+  /* らせんの回廊は長いので 章6の塔より ひかえめな頻度 */
+  stepRange: [14, 26],
+  groups: [
+    { monsterIds: ["rasenKeshigomun", "rasenKeshigomun"], weight: 3 },
+    { monsterIds: ["rasenBat", "rasenBat"], weight: 3 },
+    { monsterIds: ["rasenSnake", "rasenKeshigomun"], weight: 2 },
+    { monsterIds: ["rasenDaruman", "rasenBat"], weight: 2 },
+    { monsterIds: ["rasenCube", "rasenSnake"], weight: 1 },
+  ],
+};
+
 export function getEncounterTable(id: string): EncounterTable | undefined {
   return ENCOUNTER_TABLES[id];
 }

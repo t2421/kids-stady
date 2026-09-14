@@ -202,6 +202,14 @@ export const CH5_CASTLE_THRONE: MapDef = {
       ],
     },
     {
+      id: "throne-level-sign",
+      x: 5,
+      y: 8,
+      trigger: "inspect",
+      art: "signpost",
+      commands: [{ type: "levelSign", level: 31 }],
+    },
+    {
       id: "boss-minados",
       x: 6,
       y: 3,

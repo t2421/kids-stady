@@ -62,6 +62,7 @@ export const CHAPTER4: ChapterDef = {
     "c4.bossDefeated": "小数の魔人デシマロンを 倒した",
     "c4.orb4": "数晶・肆を 取り戻した",
     "c4.clear": "第4章クリア (けいそく長に報告済み・船を入手)",
+    "c4.quizNpc": "クイズずきの もんだいに せいかいし ひらめきメダルを もらった (KQ-31)",
     "learned.kakudoSpin": "カクドスピン習得 (テスト合格)",
     "learned.mensekiWall": "メンセキウォール習得 (テスト合格)",
     "learned.decimaFreeze": "デシマフリーズ習得 (テスト合格)",

@@ -17,6 +17,8 @@ import { SPELLS } from "../src/content/spells";
 import { SKILLS } from "../src/lib/curriculum";
 import { MEMBERS } from "../src/lib/battle/members";
 import { CHAPTERS } from "../src/content/chapters";
+import { REVIEW_MEDAL_ITEM_ID } from "../src/lib/curriculum/review";
+import { ENDING_CHECKPOINT } from "../src/lib/ending";
 
 const maps = listMaps();
 
@@ -97,6 +99,10 @@ function flattenCommands(commands: readonly EventCommand[]): EventCommand[] {
       if (cmd.type === "quiz") {
         walk(cmd.onCorrect);
         walk(cmd.onWrong);
+      }
+      if (cmd.type === "exchange") {
+        walk(cmd.onDone ?? []);
+        walk(cmd.onShort ?? []);
       }
     }
   };
@@ -204,6 +210,47 @@ describe("chapter progression", () => {
         settable.has(chapter.clearFlag),
         `第${chapter.id}章の clearFlag "${chapter.clearFlag}" を立てる場所がない`,
       ).toBe(true);
+    }
+  });
+
+  it("every chapter has a ふくしゅうのほこら (openReviewQuest)", () => {
+    for (const chapter of CHAPTERS) {
+      const has = chapter.maps.some((map) =>
+        collectCommands(map).some((cmd) => cmd.type === "openReviewQuest"),
+      );
+      expect(has, `第${chapter.id}章に openReviewQuest を持つ ほこらがない`).toBe(true);
+    }
+  });
+
+  it("choice nesting never exceeds the depth limit (4)", () => {
+    const MAX_DEPTH = 4;
+    const depth = (cmds: readonly EventCommand[]): number =>
+      Math.max(
+        0,
+        ...cmds.map((cmd) =>
+          cmd.type === "choice"
+            ? 1 + Math.max(depth(cmd.yes), depth(cmd.no))
+            : cmd.type === "quiz"
+              ? Math.max(depth(cmd.onCorrect), depth(cmd.onWrong))
+              : cmd.type === "exchange"
+                ? Math.max(depth(cmd.onDone ?? []), depth(cmd.onShort ?? []))
+                : 0,
+        ),
+      );
+    for (const map of maps) {
+      for (const npc of map.npcs) {
+        for (const entry of npc.dialog) {
+          expect(
+            depth(entry.then ?? []),
+            `"${map.id}" の NPC "${npc.id}" の choice が深すぎる`,
+          ).toBeLessThanOrEqual(MAX_DEPTH);
+        }
+      }
+      for (const ev of map.events) {
+        expect(depth(ev.commands), `"${map.id}" の event "${ev.id}"`).toBeLessThanOrEqual(
+          MAX_DEPTH,
+        );
+      }
     }
   });
 
@@ -339,6 +386,32 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
     }
   });
 
+  /*
+   * KQ-23: boss:true の battle を持つマップには「すいしょうレベル看板」(levelSign) が
+   * ちょうど1つ。inspect で、通行可能タイルに置く (踏めない壁の中だと調べられない)。
+   * ボスのいないマップに看板があるのは配置ミス。
+   */
+  it("boss maps have exactly one levelSign (inspect, walkable, Lv 1..60)", () => {
+    const hasBoss = collectCommands(map).some((c) => c.type === "battle" && c.boss === true);
+    const signs = map.events.filter((ev) =>
+      ev.commands.some((c) => c.type === "levelSign"),
+    );
+    expect(signs.length, `"${map.id}" の levelSign は ボスマップに1つだけ`).toBe(hasBoss ? 1 : 0);
+    for (const ev of signs) {
+      expect(ev.trigger, `levelSign "${ev.id}" は inspect`).toBe("inspect");
+      expect(ev.art, `levelSign "${ev.id}" は 見える art が必要`).toBeDefined();
+      expect(
+        isWalkableTile(map, ev.x, ev.y),
+        `levelSign "${ev.id}" が通行不能タイル (調べられない)`,
+      ).toBe(true);
+      const onOther =
+        map.npcs.some((n) => n.x === ev.x && n.y === ev.y) ||
+        map.events.some((o) => o.id !== ev.id && o.x === ev.x && o.y === ev.y) ||
+        Object.values(map.spawns).some((s) => s.x === ev.x && s.y === ev.y);
+      expect(onOther, `levelSign "${ev.id}" が NPC/イベント/spawn と重なる`).toBe(false);
+    }
+  });
+
   it("encounter table reference exists", () => {
     if (map.encounterTableId !== null) {
       expect(
@@ -380,12 +453,76 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
       if (cmd.type === "giveItem") {
         expect(ITEMS[cmd.itemId], `アイテム "${cmd.itemId}"`).toBeDefined();
       }
+      /* 交換所 (KQ-31): 消費側・受取側の両方が実在し、個数は 1 以上の整数 */
+      if (cmd.type === "exchange") {
+        expect(ITEMS[cmd.itemId], `exchange の消費アイテム "${cmd.itemId}"`).toBeDefined();
+        expect(ITEMS[cmd.give.itemId], `exchange の受取アイテム "${cmd.give.itemId}"`).toBeDefined();
+        expect(Number.isInteger(cmd.count) && cmd.count >= 1, `exchange の count "${cmd.count}"`).toBe(true);
+        expect(
+          Number.isInteger(cmd.give.count ?? 1) && (cmd.give.count ?? 1) >= 1,
+          `exchange の give.count "${cmd.give.count}"`,
+        ).toBe(true);
+      }
+      /* ふくしゅうのほこら の ほうび (ひらめきメダル) は items に登録されていること */
+      if (cmd.type === "openReviewQuest") {
+        expect(ITEMS[REVIEW_MEDAL_ITEM_ID], `アイテム "${REVIEW_MEDAL_ITEM_ID}"`).toBeDefined();
+        expect(ITEMS[REVIEW_MEDAL_ITEM_ID].kind).toBe("key");
+      }
       if (cmd.type === "healInn") {
         expect(cmd.price).toBeGreaterThanOrEqual(0);
+      }
+      if (cmd.type === "levelSign") {
+        expect(Number.isInteger(cmd.level), `levelSign の level は整数`).toBe(true);
+        expect(cmd.level).toBeGreaterThanOrEqual(1);
+        expect(cmd.level).toBeLessThanOrEqual(60);
       }
       if (cmd.type === "giveGold") {
         expect(Number.isInteger(cmd.amount)).toBe(true);
       }
     }
+  });
+});
+
+/*
+ * エンディング (KQ-22): { type: "ending" } は本編で ちょうど1回、本編の最終章 (第6章) の
+ * ボスイベントの中にあり、同じコマンド列で その章の clearFlag を立てた あとに来ること。
+ * (ending はランを打ち切るので、後ろに置いた setFlag は UI 越しには見えなくなる)
+ * 終章 (第7章「ムゲンのらせん」KQ-30b) はクリア後の裏ダンジョンなので ending を持たない。
+ */
+describe("ending command", () => {
+  const MAIN_STORY_FINAL_CHAPTER = 6;
+  const finalChapter = CHAPTERS.find((c) => c.id === MAIN_STORY_FINAL_CHAPTER)!;
+
+  function commandLists(map: MapDef): EventCommand[][] {
+    return [
+      ...map.events.map((ev) => flattenCommands(ev.commands)),
+      ...map.npcs.flatMap((npc) => npc.dialog.map((d) => flattenCommands(d.then ?? []))),
+    ];
+  }
+
+  it("appears exactly once, in the main story's final chapter, after its clearFlag is set", () => {
+    expect(finalChapter).toBeDefined();
+    const hits: { chapterId: number; list: EventCommand[] }[] = [];
+    for (const chapter of CHAPTERS) {
+      for (const map of chapter.maps) {
+        for (const list of commandLists(map)) {
+          if (list.some((c) => c.type === "ending")) hits.push({ chapterId: chapter.id, list });
+        }
+      }
+    }
+    expect(hits, "ending は本編に ちょうど1つ").toHaveLength(1);
+    const { chapterId, list } = hits[0];
+    expect(chapterId).toBe(finalChapter.id);
+    const endingAt = list.findIndex((c) => c.type === "ending");
+    const clearAt = list.findIndex(
+      (c) => c.type === "setFlag" && c.flag === finalChapter.clearFlag,
+    );
+    expect(clearAt, `clearFlag "${finalChapter.clearFlag}" を ending の前で立てる`).toBeGreaterThanOrEqual(0);
+    expect(clearAt).toBeLessThan(endingAt);
+  });
+
+  it("the ending checkpoint map and spawn exist", () => {
+    expect(hasMap(ENDING_CHECKPOINT.mapId)).toBe(true);
+    expect(getMapDef(ENDING_CHECKPOINT.mapId).spawns[ENDING_CHECKPOINT.spawn]).toBeDefined();
   });
 });

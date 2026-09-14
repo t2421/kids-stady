@@ -19,8 +19,20 @@ const SpellTestScreen = dynamic(
   { ssr: false },
 );
 
+/* とっくん (KQ-11): 習得テストの前の練習。テストと同じ出題ループ、EventBus 共有のため client のみ */
+const SpellPracticeScreen = dynamic(
+  () => import("@/components/SpellPracticeScreen").then((m) => m.SpellPracticeScreen),
+  { ssr: false },
+);
+
 const DrillQuestScreen = dynamic(
   () => import("@/components/DrillQuestScreen").then((m) => m.DrillQuestScreen),
+  { ssr: false },
+);
+
+/* ふくしゅうのほこら (KQ-13): おだいと同じ出題ループ、EventBus 共有のため client のみ */
+const ReviewQuestScreen = dynamic(
+  () => import("@/components/ReviewQuestScreen").then((m) => m.ReviewQuestScreen),
   { ssr: false },
 );
 
@@ -40,8 +52,26 @@ const StatusPanelOverlay = dynamic(
   { ssr: false },
 );
 
+/* ぼうけんのせいせき (KQ-14): 単独オーバーレイ。EventBus "show-stats" で開く */
+const StatsScreen = dynamic(
+  () => import("@/components/StatsScreen").then((m) => m.StatsScreen),
+  { ssr: false },
+);
+
+/* 戦闘後の まちがいノート (BattleScene と EventBus で往復する) */
+const MistakeNoteOverlay = dynamic(
+  () => import("@/components/MistakeNoteOverlay").then((m) => m.MistakeNoteOverlay),
+  { ssr: false },
+);
+
 const MenuButton = dynamic(
   () => import("@/components/MenuButton").then((m) => m.MenuButton),
+  { ssr: false },
+);
+
+/* タイトルメニュー (KQ-22): つづきから / はじめから / せいせき。EventBus 共有のため client のみ */
+const TitleMenu = dynamic(
+  () => import("@/components/TitleMenu").then((m) => m.TitleMenu),
   { ssr: false },
 );
 
@@ -51,18 +81,30 @@ const OrientationGuard = dynamic(
   { ssr: false },
 );
 
+/* FPS 表示 (KQ-40): ?debug=1 のときだけ左上に出す。window 依存なので client のみ */
+const FpsMeter = dynamic(
+  () => import("@/components/FpsMeter").then((m) => m.FpsMeter),
+  { ssr: false },
+);
+
 export default function Home() {
   return (
     <>
       <PhaserGame />
       <MathPromptPanel />
       <SpellTestScreen />
+      <SpellPracticeScreen />
       <DrillQuestScreen />
+      <ReviewQuestScreen />
       <GameUiOverlay />
       <StatusPanelOverlay />
+      <StatsScreen />
+      <MistakeNoteOverlay />
       <MenuButton />
+      <TitleMenu />
       <ProfileGate />
       <OrientationGuard />
+      <FpsMeter />
     </>
   );
 }

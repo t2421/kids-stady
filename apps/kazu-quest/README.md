@@ -66,3 +66,19 @@ src/
 ├── game/         # Phaser (scenes / field / battle / session / textures)
 └── lib/          # 純ロジック (curriculum / battle / events / save / encounter)
 ```
+
+## E2E in CI
+
+`.github/workflows/e2e.yml` が `apps/kazu-quest/**` に触れる push (main) / PR で
+**Chromium のスモーク** (`e2e/smoke.spec.ts` + `e2e/orientation.spec.ts`、
+`e2e/touch.spec.ts` があれば `--project=ipad` で追加) を自動実行する。
+webServer が `npm run build` からフルビルドするため、ルート配信 (`NEXT_PUBLIC_BASE_PATH` なし)
+で動く。失敗時は `test-results/` (trace 含む) と `playwright-report/` が 7 日間 artifact に残る。
+
+全章 (golden path) を CI で回すには GitHub の **Actions → "E2E (kazu-quest)" → Run workflow**
+で `suite` に `full` を選ぶ (45 分枠)。CLI なら:
+
+```bash
+gh workflow run e2e.yml -f suite=full        # 全 spec
+gh workflow run e2e.yml                      # スモークのみ (既定)
+```

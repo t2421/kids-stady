@@ -11,6 +11,7 @@ import { DESERT_TILES } from "./tilesDesert";
 import { ICE_TILES } from "./tilesIce";
 import { SKY_TILES } from "./tilesSky";
 import { NEGA_TILES } from "./tilesNega";
+import { spiralTiles } from "./tilesSpiral";
 import { ANIM_TILES } from "./tileAnims";
 
 export const TILE_SIZE = 16;
@@ -152,6 +153,16 @@ const BASE_TILES: Record<string, PixelArt> = {
       "kTllTTTTTTTTllTk", "kTttttttttttttTk", "kkkkkkkkkkkkkkkk", "kTTTTTTTTTTTTTTk",
       "kTtttttkktttttTk", "kTttttkyykttttTk", "kTttttkyykttttTk", "kTtttttkktttttTk",
       "kTttttttttttttTk", "kddddddddddddddk", ".kkkkkkkkkkkkkk.", "................",
+    ],
+  },
+  /* ボス前の たてふだ (levelSign イベント用)。板に すいしょうの青い印 */
+  signpost: {
+    palette: { k: "#3a2415", t: "#8b5429", T: "#b57736", l: "#dc9b4d", w: "#f2eee1", b: "#5fd0ff", B: "#2a8fd0" },
+    rows: [
+      "................", "..kkkkkkkkkkkk..", ".kTTTTTTTTTTTTk.", ".kTllllllllllTk.",
+      ".kTlwwlbblwwlTk.", ".kTllllBBllllTk.", ".kTlwwwllwwwlTk.", ".kTllllllllllTk.",
+      ".kTTTTTTTTTTTTk.", "..kkkkkkkkkkkk..", "......kttk......", "......kttk......",
+      "......kttk......", "......kttk......", ".....kttttk.....", "................",
     ],
   },
   /* ---- 屋内 (建物内部マップ用) ---- */
@@ -323,3 +334,6 @@ TILE_ART.locZeromCastle = {
   palette: { g: "#3b2f52", k: "#0a0810", d: "#161022", s: "#241c3d", S: "#3f3160", r: "#5a1f3a", y: "#8fe0ff" },
   rows: TILE_ART.locDarkCastle.rows,
 };
+
+/* 終章「ムゲンのらせん」の色ちがいタイル (KQ-30b)。元タイルの rows を参照するので最後に足す */
+Object.assign(TILE_ART, spiralTiles(TILE_ART));

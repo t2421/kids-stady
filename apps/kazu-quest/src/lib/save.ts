@@ -8,6 +8,15 @@ import { readJSON, writeJSON } from "./profiles";
 import { memberStats } from "./battle/members";
 import type { AnswerTelemetry, HistoryEntryBase, SkillStat } from "./telemetry";
 import { normalizeHistory, normalizeSkillStats, toCount } from "./telemetry";
+import type { MistakeEntry } from "./mistakes";
+import { normalizeMistakes } from "./mistakes";
+
+/* 設定 (音のおん/オフ)。既定はすべてオン */
+export interface SaveSettings {
+  sound: boolean;
+}
+
+export const DEFAULT_SETTINGS: SaveSettings = { sound: true };
 
 /* 集計の作法は全アプリ共通 (docs/save-data.md §2) — 再エクスポートして
    アプリ内からは save.ts 経由で使えるようにする */
@@ -58,6 +67,9 @@ export interface SaveData extends AnswerTelemetry {
   totalWrong: number;
   skillStats: Record<string, SkillStat>;
   history: HistoryEntry[];
+  /* まちがいノート: 戦闘で間違えた問題、新しい順 (最大 20 件 — lib/mistakes.ts) */
+  mistakes: MistakeEntry[];
+  settings: SaveSettings;
   updatedAt: number;
 }
 
@@ -94,6 +106,8 @@ export function defaultSave(): SaveData {
     totalWrong: 0,
     skillStats: {},
     history: [],
+    mistakes: [],
+    settings: { ...DEFAULT_SETTINGS },
     updatedAt: 0,
   };
 }
@@ -152,6 +166,13 @@ function normalizeKazuHistory(raw: unknown): HistoryEntry[] {
     kind: row.kind === "test" ? "test" : "battle",
     chapter: Math.max(1, toCount(row.chapter)),
   }));
+}
+
+function normalizeSettings(raw: unknown): SaveSettings {
+  const r = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  return {
+    sound: typeof r.sound === "boolean" ? r.sound : DEFAULT_SETTINGS.sound,
+  };
 }
 
 function normalizeFlags(raw: unknown): Record<string, number | boolean> {
@@ -239,6 +260,8 @@ export function normalizeSave(raw: unknown): SaveData {
     totalWrong: Math.max(0, asNumber(r.totalWrong, 0)),
     skillStats: normalizeSkillStats(r.skillStats),
     history: normalizeKazuHistory(r.history),
+    mistakes: normalizeMistakes(r.mistakes),
+    settings: normalizeSettings(r.settings),
     updatedAt: Math.max(0, asNumber(r.updatedAt, 0)),
   };
 }
@@ -249,6 +272,14 @@ export function saveKey(profileId: string): string {
 
 export function loadSave(profileId: string): SaveData {
   return normalizeSave(readJSON(saveKey(profileId)));
+}
+
+/*
+ * そのプロフィールに書き出し済みのセーブがあるか (タイトルの「つづきから」表示用)。
+ * 一度でも persistSave されていれば true。壊れた JSON は読めない = 無いのと同じ扱い。
+ */
+export function hasSave(profileId: string): boolean {
+  return readJSON(saveKey(profileId)) !== null;
 }
 
 export function persistSave(profileId: string, data: SaveData): void {

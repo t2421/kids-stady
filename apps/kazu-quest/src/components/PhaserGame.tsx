@@ -4,7 +4,10 @@ import { useLayoutEffect } from "react";
 import { startGame } from "@/game/main";
 import { autosave, getSave, updateSave } from "@/game/session";
 import { advanceSaveToChapter, chapterStart } from "@/lib/debug/advanceToChapter";
-import { expForLevel, heroStats } from "@/lib/battle/stats";
+import { expForLevel } from "@/lib/battle/stats";
+import { memberStats } from "@/lib/battle/members";
+import { installSfxUnlock } from "@/game/audio/sfx";
+import { currentAnswer } from "@/components/currentProblem";
 import type Phaser from "phaser";
 
 /*
@@ -21,12 +24,26 @@ let game: Phaser.Game | null = null;
 
 export function PhaserGame() {
   useLayoutEffect(() => {
+    /* 効果音: 最初のタップ/キーで AudioContext を起こす (iOS 制約)。何度呼んでも 1 回だけ登録 */
+    installSfxUnlock();
     if (game === null) {
       game = startGame("game-container");
       /* E2E・デバッグ用フック (Playwright スモークでも使う) */
       (window as unknown as Record<string, unknown>).__KAZUQUEST_GAME__ = game;
+      /* 性能監査 (KQ-40): FpsMeter と Playwright の計測スクリプトが読む。dev/prod 共通で無害 */
+      (window as unknown as Record<string, unknown>).__KAZUQUEST_PERF__ = {
+        fps: () => Math.round(game?.loop.actualFps ?? 0),
+        sprites: () => {
+          const field = game?.scene.getScene("Field") as unknown as
+            | { debugSpriteCount?: () => number }
+            | null;
+          return field?.debugSpriteCount?.() ?? 0;
+        },
+      };
       (window as unknown as Record<string, unknown>).__KAZUQUEST_DEBUG__ = {
         getSave,
+        /* 出題中の正解 (E2E がテンキーで打つ用。DOM には出さない — KQ-12) */
+        currentAnswer,
         teleport: (x: number, y: number, facing: string) => {
           const field = game?.scene.getScene("Field") as unknown as
             | { debugTeleport?: (x: number, y: number, facing: string) => void }
@@ -47,21 +64,31 @@ export function PhaserGame() {
             ),
           }));
         },
+        /* E2E/デバッグ: パーティ全員を level にして HP/MP を満タンにする
+           (勇者だけ上げると仲間が1撃で倒れ、終盤ボスの検証にならない) */
         grantLevel: (level: number) => {
-          const stats = heroStats(level);
           updateSave((s) => ({
             ...s,
-            party: s.party.map((m) =>
-              m.memberId === "hero"
-                ? {
-                    ...m,
-                    level,
-                    exp: expForLevel(level),
-                    hp: stats.maxHp,
-                    mp: stats.maxMp,
-                  }
-                : m,
-            ),
+            party: s.party.map((m) => {
+              const stats = memberStats(m.memberId, level);
+              return {
+                ...m,
+                level,
+                exp: expForLevel(level),
+                hp: stats.maxHp,
+                mp: stats.maxMp,
+              };
+            }),
+          }));
+        },
+        /* アイテムを直接足す (KQ-31 メダル交換所の E2E 用)。runner の giveItem と同じ意味論 */
+        giveItem: (itemId: string, count = 1) => {
+          updateSave((s) => ({
+            ...s,
+            inventory: {
+              ...s.inventory,
+              items: { ...s.inventory.items, [itemId]: (s.inventory.items[itemId] ?? 0) + count },
+            },
           }));
         },
         grantGold: (amount: number) => {

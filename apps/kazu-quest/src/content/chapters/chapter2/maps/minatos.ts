@@ -101,6 +101,38 @@ export const CH2_MINATOS: MapDef = {
         },
       ],
     },
+    {
+      /* クイズずき (KQ-31): 1回だけ ひらめきメダル。何度でも挑戦できる */
+      id: "quiz-fan",
+      x: 17,
+      y: 1,
+      art: "villager",
+      movement: "static",
+      dialog: [
+        {
+          if: { flag: "c2.quizNpc", op: "set" },
+          pages: ["また あそぼうね。"],
+        },
+        {
+          pages: [
+            "ぼくは クイズが だいすき! ながさの もんだいを といてみる?",
+            "せいかいしたら ひらめきメダルを あげるよ!",
+          ],
+          then: [
+            {
+              type: "quiz",
+              skillId: "g2_length",
+              onCorrect: [
+                { type: "message", pages: ["せいかい! すごいね。はい、ひらめきメダル!"] },
+                { type: "giveItem", itemId: "hiramekiMedal", count: 1 },
+                { type: "setFlag", flag: "c2.quizNpc" },
+              ],
+              onWrong: [{ type: "message", pages: ["ざんねん! また ちょうせんしてね。"] }],
+            },
+          ],
+        },
+      ],
+    },
   ],
   events: [
     {
