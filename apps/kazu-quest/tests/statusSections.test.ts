@@ -14,6 +14,12 @@ describe("buildStatusData", () => {
     expect(hero.equipment.every((e) => e.name === "なし")).toBe(true);
     expect(hero.spells).toEqual([]);
     expect(data.items).toEqual([]);
+    expect(data.playtime).toBe("0ふん");
+  });
+
+  it("formats playtimeMs for the つよさ tab", () => {
+    const save = { ...defaultSave(), playtimeMs: 65 * 60_000 };
+    expect(buildStatusData(save)!.playtime).toBe("1じかん 5ふん");
   });
 
   it("lists spells with MP cost, items with counts, and applies equip bonuses", () => {

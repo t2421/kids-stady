@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EventBus } from "@/game/EventBus";
 import { dqWindow, optionButton } from "@/components/uiTheme";
+import { parseRuby, sliceRuby, stripRuby, visibleLength } from "@/lib/text/ruby";
 
 /*
  * DQ風の会話UI (メッセージ / はい・いいえ / 選択リスト / マップ名トースト)。
@@ -10,6 +11,7 @@ import { dqWindow, optionButton } from "@/components/uiTheme";
  * UiScene が "ui-message" 等を emit し、完了を "ui-*-done" で返す契約。
  * キー操作 (Z/Enter/Space=すすむ, ↑↓=えらぶ, X=もどる) は補助で、
  * iPad ではすべてタップで完結する。
+ * 本文は青空文庫記法のルビ (｜漢字《かんじ》) を <ruby> で描く (lib/text/ruby.ts)。
  */
 
 const TYPE_MS = 28; /* 1文字あたりの表示間隔 */
@@ -28,9 +30,30 @@ const windowStyle: React.CSSProperties = dqWindow({
   minHeight: 140,
   padding: "20px 26px 24px",
   fontSize: "clamp(18px, 2.8vw, 25px)",
-  lineHeight: 1.55,
+  /* ルビ (rt 0.5em) の高さを行間に含めておき、ルビの有無で行が跳ねないようにする */
+  lineHeight: 2,
   whiteSpace: "pre-wrap",
 });
+
+/* ルビ記法つきの本文。shown を渡すと先頭からその文字数ぶんだけ描く (タイプライター) */
+function RubyText({ text, shown }: { text: string; shown?: number }) {
+  const segments = useMemo(() => parseRuby(text), [text]);
+  const visible = shown === undefined ? segments : sliceRuby(segments, shown);
+  return (
+    <>
+      {visible.map((seg, i) =>
+        seg.ruby === undefined ? (
+          <Fragment key={i}>{seg.base}</Fragment>
+        ) : (
+          <ruby key={i}>
+            {seg.base}
+            <rt>{seg.ruby}</rt>
+          </ruby>
+        ),
+      )}
+    </>
+  );
+}
 
 export function GameUiOverlay() {
   const [request, setRequest] = useState<UiRequest | null>(null);
@@ -59,9 +82,10 @@ export function GameUiOverlay() {
   const startPage = useCallback((text: string) => {
     stopTyping();
     setShownChars(0);
+    const length = visibleLength(text);
     typeTimer.current = setInterval(() => {
       setShownChars((n) => {
-        if (n + 1 >= text.length) stopTyping();
+        if (n + 1 >= length) stopTyping();
         return n + 1;
       });
     }, TYPE_MS);
@@ -72,11 +96,11 @@ export function GameUiOverlay() {
     const req = requestRef.current;
     if (!req) return;
     if (req.kind === "message") {
-      const text = req.pages[pageIndexRef.current] ?? "";
-      if (shownRef.current < text.length) {
+      const length = visibleLength(req.pages[pageIndexRef.current] ?? "");
+      if (shownRef.current < length) {
         /* 表示途中なら全文即時表示 (連打でもページを飛ばさない) */
         stopTyping();
-        setShownChars(text.length);
+        setShownChars(length);
         return;
       }
       if (pageIndexRef.current + 1 < req.pages.length) {
@@ -183,7 +207,7 @@ export function GameUiOverlay() {
       style={optionButton(isSelected)}
     >
       {isSelected ? "▶ " : ""}
-      {label}
+      {stripRuby(label)}
     </button>
   );
 
@@ -255,9 +279,9 @@ export function GameUiOverlay() {
             {request.kind === "message" && (
               <>
                 <span data-testid="ui-message-text">
-                  {(request.pages[pageIndex] ?? "").slice(0, shownChars)}
+                  <RubyText text={request.pages[pageIndex] ?? ""} shown={shownChars} />
                 </span>
-                {shownChars >= (request.pages[pageIndex] ?? "").length && (
+                {shownChars >= visibleLength(request.pages[pageIndex] ?? "") && (
                   <span
                     style={{
                       position: "absolute",
@@ -281,7 +305,9 @@ export function GameUiOverlay() {
                   gap: 14,
                 }}
               >
-                <span style={{ flex: "1 1 320px" }}>{request.prompt}</span>
+                <span style={{ flex: "1 1 320px" }}>
+                  <RubyText text={request.prompt} />
+                </span>
                 {request.kind === "choice" && (
                   <div style={{ display: "flex", gap: 12 }}>
                     {renderOption("はい", selected === 0, () => {

@@ -10,7 +10,8 @@ import { memberStats } from "../../lib/battle/members";
 import { equipItem } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem, SHOPS } from "../../content/items";
-import { questsForGrade } from "../../lib/curriculum/drills";
+import { questsForChapter, questsForGrades } from "../../lib/curriculum/drills";
+import { getChapter } from "../../content/chapters";
 import type { UiScene } from "../scenes/UiScene";
 
 /* めがみのほこら: checkpoint を更新して「きろくした!」 */
@@ -102,12 +103,21 @@ export function handleSpellTest(
 }
 
 /*
- * おだいの けいじばん: その学年 (= 現在の章) のドリルに挑戦して
+ * 現在の章の おだい一覧。章の出題プール (questionGrades、省略時は章の学年) から引く。
+ * 章定義が無い番号 (未登録の章) は従来どおり章番号 = 学年として扱う
+ */
+function currentChapterQuests() {
+  const current = getSave().chapter.current;
+  const chapter = getChapter(current);
+  return chapter ? questsForChapter(chapter) : questsForGrades([current]);
+}
+
+/*
+ * おだいの けいじばん: 現在の章の出題プールのドリルに挑戦して
  * ゴールドを稼ぐ。★が多い単元ほど 1問あたりの報酬が高い。
  */
 export function handleDrillBoard(ui: UiScene, advance: () => void): void {
-  const grade = getSave().chapter.current;
-  const quests = questsForGrade(grade);
+  const quests = currentChapterQuests();
   if (quests.length === 0) {
     ui.showMessage(["いまは おだいが ないみたい。"], advance);
     return;

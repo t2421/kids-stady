@@ -52,8 +52,9 @@ npx playwright test  # E2E (本番ビルドで実行)
 | `/gallery` | 全スプライトの一覧プレビュー |
 
 ゲーム内デバッグフック (`window.__KAZUQUEST_DEBUG__`): `teleport(x,y,facing)` /
-`warp(mapId,spawn)` / `grantLevel(n)` / `learnSpell(id)` / `getSave()` — E2E と
-手動デバッグの共通基盤。
+`warp(mapId,spawn)` / `grantLevel(n)` / `learnSpell(id)` / `setFlag(flag)` /
+`advanceToChapter(n)` (章 n の開始状態までセーブを進めてワープ) / `getSave()` — E2E と
+手動デバッグの共通基盤。E2E の操作ヘルパーは `e2e/helpers.ts` (`seedChapter(page, n)` 等)。
 
 ## ディレクトリ概観
 

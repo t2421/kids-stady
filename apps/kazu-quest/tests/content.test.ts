@@ -207,6 +207,28 @@ describe("chapter progression", () => {
     }
   });
 
+  it("questionGrades, when set, are integer grades 1..6 with implemented skills", () => {
+    const implementedGrades = new Set(
+      SKILLS.filter((s) => s.implemented).map((s) => s.grade),
+    );
+    for (const chapter of CHAPTERS) {
+      if (chapter.questionGrades === undefined) continue;
+      expect(
+        chapter.questionGrades.length,
+        `第${chapter.id}章の questionGrades が空`,
+      ).toBeGreaterThan(0);
+      for (const grade of chapter.questionGrades) {
+        expect(Number.isInteger(grade), `第${chapter.id}章の questionGrades "${grade}"`).toBe(true);
+        expect(grade, `第${chapter.id}章の questionGrades "${grade}"`).toBeGreaterThanOrEqual(1);
+        expect(grade, `第${chapter.id}章の questionGrades "${grade}"`).toBeLessThanOrEqual(6);
+        expect(
+          implementedGrades.has(grade),
+          `第${chapter.id}章の questionGrades ${grade} に実装済みスキルがない`,
+        ).toBe(true);
+      }
+    }
+  });
+
   it("every chapter spell is learnable at some まなびや", () => {
     const testable = new Set<string>();
     for (const map of maps) {

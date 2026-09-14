@@ -44,3 +44,19 @@ body {
   max-width: 100%;
   max-height: 100%;
 }
+
+/* ルビ (会話ウィンドウ: ｜漢字《かんじ》 → <ruby>漢字<rt>かんじ</rt></ruby>)。
+   rt は本文の半分。行の高さは会話ウィンドウ側の line-height (2.0) で
+   あらかじめ確保しているので、ルビの有無で行が跳ねない */
+ruby {
+  ruby-align: center;
+  ruby-position: over;
+}
+
+rt {
+  font-size: 0.5em;
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: 0;
+  user-select: none;
+}

@@ -2,7 +2,8 @@
 
 import { useLayoutEffect } from "react";
 import { startGame } from "@/game/main";
-import { getSave, updateSave } from "@/game/session";
+import { autosave, getSave, updateSave } from "@/game/session";
+import { advanceSaveToChapter, chapterStart } from "@/lib/debug/advanceToChapter";
 import { expForLevel, heroStats } from "@/lib/battle/stats";
 import type Phaser from "phaser";
 
@@ -74,6 +75,17 @@ export function PhaserGame() {
             | { debugWarp?: (mapId: string, spawn: string) => void }
             | null;
           field?.debugWarp?.(mapId, spawn);
+        },
+        /* 章 n の開始状態までセーブを進めて開始地点へワープする。着地先を返す (E2E seedChapter 用) */
+        advanceToChapter: (chapter: number) => {
+          updateSave((s) => advanceSaveToChapter(s, chapter));
+          autosave();
+          const target = chapterStart(chapter);
+          const field = game?.scene.getScene("Field") as unknown as
+            | { debugWarp?: (mapId: string, spawn: string) => void }
+            | null;
+          field?.debugWarp?.(target.mapId, target.spawn);
+          return target;
         },
       };
     }

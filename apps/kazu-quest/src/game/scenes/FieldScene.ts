@@ -10,7 +10,7 @@ import { pickEncounterGroup, rollEncounterSteps } from "../../lib/encounter";
 import { mulberry32 } from "../../lib/curriculum/types";
 import { memberStats } from "../../lib/battle/members";
 import { actorTextureKey } from "../textures";
-import { autosave, getSave, updateSave } from "../session";
+import { autosave, getSave, tickPlaytime, updateSave } from "../session";
 import { EventBus } from "../EventBus";
 import { fadeIn, fadeOutThen } from "../transition";
 import { addFootShadow, MapView, tileCenter } from "../field/MapView";
@@ -140,7 +140,8 @@ export class FieldScene extends Scene {
     }
   }
 
-  update() {
+  update(_time: number, delta: number) {
+    tickPlaytime(delta);
     /* 影と闇は移動ツイーン中も毎フレーム追従させる */
     this.playerShadow.setPosition(this.player.x, this.player.y + 6);
     this.darkness?.setPosition(this.player.x, this.player.y);

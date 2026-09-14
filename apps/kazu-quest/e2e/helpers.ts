@@ -1,0 +1,255 @@
+import type { Page } from "@playwright/test";
+import { STEP_MS } from "../src/game/field/timing";
+
+/*
+ * E2E 共通ヘルパー。window.__KAZUQUEST_GAME__ / __KAZUQUEST_DEBUG__ フック
+ * (src/components/PhaserGame.tsx) 経由でシーン状態とセーブを操作・検証する。
+ * 位置決めはテレポート/ワープ、移動そのものの検証だけ実際にキーで歩く。
+ */
+
+declare global {
+  interface Window {
+    __KAZUQUEST_GAME__?: {
+      scene: {
+        isActive(key: string): boolean;
+        getScene(key: string): { isBusy?: () => boolean } | null;
+      };
+    };
+    __KAZUQUEST_DEBUG__?: {
+      teleport(x: number, y: number, facing: string): void;
+      warp(mapId: string, spawn: string): void;
+      grantLevel(level: number): void;
+      learnSpell(spellId: string): void;
+      setFlag(flag: string, value?: number | boolean): void;
+      advanceToChapter(chapter: number): { mapId: string; spawn: string };
+      getSave(): {
+        chapter: { current: number; cleared: number[] };
+        flags: Record<string, number | boolean>;
+        inventory: { gold: number; items: Record<string, number> };
+        location: { mapId: string; x: number; y: number };
+        party: {
+          memberId: string;
+          level: number;
+          exp: number;
+          hp: number;
+          learnedSpells: string[];
+        }[];
+        totalCorrect: number;
+        totalWrong: number;
+        skillStats: Record<string, { c: number; w: number }>;
+      };
+    };
+  }
+}
+
+/* 指定シーン (Title / Field / Battle / Ui) がアクティブになるまで待つ */
+export async function waitForScene(page: Page, key: string) {
+  await page.waitForFunction(
+    (k) => window.__KAZUQUEST_GAME__?.scene.isActive(k) === true,
+    key,
+    { timeout: 30_000 },
+  );
+}
+
+/* セーブ上の現在位置 (mapId, x, y) を返す */
+export function fieldPos(page: Page) {
+  return page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave().location);
+}
+
+/* 1タップ=1歩 (押下時間 < STEP_MS なので2歩目が出ない)。
+   エンジン定数と連動させ、STEP_MS を変えてもここが壊れないようにする */
+const STEP_HOLD_MS = Math.min(120, STEP_MS - 30);
+/* 矢印キーを短く押して 1 マスだけ歩く */
+export async function stepOnce(page: Page, key: string) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(STEP_HOLD_MS);
+  await page.keyboard.up(key);
+  await page.waitForTimeout(STEP_MS + 80);
+}
+
+/* 壁・NPC の方を向く (移動はブロックされ向きだけ変わる) */
+export async function face(page: Page, key: string) {
+  await page.keyboard.down(key);
+  await page.waitForTimeout(80);
+  await page.keyboard.up(key);
+  await page.waitForTimeout(200);
+}
+
+/* デバッグテレポートで位置と向きを確定させる */
+export async function teleport(page: Page, x: number, y: number, facing: string) {
+  await page.waitForTimeout(300);
+  await page.evaluate(
+    ({ x, y, facing }) => window.__KAZUQUEST_DEBUG__!.teleport(x, y, facing),
+    { x, y, facing },
+  );
+  await page.waitForTimeout(200);
+}
+
+/* 別マップへワープして着地を検証する (シーン再起動との競合に備えリトライ) */
+export async function warp(page: Page, mapId: string, spawn: string) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    await page.waitForTimeout(400);
+    await page.evaluate(
+      ({ mapId, spawn }) => window.__KAZUQUEST_DEBUG__!.warp(mapId, spawn),
+      { mapId, spawn },
+    );
+    try {
+      await page.waitForFunction(
+        (id) => window.__KAZUQUEST_DEBUG__!.getSave().location.mapId === id,
+        mapId,
+        { timeout: 5_000 },
+      );
+    } catch {
+      continue;
+    }
+    await page.waitForTimeout(700);
+    const pos = await fieldPos(page);
+    if (pos.mapId === mapId) return;
+  }
+  throw new Error(`warp ${mapId}/${spawn} に失敗`);
+}
+
+/* プロフィール作成 → タイトル → フィールド (ハジマリ村) */
+export async function startGame(page: Page) {
+  await page.goto("/");
+  /* 初回はプロフィールゲート (作成モード) が出る → そのまま はじめる */
+  const startButton = page.locator('[data-testid="profile-start"]');
+  try {
+    await startButton.waitFor({ state: "visible", timeout: 20_000 });
+  } catch {
+    /* 高負荷時に初回描画が間に合わないことがある → リロードして再試行 */
+    await page.reload();
+    await startButton.waitFor({ state: "visible", timeout: 30_000 });
+  }
+  await startButton.click();
+  await page
+    .locator('[data-testid="profile-gate"]')
+    .waitFor({ state: "hidden", timeout: 10_000 });
+  await waitForScene(page, "Title");
+  await page.locator("canvas").click({ position: { x: 640, y: 360 } });
+  await waitForScene(page, "Field");
+  await page.waitForTimeout(500);
+}
+
+/*
+ * 新規ゲームを始めて第 chapter 章の開始地点に立った状態を一発で用意する。
+ * 章 1..chapter-1 のクリアフラグ・仲間加入 (コンテンツの joinParty と同じレベル)・
+ * chapter.current を __KAZUQUEST_DEBUG__.advanceToChapter で適用し、着地を検証する。
+ */
+export async function seedChapter(
+  page: Page,
+  chapter: number,
+): Promise<{ mapId: string; spawn: string }> {
+  await startGame(page);
+  const target = await page.evaluate(
+    (n) => window.__KAZUQUEST_DEBUG__!.advanceToChapter(n),
+    chapter,
+  );
+  /* フック内のワープがシーン再起動と競合して落ちることがあるので warp で着地を保証する */
+  await warp(page, target.mapId, target.spawn);
+  await page.waitForFunction(
+    (n) => window.__KAZUQUEST_DEBUG__!.getSave().chapter.current >= n,
+    chapter,
+    { timeout: 5_000 },
+  );
+  return target;
+}
+
+/* 条件が成立するまで同方向に歩き続ける (transfer 踏み込み用) */
+export async function walkUntil(
+  page: Page,
+  key: string,
+  predicate: () => boolean | Promise<boolean>,
+  maxSteps = 6,
+) {
+  for (let i = 0; i < maxSteps; i++) {
+    await stepOnce(page, key);
+    await page.waitForTimeout(500);
+    if (await predicate()) return;
+  }
+  throw new Error(`walkUntil ${key} が成立しない`);
+}
+
+/* z でダイアログを開く (開くまで最大3回リトライ) → 最後まで送る */
+export async function interactAndAdvance(page: Page) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.keyboard.press("z");
+    try {
+      await page.waitForFunction(
+        () => !!window.__KAZUQUEST_GAME__?.scene.getScene("Ui")?.isBusy?.(),
+        undefined,
+        { timeout: 2_000 },
+      );
+      await advanceDialog(page);
+      return;
+    } catch {
+      /* 開かなかった → リトライ */
+    }
+  }
+  throw new Error("ダイアログが開かない");
+}
+
+/* 開いているダイアログを最後まで送る (busy の間だけ z を送る) */
+export async function advanceDialog(page: Page) {
+  for (let i = 0; i < 25; i++) {
+    await page.waitForTimeout(350);
+    const busy = await page.evaluate(
+      () => !!window.__KAZUQUEST_GAME__?.scene.getScene("Ui")?.isBusy?.(),
+    );
+    if (!busy) return;
+    await page.keyboard.press("z");
+  }
+  throw new Error("ダイアログが閉じない");
+}
+
+/* 出題パネルの正解ボタン (data-answer="1") */
+export const correctChoice = (page: Page) =>
+  page.locator('[data-testid="math-choice"][data-answer="1"]');
+
+/* 戦闘を「たたかう + 問題に正解」で終わらせる (通常攻撃も出題される) */
+export async function grindBattleUntilField(page: Page, maxSteps = 120) {
+  const btn = correctChoice(page);
+  for (let i = 0; i < maxSteps; i++) {
+    /* フィードバック表示中は disabled になるので、押せるときだけ短命クリック */
+    const clickable = (await btn.isVisible()) && (await btn.isEnabled());
+    if (clickable) {
+      await btn.click({ timeout: 2_000 }).catch(() => {});
+      await page.waitForTimeout(700);
+    } else {
+      await page.keyboard.press("z");
+      await page.waitForTimeout(700);
+    }
+    const backInField = await page.evaluate(
+      () => window.__KAZUQUEST_GAME__!.scene.isActive("Field"),
+    );
+    if (backInField) return;
+  }
+  throw new Error("戦闘が終わらない");
+}
+
+/*
+ * まなびやテストを最初の choice = はい で受け、全問正解で通す。
+ * 問題数はコンテンツ (spell.learnTest.questions) 依存なので固定せず、
+ * 進捗バナー (spell-test-banner) が消えるまで正解を押し続ける。
+ */
+export async function takeSpellTestAllCorrect(page: Page, maxQuestions = 40) {
+  const btn = correctChoice(page);
+  const banner = page.locator('[data-testid="spell-test-banner"]');
+  await page.keyboard.press("z");
+  for (let i = 0; i < 30; i++) {
+    if (await btn.isVisible()) break;
+    await page.keyboard.press("z");
+    await page.waitForTimeout(500);
+  }
+  /* 1問あたり最大 5 回のポーリング (正解フィードバック中は disabled) */
+  for (let i = 0; i < maxQuestions * 5; i++) {
+    if (!(await banner.isVisible())) return;
+    if ((await btn.isVisible()) && (await btn.isEnabled())) {
+      await btn.click({ timeout: 2_000 }).catch(() => {});
+      await page.waitForTimeout(900);
+    } else {
+      await page.waitForTimeout(300);
+    }
+  }
+  throw new Error("しゅうとくテストが終わらない");
+}

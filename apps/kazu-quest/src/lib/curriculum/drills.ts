@@ -4,7 +4,9 @@
  * むずかしい単元 (★が多い)・上の学年ほど 1問あたりの報酬が高い。
  */
 
+import type { ChapterDef } from "../../content/types";
 import { SKILLS } from "./index";
+import { chapterQuestionGrades } from "./gradePool";
 
 export interface DrillQuest {
   skillId: string;
@@ -89,6 +91,21 @@ export function questsForGrade(grade: number): DrillQuest[] {
       };
     })
     .sort((a, b) => a.stars - b.stars || a.skillId.localeCompare(b.skillId));
+}
+
+/*
+ * 複数学年の おだい一覧。学年順 → 学年内はやさしい順。
+ * 同じ学年が重複しても一覧は1回だけ (questionGrades の重複を吸収)
+ */
+export function questsForGrades(grades: number[]): DrillQuest[] {
+  return [...new Set(grades)]
+    .sort((a, b) => a - b)
+    .flatMap((grade) => questsForGrade(grade));
+}
+
+/* 章の出題プール (questionGrades、省略時 [grade]) に基づく おだい一覧 */
+export function questsForChapter(chapter: ChapterDef): DrillQuest[] {
+  return questsForGrades(chapterQuestionGrades(chapter));
 }
 
 export function getDrillQuest(skillId: string): DrillQuest | undefined {

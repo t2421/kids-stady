@@ -74,6 +74,15 @@ export interface StepResult {
   done: boolean;
 }
 
+/*
+ * データ操作コマンド (setFlag/giveItem/giveGold/learnSpell/joinParty/advanceChapter)
+ * を save に適用する。UI コマンドは無変更で返す。デバッグフック (章スキップ) からも
+ * 同じ意味論で再利用するため export する。
+ */
+export function applyDataCommand(save: SaveData, cmd: EventCommand): SaveData {
+  return applyData(save, cmd);
+}
+
 function applyData(save: SaveData, cmd: EventCommand): SaveData {
   switch (cmd.type) {
     case "setFlag":

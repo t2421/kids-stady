@@ -45,6 +45,12 @@ const MenuButton = dynamic(
   { ssr: false },
 );
 
+/* 縦持ち警告は全 UI の最前面。matchMedia は window 依存なので client のみ */
+const OrientationGuard = dynamic(
+  () => import("@/components/OrientationGuard").then((m) => m.OrientationGuard),
+  { ssr: false },
+);
+
 export default function Home() {
   return (
     <>
@@ -56,6 +62,7 @@ export default function Home() {
       <StatusPanelOverlay />
       <MenuButton />
       <ProfileGate />
+      <OrientationGuard />
     </>
   );
 }

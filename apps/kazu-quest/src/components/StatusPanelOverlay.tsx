@@ -212,6 +212,12 @@ export function StatusPanelOverlay() {
                   <div style={{ ...lineFont, fontSize: 15, color: UI_COLORS.textSub, marginTop: 14 }}>
                     つぎのレベルまで あと {m.nextNeed}
                   </div>
+                  <div
+                    data-testid="status-playtime"
+                    style={{ ...lineFont, fontSize: 15, color: UI_COLORS.textSub, marginTop: 6 }}
+                  >
+                    あそんだ じかん: {data.playtime}
+                  </div>
                 </>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

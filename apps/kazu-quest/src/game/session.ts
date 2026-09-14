@@ -7,6 +7,7 @@
 import { AVATARS, createProfile, getActiveId } from "../lib/profiles";
 import type { SaveData } from "../lib/save";
 import { defaultSave, loadSave, persistSave } from "../lib/save";
+import { addPlaytime } from "../lib/playtime";
 
 interface SessionState {
   profileId: string | null;
@@ -57,4 +58,30 @@ export function autosave(): void {
   if (state.profileId) {
     persistSave(state.profileId, state.save);
   }
+}
+
+/* ---------- プレイ時間 ---------- */
+
+/*
+ * タブが隠れている間は加算しない。Phaser はバックグラウンドで update を
+ * 止めるが、復帰の1フレームで巨大な delta が来る (addPlaytime の clamp と二重の保険)。
+ * Node (Vitest) には document が無いので、その場合は常に「表示中」扱い。
+ */
+let playtimePaused = false;
+let visibilityGuardInstalled = false;
+
+function ensureVisibilityGuard(): void {
+  if (visibilityGuardInstalled || typeof document === "undefined") return;
+  visibilityGuardInstalled = true;
+  playtimePaused = document.hidden;
+  document.addEventListener("visibilitychange", () => {
+    playtimePaused = document.hidden;
+  });
+}
+
+/* Field/Battle の update(time, delta) から毎フレーム呼ぶ。書き出しは autosave() 任せ */
+export function tickPlaytime(deltaMs: number): void {
+  ensureVisibilityGuard();
+  if (playtimePaused) return;
+  state.save = addPlaytime(state.save, deltaMs);
 }

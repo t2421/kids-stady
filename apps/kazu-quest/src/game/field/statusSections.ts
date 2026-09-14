@@ -11,6 +11,7 @@ import { memberName, memberStats } from "../../lib/battle/members";
 import { equippedStats, SLOT_LABELS } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem } from "../../content/items";
+import { formatPlaytime } from "../../lib/format";
 
 export interface MemberStatus {
   name: string;
@@ -36,6 +37,8 @@ export interface StatusData {
   members: MemberStatus[];
   /* もちものは パーティ共有。1行 = 1アイテム ("やくそう ×5") */
   items: string[];
+  /* つよさタブの脚注: "1じかん 5ふん" (lib/format.formatPlaytime) */
+  playtime: string;
 }
 
 export function buildStatusData(save: SaveData): StatusData | null {
@@ -71,5 +74,10 @@ export function buildStatusData(save: SaveData): StatusData | null {
     .filter(([, count]) => count > 0)
     .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
 
-  return { gold: save.inventory.gold, members, items };
+  return {
+    gold: save.inventory.gold,
+    members,
+    items,
+    playtime: formatPlaytime(save.playtimeMs),
+  };
 }

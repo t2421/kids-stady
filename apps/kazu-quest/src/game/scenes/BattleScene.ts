@@ -7,7 +7,7 @@ import { getSpell } from "../../content/spells";
 import { getChapter } from "../../content/chapters";
 import type { SpellDef } from "../../content/types";
 import { mulberry32 } from "../../lib/curriculum/types";
-import { autosave, getSave, updateSave } from "../session";
+import { autosave, getSave, tickPlaytime, updateSave } from "../session";
 import { monsterTextureKey } from "../textures";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
 import { EventBus } from "../EventBus";
@@ -120,6 +120,10 @@ export class BattleScene extends Scene {
     this.updateStatus();
     this.showIntro();
     EventBus.emit("current-scene-ready", this);
+  }
+
+  update(_time: number, delta: number) {
+    tickPlaytime(delta);
   }
 
   /* ---------- パーティ ---------- */

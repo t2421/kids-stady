@@ -180,6 +180,12 @@ export interface ShopDef {
 export interface ChapterDef {
   id: number;
   grade: number;
+  /*
+   * 出題プールの学年 (おだい・復習など「章の学年」から出す場面が参照する)。
+   * 省略 = [grade]。終章のように複数学年をまたぐ章はここに列挙する。
+   * 実際の解決は lib/curriculum/gradePool.ts の chapterQuestionGrades() に委ねる
+   */
+  questionGrades?: number[];
   title: string;
   implemented: boolean;
   startMap: string;
