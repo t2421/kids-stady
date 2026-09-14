@@ -28,6 +28,7 @@ kids-stady/
 │   ├── mathematics-design-plan.md
 │   ├── kazu-quest-design-plan.md   # カズクエ設計の正典
 │   ├── kazu-quest-roadmap.md       # カズクエ残作業のタスク分解と実行ログ
+│   ├── kazu-quest-learning-plan.md # カズクエ 学びの設計 (レッスン・前提・間隔復習) とタスク LP-xx
 │   ├── kazu-quest-balance.md       # ボス戦バランス (シミュレータ出力)
 │   ├── kazu-quest-perf.md          # 性能監査
 │   └── kazu-quest-release-checklist.md  # 本番プレイスルー・チェックリスト
