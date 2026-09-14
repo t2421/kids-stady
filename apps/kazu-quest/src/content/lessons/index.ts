@@ -7,8 +7,12 @@
 import type { LessonDef, LessonPage } from "./types";
 import { FIGURE_KINDS, MISTAKE_PATTERNS } from "./types";
 import { SKILLS } from "../../lib/curriculum";
+import { G1_ADD_NC } from "./g1_add_nc";
 
-export const LESSONS: Record<string, LessonDef> = {};
+/* LP-12〜17 (波4) がここに単元ごとの LessonDef を足していく。LP-08 の先行分は1件だけ */
+export const LESSONS: Record<string, LessonDef> = {
+  g1_add_nc: G1_ADD_NC,
+};
 
 export function getLesson(skillId: string): LessonDef | undefined {
   return LESSONS[skillId];

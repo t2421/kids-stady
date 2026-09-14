@@ -27,6 +27,11 @@ import {
   handleShop,
   handleSpellTest,
 } from "../field/effectHandlers";
+import {
+  handleOpenLesson,
+  handleOpenPreview,
+  handleOpenReview,
+} from "../field/lessonFlow";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
 import { INTERACT_COOLDOWN_MS, STEP_MS } from "../field/timing";
@@ -657,11 +662,14 @@ export class FieldScene extends Scene {
         case "openReviewQuest":
           handleReviewQuest(this.ui, () => advance());
           break;
-        // LP-08/LP-11 replaces this with EventBus emit (open-lesson / open-review)
         case "openLesson":
+          handleOpenLesson(this.ui, effect.skillId, () => advance());
+          break;
         case "openReview":
+          handleOpenReview(this.ui, () => advance());
+          break;
         case "openPreview":
-          this.ui.showMessage(["じゅんびちゅう…"], () => advance());
+          handleOpenPreview(this.ui, () => advance());
           break;
         case "openShop":
           handleShop(this.ui, effect.shopId, () => advance());

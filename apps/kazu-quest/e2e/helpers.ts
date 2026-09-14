@@ -24,6 +24,8 @@ declare global {
       setFlag(flag: string, value?: number | boolean): void;
       /* 単元の習熟状態を直接書く (学びの設計 LP-04) */
       setMastery(skillId: string, state: "none" | "practicing" | "can" | "mastered"): void;
+      /* TEMPORARY (LP-08 E2E 用): open-lesson を直接叩いて LessonScreen を開く */
+      openLesson(skillId: string): void;
       /* 間隔復習の期日到来を待たずに時計を進める (src/lib/clock.ts のオフセット) */
       advanceClock(ms: number): void;
       giveItem(itemId: string, count?: number): void;

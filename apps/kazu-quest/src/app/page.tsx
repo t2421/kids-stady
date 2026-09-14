@@ -36,6 +36,12 @@ const ReviewQuestScreen = dynamic(
   { ssr: false },
 );
 
+/* まなびやのレッスン画面 (LP-08): EventBus "open-lesson" で開く、client のみ */
+const LessonScreen = dynamic(
+  () => import("@/components/LessonScreen").then((m) => m.LessonScreen),
+  { ssr: false },
+);
+
 const ProfileGate = dynamic(
   () => import("@/components/ProfileGate").then((m) => m.ProfileGate),
   { ssr: false },
@@ -96,6 +102,7 @@ export default function Home() {
       <SpellPracticeScreen />
       <DrillQuestScreen />
       <ReviewQuestScreen />
+      <LessonScreen />
       <GameUiOverlay />
       <StatusPanelOverlay />
       <StatsScreen />

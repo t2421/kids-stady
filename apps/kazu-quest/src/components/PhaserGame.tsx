@@ -11,6 +11,7 @@ import { currentAnswer } from "@/components/currentProblem";
 import { advanceClock as advanceClockOffset, now } from "@/lib/clock";
 import { REVIEW_INTERVALS_MS } from "@/lib/mastery";
 import type { MasteryState } from "@/lib/save";
+import { EventBus } from "@/game/EventBus";
 import type Phaser from "phaser";
 
 /*
@@ -75,6 +76,15 @@ export function PhaserGame() {
             },
           }));
           autosave();
+        },
+        /*
+         * TEMPORARY (LP-08 E2E 用): マップにまだ「まなびやの先生」の導線が無いので、
+         * open-lesson を直接叩いて LessonScreen を開く。LP-09/LP-10 以降で
+         * フィールドの openLesson effect (handleOpenLesson) が正式な入口になり次第、
+         * このフックは削除してよい
+         */
+        openLesson: (skillId: string) => {
+          EventBus.emit("open-lesson", { skillId, entry: "story" });
         },
         learnSpell: (spellId: string) => {
           updateSave((s) => ({
