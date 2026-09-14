@@ -6,6 +6,8 @@ import { artSize } from "@/content/art/format";
 import { TILE_ART } from "@/content/art/tiles";
 import { ACTOR_ART } from "@/content/art/actors";
 import { MONSTER_ART } from "@/content/art/monsters";
+import { Figure } from "@/components/figures/Figure";
+import type { FigureSpec } from "@/content/lessons/types";
 
 /*
  * スプライトギャラリー — ビジュアル開発用のプレビューページ。
@@ -124,6 +126,108 @@ function Section({
   );
 }
 
+/*
+ * ず (視覚モデル) ギャラリー — FigureSpec の 17 kind すべてを1つずつ並べる (LP-05)。
+ * FIGURE_EXAMPLES に { label, spec } を足すだけで一覧に反映される (LP-05/LP-06/LP-07 共通)。
+ * 未実装の kind は Figure が「(ず) じゅんびちゅう」を描くので、そのまま並べておけば
+ * 実装が届き次第、置き換わったものが自然に表示される。
+ */
+const FIGURE_EXAMPLES: { label: string; spec: FigureSpec }[] = [
+  { label: "tenFrame", spec: { kind: "tenFrame", count: 6, second: 3 } },
+  { label: "numberLine", spec: { kind: "numberLine", from: 0, to: 20, marks: [5, 12], highlight: [8, 15] } },
+  { label: "cherry", spec: { kind: "cherry", total: 9, split: [4, 5] } },
+  { label: "columnCalc (+)", spec: { kind: "columnCalc", op: "+", a: 48, b: 27, showCarry: true } },
+  { label: "columnCalc (÷)", spec: { kind: "columnCalc", op: "÷", a: 84, b: 4 } },
+  { label: "array", spec: { kind: "array", rows: 3, cols: 4, groupBy: "row", remainder: 2 } },
+  { label: "kukuTable", spec: { kind: "kukuTable", highlightRow: 7, highlightCol: 8 } },
+  { label: "fractionBar", spec: { kind: "fractionBar", parts: 4, filled: 1 } },
+  {
+    label: "fractionBar (2本比較)",
+    spec: { kind: "fractionBar", parts: 4, filled: 1, second: { parts: 3, filled: 2 } },
+  },
+  { label: "placeValue", spec: { kind: "placeValue", value: "3.25", highlightDigit: 1 } },
+  { label: "placeValue (整数)", spec: { kind: "placeValue", value: "12000000", highlightDigit: 1 } },
+  { label: "areaGrid", spec: { kind: "areaGrid", w: 4, h: 3, unit: "cm" } },
+  { label: "areaGrid (三角形)", spec: { kind: "areaGrid", w: 6, h: 4, shape: "triangle" } },
+  { label: "areaGrid (平行四辺形)", spec: { kind: "areaGrid", w: 6, h: 3, shape: "parallelogram" } },
+  { label: "protractor", spec: { kind: "protractor", angle: 60, showReading: true } },
+  { label: "clock", spec: { kind: "clock", hour: 3, minute: 15 } },
+  {
+    label: "clock (あと なんぷんで)",
+    spec: { kind: "clock", hour: 3, minute: 45, second: { hour: 4, minute: 20 } },
+  },
+  { label: "percentBar", spec: { kind: "percentBar", base: 200, part: 50, label: "25%" } },
+  {
+    label: "tapeDiagram",
+    spec: {
+      kind: "tapeDiagram",
+      segments: [
+        { label: "りんご", length: 3 },
+        { label: "みかん", length: 5 },
+      ],
+      total: "8",
+    },
+  },
+  { label: "treeDiagram", spec: { kind: "treeDiagram", levels: [["A"], ["B", "C"]] } },
+  { label: "letterBox", spec: { kind: "letterBox", expr: "□ + 3 = 8", value: 5 } },
+  {
+    label: "balance",
+    spec: {
+      kind: "balance",
+      left: [{ label: "りんご", weight: 3 }],
+      right: [{ label: "みかん", weight: 3 }],
+    },
+  },
+  { label: "measureCup", spec: { kind: "measureCup", capacityDl: 10, filledDl: 6 } },
+];
+
+function FigureSection() {
+  return (
+    <section style={{ marginBottom: 36 }}>
+      <h2
+        style={{
+          fontSize: 22,
+          margin: "0 0 12px",
+          color: "var(--kids-accent)",
+          borderBottom: "2px solid var(--kids-panel-border)",
+          paddingBottom: 6,
+        }}
+      >
+        ず (figures)
+        <span style={{ fontSize: 14, marginLeft: 10, color: "var(--kids-text-soft)" }}>
+          {FIGURE_EXAMPLES.length} 件
+        </span>
+      </h2>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+          gap: 12,
+        }}
+      >
+        {FIGURE_EXAMPLES.map(({ label, spec }) => (
+          <div
+            key={label}
+            style={{
+              background: "var(--kids-panel-bg)",
+              border: "2px solid var(--kids-panel-border)",
+              borderRadius: 12,
+              padding: 12,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <Figure spec={spec} />
+            <code style={{ fontSize: 13, color: "var(--kids-text-soft)" }}>{label}</code>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function GalleryPage() {
   return (
     <main
@@ -148,6 +252,7 @@ export default function GalleryPage() {
       <Section title="タイル (tile-*)" arts={TILE_ART} repeat />
       <Section title="キャラクター (actor-*)" arts={ACTOR_ART} />
       <Section title="モンスター (monster-*)" arts={MONSTER_ART} />
+      <FigureSection />
     </main>
   );
 }

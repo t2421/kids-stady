@@ -1,6 +1,11 @@
 /*
  * 小4のスキルと問題ジェネレータ (第4章「氷の国の はかりごと」)。
  * 億兆・÷2桁・がい数・小数・同分母分数・角度・面積・表とグラフ。
+ *
+ * 出題の段階 (LP-02b, docs/kazu-quest-levels.md): 各ジェネレータは
+ * `(rng, level?)` を取り、level 省略時は 2 (= 従来どおりの出題) を使う。
+ * level 2 の分岐は既存コードと完全に同じ値域・同じ乱数消費順にしてある
+ * (シード固定のテストが壊れないため)。
  */
 
 import type { Problem, Rng } from "./types";
@@ -9,11 +14,15 @@ import { makeChoicesOf } from "./choices";
 import { dec, frac, gcd } from "./numbers";
 import { genericHints } from "./hints";
 
+type Level = 1 | 2 | 3;
+
 /* 億・兆 (くらいの しくみ) */
-function genBigNumber(rng: Rng): Problem {
+function genBigNumber(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [nLo, nHi] = lv === 1 ? [2, 5] : lv === 3 ? [10, 99] : [2, 9];
   const kind = randInt(rng, 0, 2);
   if (kind === 0) {
-    const n = randInt(rng, 2, 9);
+    const n = randInt(rng, nLo, nHi);
     const answer = n * 10000;
     return {
       skillId: "g4_big_number",
@@ -39,7 +48,7 @@ function genBigNumber(rng: Rng): Problem {
     };
   }
   if (kind === 1) {
-    const n = randInt(rng, 2, 9);
+    const n = randInt(rng, nLo, nHi);
     return {
       skillId: "g4_big_number",
       text: `${n}億 は 1000万の なんこ分?`,
@@ -57,7 +66,7 @@ function genBigNumber(rng: Rng): Problem {
       hints: genericHints([`1億 = 1000万 × 10`, `${n}億 = 1000万 × ${n * 10}`]),
     };
   }
-  const n = randInt(rng, 2, 9);
+  const n = randInt(rng, nLo, nHi);
   return {
     skillId: "g4_big_number",
     text: `${n}兆 は ${n}億の なんばい?`,
@@ -79,9 +88,12 @@ function genBigNumber(rng: Rng): Problem {
 }
 
 /* ÷2桁 (わりきれる) */
-function genDiv2Digit(rng: Rng): Problem {
-  const divisor = randInt(rng, 12, 39);
-  const answer = randInt(rng, 3, 24);
+function genDiv2Digit(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [divLo, divHi, ansLo, ansHi] =
+    lv === 1 ? [11, 20, 2, 9] : lv === 3 ? [40, 99, 10, 50] : [12, 39, 3, 24];
+  const divisor = randInt(rng, divLo, divHi);
+  const answer = randInt(rng, ansLo, ansHi);
   const dividend = divisor * answer;
   return {
     skillId: "g4_div_2digit",
@@ -111,10 +123,12 @@ function genDiv2Digit(rng: Rng): Problem {
 }
 
 /* がい数 (四捨五入) */
-function genRound(rng: Rng): Problem {
+function genRound(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
   const toHundred = rng() < 0.5;
   const unit = toHundred ? 100 : 1000;
-  const value = randInt(rng, unit * 3, unit * 90);
+  const [mulLo, mulHi] = lv === 1 ? [2, 20] : lv === 3 ? [50, 300] : [3, 90];
+  const value = randInt(rng, unit * mulLo, unit * mulHi);
   const answer = Math.round(value / unit) * unit;
   const cut = Math.floor(value / unit) * unit;
   return {
@@ -144,11 +158,13 @@ function genRound(rng: Rng): Problem {
 }
 
 /* 小数の たしひき (0.01のくらい) */
-function genDecimal(rng: Rng): Problem {
+function genDecimal(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
   const add = rng() < 0.5;
   if (add) {
-    const a = randInt(rng, 15, 240);
-    const b = randInt(rng, 15, 240);
+    const [lo, hi] = lv === 1 ? [5, 50] : lv === 3 ? [300, 900] : [15, 240];
+    const a = randInt(rng, lo, hi);
+    const b = randInt(rng, lo, hi);
     const answer = dec((a + b) / 100, 2);
     return {
       skillId: "g4_decimal",
@@ -175,8 +191,10 @@ function genDecimal(rng: Rng): Problem {
       ]),
     };
   }
-  const a = randInt(rng, 60, 320);
-  const b = randInt(rng, 15, a - 5);
+  const [aLo, aHi, bLo] =
+    lv === 1 ? [20, 60, 5] : lv === 3 ? [400, 950, 300] : [60, 320, 15];
+  const a = randInt(rng, aLo, aHi);
+  const b = randInt(rng, bLo, a - 5);
   const answer = dec((a - b) / 100, 2);
   return {
     skillId: "g4_decimal",
@@ -205,8 +223,10 @@ function genDecimal(rng: Rng): Problem {
 }
 
 /* 同分母の分数 (たしひき・仮分数まで) */
-function genFractionSame(rng: Rng): Problem {
-  const d = randInt(rng, 4, 9);
+function genFractionSame(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [dLo, dHi] = lv === 1 ? [3, 5] : lv === 3 ? [6, 12] : [4, 9];
+  const d = randInt(rng, dLo, dHi);
   if (rng() < 0.5) {
     /* 1をこえる たし算 (仮分数のまま答える) */
     let n1 = randInt(rng, 2, d - 1);
@@ -271,11 +291,15 @@ function genFractionSame(rng: Rng): Problem {
   };
 }
 
-/* 角度 (直線・三角形・一しゅう) */
-function genAngle(rng: Rng): Problem {
-  const kind = randInt(rng, 0, 2);
+/* 角度 (直線・三角形・一しゅう)。Lv1 は「一しゅう」を除いた やさしい2種、
+ * Lv3 は 同じ3種だが 10°きざみでなく 5°きざみで こまかく出す */
+function genAngle(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const step = lv === 3 ? 5 : 10;
+  const kind = lv === 1 ? randInt(rng, 0, 1) : randInt(rng, 0, 2);
   if (kind === 0) {
-    const a = randInt(rng, 2, 17) * 10;
+    const [lo, hi] = lv === 1 ? [2, 8] : lv === 3 ? [4, 34] : [2, 17];
+    const a = randInt(rng, lo, hi) * step;
     const answer = 180 - a;
     return {
       skillId: "g4_angle",
@@ -295,12 +319,15 @@ function genAngle(rng: Rng): Problem {
     };
   }
   if (kind === 1) {
-    const a = randInt(rng, 3, 12) * 10;
-    const b = randInt(rng, 3, 14) * 10;
+    const [aLo, aHi, bLo, bHi] =
+      lv === 1 ? [3, 8, 3, 8] : lv === 3 ? [6, 24, 6, 28] : [3, 12, 3, 14];
+    const a = randInt(rng, aLo, aHi) * step;
+    const b = randInt(rng, bLo, bHi) * step;
     const answer = 180 - a - b;
     if (answer <= 0) {
       /* 角の和が こえたら 直角三角形の のこりの角に きりかえる */
-      const c = randInt(rng, 2, 8) * 10;
+      const [cLo, cHi] = lv === 1 ? [2, 6] : lv === 3 ? [2, 16] : [2, 8];
+      const c = randInt(rng, cLo, cHi) * step;
       return {
         skillId: "g4_angle",
         text: `直角三角形の のこりの 角。90° と ${c}° の ほかの 角は なん度?`,
@@ -335,7 +362,8 @@ function genAngle(rng: Rng): Problem {
       hints: genericHints([`三角形の 角の和は 180°`, `180 - ${a} - ${b} = ${answer}°`]),
     };
   }
-  const a = randInt(rng, 5, 33) * 10;
+  const [lo, hi] = lv === 3 ? [10, 70] : [5, 33];
+  const a = randInt(rng, lo, hi) * step;
   const answer = 360 - a;
   return {
     skillId: "g4_angle",
@@ -356,10 +384,12 @@ function genAngle(rng: Rng): Problem {
 }
 
 /* 面積 (長方形・正方形) */
-function genArea(rng: Rng): Problem {
+function genArea(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [lo, hi] = lv === 1 ? [2, 8] : lv === 3 ? [10, 40] : [3, 15];
   if (rng() < 0.6) {
-    const w = randInt(rng, 3, 15);
-    const h = randInt(rng, 3, 15);
+    const w = randInt(rng, lo, hi);
+    const h = randInt(rng, lo, hi);
     const answer = w * h;
     return {
       skillId: "g4_area",
@@ -378,7 +408,7 @@ function genArea(rng: Rng): Problem {
       hints: genericHints([`長方形の 面せき = たて × よこ`, `${h} × ${w} = ${answer}cm²`]),
     };
   }
-  const s = randInt(rng, 3, 15);
+  const s = randInt(rng, lo, hi);
   const answer = s * s;
   return {
     skillId: "g4_area",
@@ -401,8 +431,10 @@ function genArea(rng: Rng): Problem {
 /* 表とグラフ (小さな表を読みとる) */
 const GRAPH_LABELS = ["月", "火", "水"] as const;
 
-function genGraph(rng: Rng): Problem {
-  const values = [randInt(rng, 3, 20), randInt(rng, 3, 20), randInt(rng, 3, 20)];
+function genGraph(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [lo, hi] = lv === 1 ? [2, 10] : lv === 3 ? [15, 60] : [3, 20];
+  const values = [randInt(rng, lo, hi), randInt(rng, lo, hi), randInt(rng, lo, hi)];
   const table = GRAPH_LABELS.map((d, i) => `${d}よう日 ${values[i]}こ`).join(" / ");
   if (rng() < 0.5) {
     const answer = values[0] + values[1] + values[2];
@@ -456,7 +488,7 @@ function genGraph(rng: Rng): Problem {
   };
 }
 
-export const GRADE4_GENERATORS: Record<string, (rng: Rng) => Problem> = {
+export const GRADE4_GENERATORS: Record<string, (rng: Rng, level?: Level) => Problem> = {
   g4_big_number: genBigNumber,
   g4_div_2digit: genDiv2Digit,
   g4_round: genRound,

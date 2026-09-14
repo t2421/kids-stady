@@ -437,3 +437,74 @@ describe("LP-02: level 1〜3 (grade1〜3, 20単元)", () => {
     }
   });
 });
+
+/*
+ * LP-02b: 出題の段階 (level 1〜3、docs/kazu-quest-levels.md 小4〜小6)。
+ * 小4〜小6 (grade4.ts〜grade6.ts、24単元) について LP-02 と同じ形式で検証する。
+ * 小4〜小6は「出題の種類が変わる」単元 (小3の g3_fraction のような例) が無く、
+ * 全単元が「同じ出題の種類で値域だけ広がる」形にそろえてあるため、
+ * MAGNITUDE_SKIP は使っていない。
+ */
+describe("LP-02b: level 1〜3 (grade4〜6, 24単元)", () => {
+  const LEVEL_RUNS = 300;
+  const LEVEL_SKILLS = [
+    ...implementedByGrade(4),
+    ...implementedByGrade(5),
+    ...implementedByGrade(6),
+  ];
+
+  /*
+   * 値域の単調性チェック用の magnitude proxy。既定は answer の数値。
+   * g4_fraction_same だけは 分数の値そのもの (答え) だと 分母が大きくなっても
+   * 0〜2程度に頭打ちになり Lv による値域拡大を反映しにくいため、
+   * 分子の和 (p.a + p.b、分母のレンジ拡大にともなって素直に増える) を使う
+   */
+  const MAGNITUDE_OVERRIDE: Record<string, (p: ReturnType<typeof generate>) => number> = {
+    g4_fraction_same: (p) => Number(p.a) + Number(p.b),
+  };
+
+  for (const skillId of LEVEL_SKILLS) {
+    it(`${skillId}: レベル1〜3 (各 ${LEVEL_RUNS} 問) は 3択ユニーク・正答を含む`, () => {
+      for (const level of [1, 2, 3] as const) {
+        const rng = mulberry32(3000 + level);
+        for (let i = 0; i < LEVEL_RUNS; i++) {
+          const p = generate(skillId, rng, { level });
+          expect(p.skillId).toBe(skillId);
+          expect(p.choices).toContain(p.answer);
+          const values = p.choices.map(valueOf);
+          for (const v of values) {
+            expect(Number.isFinite(v), `値にならない選択肢: ${p.choices}`).toBe(true);
+          }
+          expect(new Set(values).size, `同じ値の選択肢が並んだ: ${p.choices}`).toBe(3);
+        }
+      }
+    });
+
+    it(`${skillId}: レベルが上がると 値域が広がる (max(Lv1) <= max(Lv2) <= max(Lv3))`, () => {
+      const magnitude =
+        MAGNITUDE_OVERRIDE[skillId] ?? ((p: ReturnType<typeof generate>) => valueOf(p.answer));
+      const maxByLevel: Record<1 | 2 | 3, number> = {
+        1: -Infinity,
+        2: -Infinity,
+        3: -Infinity,
+      };
+      for (const level of [1, 2, 3] as const) {
+        const rng = mulberry32(4000 + level);
+        for (let i = 0; i < LEVEL_RUNS; i++) {
+          const p = generate(skillId, rng, { level });
+          maxByLevel[level] = Math.max(maxByLevel[level], magnitude(p));
+        }
+      }
+      expect(maxByLevel[1]).toBeLessThanOrEqual(maxByLevel[2]);
+      expect(maxByLevel[2]).toBeLessThanOrEqual(maxByLevel[3]);
+    });
+  }
+
+  it("level を省略した2引数呼び出しは level: 2 と完全に同じ問題列になる", () => {
+    for (const skillId of LEVEL_SKILLS) {
+      const withoutLevel = generate(skillId, mulberry32(88));
+      const withLevel2 = generate(skillId, mulberry32(88), { level: 2 });
+      expect(withLevel2).toEqual(withoutLevel);
+    }
+  });
+});

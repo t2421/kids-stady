@@ -1,6 +1,11 @@
 /*
  * 小5のスキルと問題ジェネレータ (第5章「割合の都と 魔王マイナドス」)。
  * 小数の×÷・異分母分数・割合・平均・単位量あたり・体積・倍数約数・面積。
+ *
+ * 出題の段階 (LP-02b, docs/kazu-quest-levels.md): 各ジェネレータは
+ * `(rng, level?)` を取り、level 省略時は 2 (= 従来どおりの出題) を使う。
+ * level 2 の分岐は既存コードと完全に同じ値域・同じ乱数消費順にしてある
+ * (シード固定のテストが壊れないため)。
  */
 
 import type { Problem, Rng } from "./types";
@@ -9,11 +14,16 @@ import { makeChoicesOf } from "./choices";
 import { dec, frac, gcd, lcm } from "./numbers";
 import { genericHints } from "./hints";
 
+type Level = 1 | 2 | 3;
+
 /* 小数の かけ算わり算 (0.1きざみ × 整数) */
-function genDecimalMulDiv(rng: Rng): Problem {
+function genDecimalMulDiv(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [tLo, tHi, bLo, bHi] =
+    lv === 1 ? [11, 30, 2, 4] : lv === 3 ? [100, 999, 2, 12] : [12, 95, 2, 9];
   if (rng() < 0.5) {
-    const tenths = randInt(rng, 12, 95);
-    const b = randInt(rng, 2, 9);
+    const tenths = randInt(rng, tLo, tHi);
+    const b = randInt(rng, bLo, bHi);
     const answer = dec((tenths * b) / 10, 2);
     return {
       skillId: "g5_decimal_muldiv",
@@ -40,8 +50,8 @@ function genDecimalMulDiv(rng: Rng): Problem {
       ]),
     };
   }
-  const quotientTenths = randInt(rng, 12, 95);
-  const divisor = randInt(rng, 2, 9);
+  const quotientTenths = randInt(rng, tLo, tHi);
+  const divisor = randInt(rng, bLo, bHi);
   const dividendTenths = quotientTenths * divisor;
   const answer = dec(quotientTenths / 10, 1);
   return {
@@ -71,11 +81,15 @@ function genDecimalMulDiv(rng: Rng): Problem {
 }
 
 /* 異分母の分数 (通分して たしひき・答えは約分する) */
-function genFractionDiff(rng: Rng): Problem {
-  const denominators = [2, 3, 4, 5, 6, 8];
+function genFractionDiff(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const denominators =
+    lv === 1 ? [2, 3, 4] : lv === 3 ? [3, 4, 5, 6, 7, 8, 9, 10, 12] : [2, 3, 4, 5, 6, 8];
   let d1 = denominators[randInt(rng, 0, denominators.length - 1)];
   let d2 = denominators[randInt(rng, 0, denominators.length - 1)];
-  if (d1 === d2) d2 = d1 === 2 ? 3 : 2;
+  if (d1 === d2) {
+    d2 = lv === 2 ? (d1 === 2 ? 3 : 2) : d1 === denominators[0] ? denominators[1] : denominators[0];
+  }
   const n1 = randInt(rng, 1, d1 - 1);
   const n2 = randInt(rng, 1, d2 - 1);
   const common = lcm(d1, d2);
@@ -167,9 +181,12 @@ function genFractionDiff(rng: Rng): Problem {
 }
 
 /* 割合と 百分率 */
-function genPercent(rng: Rng): Problem {
-  const base = randInt(rng, 2, 20) * 10;
-  const pct = [10, 20, 25, 40, 50, 75, 80][randInt(rng, 0, 6)];
+function genPercent(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const pctList = lv === 1 ? [10, 20, 50] : lv === 3 ? [15, 24, 35, 40, 60, 65, 75, 90] : [10, 20, 25, 40, 50, 75, 80];
+  const baseMul = lv === 1 ? [2, 10] : lv === 3 ? [10, 40] : [2, 20];
+  const base = randInt(rng, baseMul[0], baseMul[1]) * 10;
+  const pct = pctList[randInt(rng, 0, pctList.length - 1)];
   const value = (base * pct) / 100;
   if (Number.isInteger(value) && rng() < 0.6) {
     return {
@@ -197,8 +214,10 @@ function genPercent(rng: Rng): Problem {
     };
   }
   /* 「○は □の なん%?」 (割り切れる組にする) */
-  const percent = [10, 20, 25, 50][randInt(rng, 0, 3)];
-  const whole = randInt(rng, 2, 20) * 20;
+  const percentList = lv === 1 ? [10, 50] : lv === 3 ? [10, 20, 25, 50, 75] : [10, 20, 25, 50];
+  const wholeMul = lv === 1 ? [2, 8] : lv === 3 ? [10, 40] : [2, 20];
+  const percent = percentList[randInt(rng, 0, percentList.length - 1)];
+  const whole = randInt(rng, wholeMul[0], wholeMul[1]) * 20;
   const part = (whole * percent) / 100;
   return {
     skillId: "g5_percent",
@@ -226,13 +245,16 @@ function genPercent(rng: Rng): Problem {
 }
 
 /* 平均 */
-function genAverage(rng: Rng): Problem {
-  const count = randInt(rng, 3, 4);
-  const answer = randInt(rng, 4, 30);
+function genAverage(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [countLo, countHi, ansLo, ansHi, spread] =
+    lv === 1 ? [2, 3, 4, 15, 2] : lv === 3 ? [4, 5, 10, 60, 5] : [3, 4, 4, 30, 3];
+  const count = randInt(rng, countLo, countHi);
+  const answer = randInt(rng, ansLo, ansHi);
   const values: number[] = [];
   let rest = answer * count;
   for (let i = 0; i < count - 1; i++) {
-    const v = Math.max(1, answer + randInt(rng, -3, 3));
+    const v = Math.max(1, answer + randInt(rng, -spread, spread));
     values.push(v);
     rest -= v;
   }
@@ -270,9 +292,12 @@ function genAverage(rng: Rng): Problem {
 }
 
 /* 単位量あたりの 大きさ */
-function genUnitRate(rng: Rng): Problem {
-  const per = randInt(rng, 20, 150);
-  const count = randInt(rng, 3, 9);
+function genUnitRate(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [perLo, perHi, countLo, countHi] =
+    lv === 1 ? [10, 50, 2, 5] : lv === 3 ? [100, 500, 6, 20] : [20, 150, 3, 9];
+  const per = randInt(rng, perLo, perHi);
+  const count = randInt(rng, countLo, countHi);
   const total = per * count;
   if (rng() < 0.5) {
     return {
@@ -311,11 +336,13 @@ function genUnitRate(rng: Rng): Problem {
 }
 
 /* 体積 (直方体・立方体) */
-function genVolume(rng: Rng): Problem {
+function genVolume(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [lo, hi] = lv === 1 ? [2, 5] : lv === 3 ? [6, 20] : [2, 9];
   if (rng() < 0.6) {
-    const a = randInt(rng, 2, 9);
-    const b = randInt(rng, 2, 9);
-    const c = randInt(rng, 2, 9);
+    const a = randInt(rng, lo, hi);
+    const b = randInt(rng, lo, hi);
+    const c = randInt(rng, lo, hi);
     const answer = a * b * c;
     return {
       skillId: "g5_volume",
@@ -340,7 +367,7 @@ function genVolume(rng: Rng): Problem {
       ]),
     };
   }
-  const s = randInt(rng, 2, 9);
+  const s = randInt(rng, lo, hi);
   const answer = s * s * s;
   return {
     skillId: "g5_volume",
@@ -361,10 +388,12 @@ function genVolume(rng: Rng): Problem {
 }
 
 /* 倍数と 約数 */
-function genMultiple(rng: Rng): Problem {
-  const a = randInt(rng, 2, 12);
-  let b = randInt(rng, 2, 12);
-  if (b === a) b = a === 12 ? 6 : a + 1;
+function genMultiple(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [lo, hi] = lv === 1 ? [2, 6] : lv === 3 ? [2, 24] : [2, 12];
+  const a = randInt(rng, lo, hi);
+  let b = randInt(rng, lo, hi);
+  if (b === a) b = a === hi ? (lv === 2 ? 6 : lo) : a + 1;
   if (rng() < 0.5) {
     const answer = lcm(a, b);
     return {
@@ -418,10 +447,13 @@ function genMultiple(rng: Rng): Problem {
 }
 
 /* 面積 (三角形・平行四辺形) */
-function genArea(rng: Rng): Problem {
+function genArea(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [baseMulLo, baseMulHi, heightLo, heightHi] =
+    lv === 1 ? [2, 6, 3, 8] : lv === 3 ? [10, 20, 10, 30] : [2, 12, 3, 14];
   if (rng() < 0.5) {
-    const base = randInt(rng, 2, 12) * 2; /* ÷2 でわりきれるように */
-    const height = randInt(rng, 3, 14);
+    const base = randInt(rng, baseMulLo, baseMulHi) * 2; /* ÷2 でわりきれるように */
+    const height = randInt(rng, heightLo, heightHi);
     const answer = (base * height) / 2;
     return {
       skillId: "g5_area",
@@ -448,8 +480,8 @@ function genArea(rng: Rng): Problem {
       ]),
     };
   }
-  const base = randInt(rng, 3, 14);
-  const height = randInt(rng, 3, 14);
+  const base = randInt(rng, heightLo, heightHi);
+  const height = randInt(rng, heightLo, heightHi);
   const answer = base * height;
   return {
     skillId: "g5_area",
@@ -475,7 +507,7 @@ function genArea(rng: Rng): Problem {
   };
 }
 
-export const GRADE5_GENERATORS: Record<string, (rng: Rng) => Problem> = {
+export const GRADE5_GENERATORS: Record<string, (rng: Rng, level?: Level) => Problem> = {
   g5_decimal_muldiv: genDecimalMulDiv,
   g5_fraction_diff: genFractionDiff,
   g5_percent: genPercent,

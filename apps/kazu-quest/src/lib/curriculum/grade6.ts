@@ -1,6 +1,11 @@
 /*
  * 小6のスキルと問題ジェネレータ (第6章「ゼロのあなと 下の世界ネガリア」)。
  * 分数の×÷・文字と式・比・速さ・円の面積・比例・拡大縮小・場合の数。
+ *
+ * 出題の段階 (LP-02b, docs/kazu-quest-levels.md): 各ジェネレータは
+ * `(rng, level?)` を取り、level 省略時は 2 (= 従来どおりの出題) を使う。
+ * level 2 の分岐は既存コードと完全に同じ値域・同じ乱数消費順にしてある
+ * (シード固定のテストが壊れないため)。
  */
 
 import type { Problem, Rng } from "./types";
@@ -11,13 +16,18 @@ import { genericHints } from "./hints";
 
 const PI = 3.14;
 
+type Level = 1 | 2 | 3;
+
 /* 分数の かけ算わり算 */
-function genFractionMulDiv(rng: Rng): Problem {
+function genFractionMulDiv(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [dLo, dHi, mLo, mHi] =
+    lv === 1 ? [2, 5, 2, 4] : lv === 3 ? [6, 12, 4, 10] : [3, 9, 2, 6];
   const kind = randInt(rng, 0, 2);
-  const d = randInt(rng, 3, 9);
+  const d = randInt(rng, dLo, dHi);
   const n = randInt(rng, 1, d - 1);
   if (kind === 0) {
-    const m = randInt(rng, 2, 6);
+    const m = randInt(rng, mLo, mHi);
     const answer = frac(n * m, d);
     return {
       skillId: "g6_fraction_muldiv",
@@ -45,7 +55,7 @@ function genFractionMulDiv(rng: Rng): Problem {
     };
   }
   if (kind === 1) {
-    const m = randInt(rng, 2, 6);
+    const m = randInt(rng, mLo, mHi);
     const answer = frac(n, d * m);
     return {
       skillId: "g6_fraction_muldiv",
@@ -72,7 +82,8 @@ function genFractionMulDiv(rng: Rng): Problem {
       ]),
     };
   }
-  const d2 = randInt(rng, 2, 7);
+  const [d2Lo, d2Hi] = lv === 1 ? [2, 4] : lv === 3 ? [4, 10] : [2, 7];
+  const d2 = randInt(rng, d2Lo, d2Hi);
   const n2 = randInt(rng, 1, d2 - 1);
   const answer = frac(n * n2, d * d2);
   return {
@@ -102,11 +113,13 @@ function genFractionMulDiv(rng: Rng): Problem {
 }
 
 /* 文字と式 (x をもとめる) */
-function genLetterExpr(rng: Rng): Problem {
+function genLetterExpr(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
   const kind = randInt(rng, 0, 2);
   if (kind === 0) {
-    const x = randInt(rng, 2, 30);
-    const b = randInt(rng, 2, 30);
+    const [lo, hi] = lv === 1 ? [2, 10] : lv === 3 ? [20, 99] : [2, 30];
+    const x = randInt(rng, lo, hi);
+    const b = randInt(rng, lo, hi);
     return {
       skillId: "g6_letter_expr",
       text: `x + ${b} = ${x + b} のとき x は いくつ?`,
@@ -125,8 +138,10 @@ function genLetterExpr(rng: Rng): Problem {
     };
   }
   if (kind === 1) {
-    const x = randInt(rng, 2, 12);
-    const a = randInt(rng, 2, 9);
+    const [xLo, xHi, aLo, aHi] =
+      lv === 1 ? [2, 6, 2, 5] : lv === 3 ? [8, 20, 6, 12] : [2, 12, 2, 9];
+    const x = randInt(rng, xLo, xHi);
+    const a = randInt(rng, aLo, aHi);
     return {
       skillId: "g6_letter_expr",
       text: `${a} × x = ${a * x} のとき x は いくつ?`,
@@ -144,9 +159,11 @@ function genLetterExpr(rng: Rng): Problem {
       hints: genericHints([`x = ${a * x} ÷ ${a}`, `x = ${x}`]),
     };
   }
-  const x = randInt(rng, 2, 12);
-  const a = randInt(rng, 2, 6);
-  const b = randInt(rng, 1, 20);
+  const [xLo3, xHi3, aLo3, aHi3, bLo3, bHi3] =
+    lv === 1 ? [2, 6, 2, 3, 1, 10] : lv === 3 ? [8, 20, 4, 9, 10, 50] : [2, 12, 2, 6, 1, 20];
+  const x = randInt(rng, xLo3, xHi3);
+  const a = randInt(rng, aLo3, aHi3);
+  const b = randInt(rng, bLo3, bHi3);
   return {
     skillId: "g6_letter_expr",
     text: `x = ${x} のとき ${a} × x + ${b} は いくつ?`,
@@ -172,12 +189,15 @@ function genLetterExpr(rng: Rng): Problem {
 }
 
 /* 比 */
-function genRatio(rng: Rng): Problem {
-  const a = randInt(rng, 1, 9);
-  let b = randInt(rng, 1, 9);
+function genRatio(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [lo, hi] = lv === 1 ? [1, 5] : lv === 3 ? [1, 20] : [1, 9];
+  const a = randInt(rng, lo, hi);
+  let b = randInt(rng, lo, hi);
   /* a:a は 比のあたいが 1 になり 誤答が つくりにくいので ずらす */
-  if (b === a) b = a === 9 ? 8 : a + 1;
-  const k = randInt(rng, 2, 6);
+  if (b === a) b = a === hi ? (lv === 2 ? 8 : hi - 1) : a + 1;
+  const [kLo, kHi] = lv === 1 ? [2, 3] : lv === 3 ? [2, 10] : [2, 6];
+  const k = randInt(rng, kLo, kHi);
   if (rng() < 0.5) {
     const answer = frac(a, b);
     return {
@@ -223,9 +243,12 @@ function genRatio(rng: Rng): Problem {
 }
 
 /* 速さ */
-function genSpeed(rng: Rng): Problem {
-  const speed = randInt(rng, 3, 12) * 10;
-  const time = randInt(rng, 2, 9);
+function genSpeed(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [spdLo, spdHi, timeLo, timeHi] =
+    lv === 1 ? [2, 6, 2, 5] : lv === 3 ? [10, 30, 5, 15] : [3, 12, 2, 9];
+  const speed = randInt(rng, spdLo, spdHi) * 10;
+  const time = randInt(rng, timeLo, timeHi);
   const distance = speed * time;
   const kind = randInt(rng, 0, 2);
   if (kind === 0) {
@@ -295,8 +318,10 @@ function genSpeed(rng: Rng): Problem {
 }
 
 /* 円の 面積と 円周 (円周率 3.14) */
-function genCircleArea(rng: Rng): Problem {
-  const r = randInt(rng, 1, 10);
+function genCircleArea(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [lo, hi] = lv === 1 ? [1, 5] : lv === 3 ? [8, 25] : [1, 10];
+  const r = randInt(rng, lo, hi);
   if (rng() < 0.5) {
     const answer = dec(PI * r * r, 2);
     return {
@@ -352,10 +377,13 @@ function genCircleArea(rng: Rng): Problem {
 }
 
 /* 比例 */
-function genProportion(rng: Rng): Problem {
-  const unit = randInt(rng, 2, 12);
-  const x1 = randInt(rng, 2, 5);
-  const k = randInt(rng, 2, 4);
+function genProportion(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [unitLo, unitHi, x1Lo, x1Hi, kLo, kHi] =
+    lv === 1 ? [2, 6, 2, 3, 2, 3] : lv === 3 ? [6, 20, 3, 8, 3, 6] : [2, 12, 2, 5, 2, 4];
+  const unit = randInt(rng, unitLo, unitHi);
+  const x1 = randInt(rng, x1Lo, x1Hi);
+  const k = randInt(rng, kLo, kHi);
   const x2 = x1 * k;
   const y1 = unit * x1;
   const answer = unit * x2;
@@ -386,9 +414,12 @@ function genProportion(rng: Rng): Problem {
 }
 
 /* 拡大図と 縮図 */
-function genScale(rng: Rng): Problem {
-  const side = randInt(rng, 3, 20);
-  const k = randInt(rng, 2, 4);
+function genScale(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [sideLo, sideHi, kLo, kHi] =
+    lv === 1 ? [2, 10, 2, 3] : lv === 3 ? [15, 50, 3, 6] : [3, 20, 2, 4];
+  const side = randInt(rng, sideLo, sideHi);
+  const k = randInt(rng, kLo, kHi);
   if (rng() < 0.5) {
     const answer = side * k;
     return {
@@ -427,11 +458,16 @@ function genScale(rng: Rng): Problem {
   };
 }
 
-/* 場合の数 */
-function genCombination(rng: Rng): Problem {
+/* 場合の数。Lv3 は 6人の じゅんれつ・10チームの 総あたりまで広げる
+ * (n! テーブルを 6!=720 まで のばす) */
+const FACTORIALS = [1, 1, 2, 6, 24, 120, 720];
+
+function genCombination(rng: Rng, level?: Level): Problem {
+  const lv = level ?? 2;
+  const [nLo, nHi] = lv === 1 ? [2, 4] : lv === 3 ? [4, 6] : [3, 5];
   if (rng() < 0.5) {
-    const n = randInt(rng, 3, 5);
-    const answer = [1, 1, 2, 6, 24, 120][n];
+    const n = randInt(rng, nLo, nHi);
+    const answer = FACTORIALS[n];
     return {
       skillId: "g6_combination",
       text: `${n}人が 1れつに ならぶ ならびかたは なんとおり?`,
@@ -455,7 +491,8 @@ function genCombination(rng: Rng): Problem {
       ]),
     };
   }
-  const n = randInt(rng, 4, 6);
+  const [n2Lo, n2Hi] = lv === 1 ? [3, 4] : lv === 3 ? [6, 10] : [4, 6];
+  const n = randInt(rng, n2Lo, n2Hi);
   const answer = (n * (n - 1)) / 2;
   return {
     skillId: "g6_combination",
@@ -483,7 +520,7 @@ function genCombination(rng: Rng): Problem {
   };
 }
 
-export const GRADE6_GENERATORS: Record<string, (rng: Rng) => Problem> = {
+export const GRADE6_GENERATORS: Record<string, (rng: Rng, level?: Level) => Problem> = {
   g6_fraction_muldiv: genFractionMulDiv,
   g6_letter_expr: genLetterExpr,
   g6_ratio: genRatio,
