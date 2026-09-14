@@ -76,7 +76,7 @@ export const CH4_ICECAVE_2: MapDef = {
     "WSSSSSrSSSSSSW",
     "WScSSSrSSSScSW",
     "WSSSSSrSSSSSSW",
-    "WSSSSSrSSSSSSW",
+    "WWWWWWrWWWWWWW",
     "WScSSSrSSSScSW",
     "WSSSSSrSSSSSSW",
     "WWWWWWDWWWWWWW",

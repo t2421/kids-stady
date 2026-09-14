@@ -27,8 +27,12 @@ kids-stady/
 │   ├── save-data.md           # localStorage セーブデータ契約
 │   ├── mathematics-design-plan.md
 │   ├── kazu-quest-design-plan.md   # カズクエ設計の正典
-│   └── kazu-quest-roadmap.md       # カズクエ残作業のタスク分解 (Sonnet 移譲用)
-└── .github/workflows/deploy.yml  # GitHub Pages へのビルド&デプロイ
+│   ├── kazu-quest-roadmap.md       # カズクエ残作業のタスク分解と実行ログ
+│   ├── kazu-quest-balance.md       # ボス戦バランス (シミュレータ出力)
+│   ├── kazu-quest-perf.md          # 性能監査
+│   └── kazu-quest-release-checklist.md  # 本番プレイスルー・チェックリスト
+├── .github/workflows/deploy.yml  # GitHub Pages へのビルド&デプロイ
+└── .github/workflows/e2e.yml     # カズクエ E2E (スモーク自動 / 全章は手動起動)
 ```
 
 ## 開発方針
