@@ -5,11 +5,12 @@ import {
   fieldPos,
   grindBattleUntilField,
   interactAndAdvance,
+  openTeacherMenuAndPickUnit,
   seedChapter,
   stepOnce,
-  takeSpellTestAllCorrect,
   teleport,
   waitForAnswerable,
+  walkLessonToPass,
   walkUntil,
   warp,
 } from "./helpers";
@@ -159,10 +160,11 @@ test("chapter 5 golden path: queen → shop → learn パーセンフレア → 
   await options(page).last().click();
   await advanceDialog(page); /* まいど ありがとう! */
 
-  /* まなびや: 学者 (4,2) の最初の選択肢 = パーセンフレア を はい で受けて全問正解 */
+  /* まなびや: 割合ギルド長 (4,2) の一覧から「割合と百分率」を選んで全問正解 */
   await warp(page, "ch5-percen-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g5_percent");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -171,7 +173,6 @@ test("chapter 5 golden path: queen → shop → learn パーセンフレア → 
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
   await flag(page, "learned.percenFlare");
 
   /* 順番ゲート: 星のかぎ なしでは 海の番人 (19,12) が 海底神殿入口 (20,12) への道をふさぐ */

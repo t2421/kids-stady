@@ -3,7 +3,7 @@
 import type { MapDef } from "../../../types";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 function exitEvents(
   mapId: string,
@@ -117,19 +117,19 @@ export const CH3_WAKEERA_MANABIYA: MapDef = {
       id: "scholar-wakeera",
       x: 4,
       y: 2,
-      art: "scholar",
+      art: "calcMaster",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは ワケーラの まなびや。わり算と 大きな数を おしえておる。",
+            "わしは 計算商人。ワケーラの まなびやで わり算と 大きな数を おしえておる。",
             "わり算は 「おなじ かずずつ わけること」。あまりが でることも あるぞ。",
           ],
-          then: spellTestMenu([
-            { spellId: "waridama", label: "ワリダマ (わり算)" },
-            { spellId: "amariBind", label: "アマリバインド (あまり)" },
-            { spellId: "ketaCrush", label: "ケタクラッシュ (かけ算ひっさん)" },
-            { spellId: "manLight", label: "マンライト (大きい数)" },
+          then: teacherMenu([
+            { skillId: "g3_div", label: "わり算", spellIds: ["waridama"] },
+            { skillId: "g3_div_remainder", label: "あまりの ある わり算", spellIds: ["amariBind"] },
+            { skillId: "g3_mul_column", label: "かけ算の ひっさん", spellIds: ["ketaCrush"] },
+            { skillId: "g3_big_number", label: "大きい数", spellIds: ["manLight"] },
           ]),
         },
       ],

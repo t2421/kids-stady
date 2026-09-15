@@ -3,7 +3,7 @@
 import type { MapDef } from "../../../types";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 function exitEvents(
   mapId: string,
@@ -117,19 +117,19 @@ export const CH4_MAJORIA_MANABIYA: MapDef = {
       id: "scholar-majoria",
       x: 4,
       y: 2,
-      art: "measurer",
+      art: "scaleQueen",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは メジャーリアの まなびや。角度・面せき・大きな数を おしえておる。",
+            "わたくしは はかりの女王。メジャーリアの まなびやで 角度・面せき・大きな数を おしえています。",
             "直角は 90ど。はんたいむきの 一直線は 180ど。おぼえておきなさい!",
           ],
-          then: spellTestMenu([
-            { spellId: "kakudoSpin", label: "カクドスピン (角度)" },
-            { spellId: "mensekiWall", label: "メンセキウォール (面せき)" },
-            { spellId: "octoBillion", label: "オクトビリオン (億と兆)" },
-            { spellId: "gaisuuBomb", label: "ガイスウボム (がい数)" },
+          then: teacherMenu([
+            { skillId: "g4_angle", label: "角度", spellIds: ["kakudoSpin"] },
+            { skillId: "g4_area", label: "面せき", spellIds: ["mensekiWall"] },
+            { skillId: "g4_big_number", label: "億と兆", spellIds: ["octoBillion"] },
+            { skillId: "g4_round", label: "がい数", spellIds: ["gaisuuBomb"] },
           ]),
         },
       ],

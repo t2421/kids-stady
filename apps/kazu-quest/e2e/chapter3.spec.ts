@@ -4,11 +4,12 @@ import {
   answerCorrectOnce,
   grindBattleUntilField,
   interactAndAdvance,
+  openTeacherMenuAndPickUnit,
   seedChapter,
   stepOnce,
-  takeSpellTestAllCorrect,
   teleport,
   waitForAnswerable,
+  walkLessonToPass,
   warp,
 } from "./helpers";
 
@@ -81,10 +82,11 @@ test("chapter 3 golden path: chief → kakeru joins → shop → learn ワリダ
   await options.last().click();
   await advanceDialog(page); /* まいど ありがとう! */
 
-  /* まなびや: 学者 (4,2) の最初の選択肢 = ワリダマ を はい で受けて全問正解 */
+  /* まなびや: 計算商人 (4,2) の一覧から「わり算」を選んで全問正解 */
   await warp(page, "ch3-wakeera-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g3_div");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -93,7 +95,6 @@ test("chapter 3 golden path: chief → kakeru joins → shop → learn ワリダ
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
   await flag(page, "learned.waridama");
 
   /* 大灯りの遺跡 (寄り道): 祭壇 (6,1) を しらべて 円の といに 正解 → c3.ruinsLit */

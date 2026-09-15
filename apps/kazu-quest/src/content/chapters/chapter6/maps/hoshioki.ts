@@ -7,7 +7,7 @@ import type { EventCommand, MapDef } from "../../../types";
 import { CH6_TOWN_LEGEND } from "../legends";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 export const CH6_HOSHIOKI: MapDef = {
   id: "ch6-hoshioki",
@@ -290,19 +290,23 @@ export const CH6_HOSHIOKI_MANABIYA: MapDef = {
       id: "scholar-hoshioki",
       x: 4,
       y: 2,
-      art: "scholar",
+      art: "stargazer",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは さいごの まなびや。分数の かけ算わり算・文字と式・拡大縮小、",
-            "そして 6年ぶんを ぜんぶ つかう 「フッカツノシキ」を おしえよう。",
+            "わたしは 星読み。さいごの まなびやで 分数の かけ算わり算・文字と式・拡大縮小、",
+            "そして 6年ぶんを ぜんぶ つかう 「比れい」を おしえよう。",
           ],
-          then: spellTestMenu([
-            { spellId: "bunsuuNova", label: "ブンスウノヴァ (分数の×÷)" },
-            { spellId: "mojishikiSign", label: "モジシキサイン (文字と式)" },
-            { spellId: "kakudaiSlash", label: "カクダイスラッシュ (拡大縮小)" },
-            { spellId: "fukkatsuNoShiki", label: "フッカツノシキ (6年ぶんの 総ふくしゅう)" },
+          then: teacherMenu([
+            { skillId: "g6_fraction_muldiv", label: "分数の×÷", spellIds: ["bunsuuNova"] },
+            { skillId: "g6_letter_expr", label: "文字と式", spellIds: ["mojishikiSign"] },
+            { skillId: "g6_scale", label: "拡大縮小", spellIds: ["kakudaiSlash"] },
+            {
+              skillId: "g6_proportion",
+              label: "比れい (6年ぶんの 総ふくしゅう)",
+              spellIds: ["fukkatsuNoShiki"],
+            },
           ]),
         },
       ],

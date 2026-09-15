@@ -3,7 +3,7 @@
 import type { MapDef } from "../../../types";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 function exitEvents(
   mapId: string,
@@ -119,19 +119,19 @@ export const CH5_PERCEN_MANABIYA: MapDef = {
       id: "scholar-percen",
       x: 4,
       y: 2,
-      art: "scholar",
+      art: "percentGuildMaster",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは パーセンの まなびや。割合・小数・倍数約数を おしえておる。",
+            "わたしが 割合ギルド長だ。パーセンでは 割合・小数・倍数約数を おしえておる。",
             "くらべる りょう ÷ もとに する りょう = わりあい。これが すべての もとじゃ!",
           ],
-          then: spellTestMenu([
-            { spellId: "percenFlare", label: "パーセンフレア (割合と百分率)" },
-            { spellId: "shousuuStorm", label: "ショウスウストーム (小数の×÷)" },
-            { spellId: "baiyakuBreak", label: "バイヤクブレイク (倍数と約数)" },
-            { spellId: "heikinHeal", label: "ヘイキンヒール (平きん)" },
+          then: teacherMenu([
+            { skillId: "g5_percent", label: "割合と百分率", spellIds: ["percenFlare"] },
+            { skillId: "g5_decimal_muldiv", label: "小数の×÷", spellIds: ["shousuuStorm"] },
+            { skillId: "g5_multiple", label: "倍数と約数", spellIds: ["baiyakuBreak"] },
+            { skillId: "g5_average", label: "平きん", spellIds: ["heikinHeal"] },
           ]),
         },
       ],

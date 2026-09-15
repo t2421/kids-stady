@@ -2,6 +2,7 @@
 
 import type { MapDef } from "../../../types";
 import { shrineMenu } from "../../shrineMenu";
+import { teacherMenu } from "../../teacherMenu";
 import { INTERIOR_LEGEND, CASTLE_LEGEND } from "../../chapter1/legends";
 
 function exitEvents(
@@ -113,36 +114,22 @@ export const CH2_MINATOS_MANABIYA: MapDef = {
       id: "scholar3",
       x: 4,
       y: 2,
-      art: "scholar",
+      art: "abacusCaptain",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは ミナトスの まなびや。九九と ひっさんを おしえておるぞ。",
+            "わしは そろばん船長。ミナトスの まなびやでは 九九と ひっさんを おしえておるぞ。",
             "九九は 「なんばんめの だんか」を おぼえるのが コツじゃ!",
           ],
-          then: [
+          then: teacherMenu([
+            { skillId: "g2_kuku", label: "九九", spellIds: ["kukudama"] },
             {
-              type: "choice",
-              prompt: "ククダマ (九九) の テスト?",
-              yes: [{ type: "openSpellTest", spellId: "kukudama" }],
-              no: [
-                {
-                  type: "choice",
-                  prompt: "ヒッサンブレイク (ひっさん) の テスト?",
-                  yes: [{ type: "openSpellTest", spellId: "hissanBreak" }],
-                  no: [
-                    {
-                      type: "choice",
-                      prompt: "タシリアーダ (ぜんいん かいふく) の テスト?",
-                      yes: [{ type: "openSpellTest", spellId: "tashiriada" }],
-                      no: [{ type: "message", pages: ["また おいで!"] }],
-                    },
-                  ],
-                },
-              ],
+              skillId: "g2_add_column",
+              label: "たし・ひきざんの ひっさん",
+              spellIds: ["hissanBreak", "tashiriada"],
             },
-          ],
+          ]),
         },
       ],
     },

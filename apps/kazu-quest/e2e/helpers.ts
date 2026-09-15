@@ -473,3 +473,27 @@ export async function takeSpellTestAllCorrect(page: Page, maxQuestions = 40) {
   }
   await answerAllCorrectUntilHidden(page, "spell-test-banner", maxQuestions);
 }
+
+/*
+ * 新・まなびやの先生メニュー (学びの設計 LP-18)。z で話しかけると挨拶 (複数ページ)
+ * のあと teacher-menu (単元一覧) が開く — 旧来の はい/いいえ 入れ子と違って
+ * 中間の choice が無いので、z を送り続けて teacher-menu が現れるのを待つだけでよい。
+ * 指定 skillId の項目をタップし、lesson-screen が開くまで待つ (以降は
+ * walkLessonToPass に委ねる — どの章のどの先生でも同じ形)。
+ */
+export async function openTeacherMenuAndPickUnit(page: Page, skillId: string) {
+  await page.keyboard.press("z");
+  const menu = page.locator('[data-testid="teacher-menu"]');
+  for (let i = 0; i < 30; i++) {
+    if (await menu.isVisible()) break;
+    await page.keyboard.press("z");
+    await page.waitForTimeout(500);
+  }
+  await menu.waitFor({ state: "visible", timeout: 15_000 });
+  await page
+    .locator(`[data-testid="teacher-menu-item"][data-skill="${skillId}"]`)
+    .click();
+  await page
+    .locator('[data-testid="lesson-screen"]')
+    .waitFor({ state: "visible", timeout: 15_000 });
+}

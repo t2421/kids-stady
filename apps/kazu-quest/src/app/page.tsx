@@ -60,6 +60,12 @@ const PreviewMenu = dynamic(
   { ssr: false },
 );
 
+/* まなびやの先生メニュー (LP-18): EventBus "open-teacher-menu" で開く、client のみ */
+const TeacherMenu = dynamic(
+  () => import("@/components/TeacherMenu").then((m) => m.TeacherMenu),
+  { ssr: false },
+);
+
 const ProfileGate = dynamic(
   () => import("@/components/ProfileGate").then((m) => m.ProfileGate),
   { ssr: false },
@@ -124,6 +130,7 @@ export default function Home() {
       <ReadinessScreen />
       <ReviewScreen />
       <PreviewMenu />
+      <TeacherMenu />
       <GameUiOverlay />
       <StatusPanelOverlay />
       <StatsScreen />

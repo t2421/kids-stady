@@ -31,6 +31,7 @@ import {
   handleOpenLesson,
   handleOpenPreview,
   handleOpenReview,
+  handleOpenTeacherMenu,
 } from "../field/lessonFlow";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
@@ -670,6 +671,9 @@ export class FieldScene extends Scene {
           break;
         case "openPreview":
           handleOpenPreview(this.ui, () => advance());
+          break;
+        case "openTeacherMenu":
+          handleOpenTeacherMenu(this.ui, effect.entries, () => advance());
           break;
         case "openShop":
           handleShop(this.ui, effect.shopId, () => advance());

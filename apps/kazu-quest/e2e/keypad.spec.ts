@@ -3,9 +3,9 @@ import {
   advanceLessonUntil,
   correctChoice,
   keypadDisplay,
+  openTeacherMenuAndPickUnit,
   seedChapter,
   startGame,
-  startSpellTest,
   teleport,
   walkLessonToPass,
   warp,
@@ -41,10 +41,10 @@ test("keypad: chapter 3 spell test uses the keypad (keys >= 72px) and passes wit
   const start = await seedChapter(page, 3);
   expect(start.mapId).toBe("ch3-wakeera");
 
-  /* まなびや: 学者 (4,2) の最初の選択肢 = ワリダマ (g3_div、レッスンに委譲) */
+  /* まなびや: 計算商人 (4,2) の一覧から「わり算」(g3_div、レッスンに委譲) */
   await warp(page, "ch3-wakeera-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await startSpellTest(page);
+  await openTeacherMenuAndPickUnit(page, "g3_div");
 
   /* レッスンの story/concept/れい/穴埋め (常に3択) を抜けて、
      れんしゅう Lv1 まで進める — ここが検証ポイント */
@@ -91,10 +91,10 @@ test("keypad: chapter 1 spell test still uses the three choices", async ({ page 
   test.setTimeout(120_000);
   await startGame(page);
 
-  /* 王城の まなびや (賢者は (2,4)) — ヒキダマ (g1_sub_nc、小1、レッスンに委譲) */
+  /* 王城の まなびや (ふくろう博士は (2,4)) — ヒキダマ (g1_sub_nc、小1、レッスンに委譲) */
   await warp(page, "ch1-capital-castle", "start");
   await teleport(page, 3, 4, "left");
-  await startSpellTest(page);
+  await openTeacherMenuAndPickUnit(page, "g1_sub_nc");
 
   /* れんしゅう Lv1 まで進める (小1単元は穴埋め同様ずっと3択のはず) */
   await advanceLessonUntil(page, "lesson-practice");

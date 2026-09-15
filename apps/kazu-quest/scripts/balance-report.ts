@@ -18,6 +18,7 @@ import {
   LEVEL_OFFSETS,
   MAX_WIN_RATE_BELOW_LEVEL,
   MIN_WIN_RATE_AT_LEVEL,
+  learningExpForChapter,
   partyLabel,
   scenarioMonsters,
   type BalanceScenario,
@@ -147,7 +148,12 @@ function renderSensitivity(reports: ScenarioReport[]): string[] {
   });
 }
 
-/* 章ごとに1行: 章頭Lv → 想定Lv に必要な EXP と、その章のボス (必須戦闘) EXP 合計 */
+/*
+ * 章ごとに1行: 章頭Lv → 想定Lv に必要な EXP と、その章のボス (必須戦闘) EXP
+ * 合計、および その学年の単元をレッスン+テスト合格まで進めた分の EXP
+ * (学びの設計 LP-21。章ゲートによりクリアまでに can 到達済みという前提の
+ * 概算 — tests/balanceScenarios.ts の learningExpForChapter 参照)
+ */
 function renderExp(reports: ScenarioReport[]): string[] {
   const chapters = [...new Set(reports.map((r) => r.scenario.chapter))];
   return chapters.map((chapter) => {
@@ -157,8 +163,9 @@ function renderExp(reports: ScenarioReport[]): string[] {
     const bossExp = own
       .flatMap((s) => scenarioMonsters(s).flat())
       .reduce((sum, m) => sum + m.exp, 0);
-    const share = need === 0 ? 100 : Math.round((bossExp / need) * 100);
-    return `| ${chapter} | Lv${final.startLevel} → Lv${final.level} | ${need} | ${bossExp} | ${share}% |`;
+    const lessonExp = learningExpForChapter(chapter);
+    const share = need === 0 ? 100 : Math.round(((bossExp + lessonExp) / need) * 100);
+    return `| ${chapter} | Lv${final.startLevel} → Lv${final.level} | ${need} | ${bossExp} | ${lessonExp} | ${share}% |`;
   });
 }
 
@@ -213,12 +220,15 @@ function renderReport(reports: ScenarioReport[]): string {
     "|---|---|---|---|---|---|",
     ...renderSensitivity(reports),
     "",
-    "## EXP 概算 (必須戦闘だけで想定Lvに届くか)",
+    "## EXP 概算 (必須戦闘 + 学びのEXPだけで想定Lvに届くか)",
     "",
-    "必要EXP = 章頭Lv → 想定Lv。ボスEXP = その章の boss:true 戦闘の EXP 合計。残りは雑魚戦で稼ぐ必要がある。",
+    "必要EXP = 章頭Lv → 想定Lv。ボスEXP = その章の boss:true 戦闘の EXP 合計。" +
+      "単元EXP = その学年の全単元をレッスン完了+テスト合格まで進めた分の EXP (学びの設計 LP-21。" +
+      "章ゲートで can 到達済みという前提の概算。マスターぶんは間隔復習に日数がかかるためここには含めない)。" +
+      "残りは雑魚戦で稼ぐ必要がある。",
     "",
-    "| 章 | Lv | 必要EXP | ボスEXP | ボスで賄える割合 |",
-    "|---|---|---|---|---|",
+    "| 章 | Lv | 必要EXP | ボスEXP | 単元EXP | ボス+単元で賄える割合 |",
+    "|---|---|---|---|---|---|",
     ...renderExp(reports),
     "",
     "## 装備の想定",

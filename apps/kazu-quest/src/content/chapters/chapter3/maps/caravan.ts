@@ -6,7 +6,7 @@
 import type { MapDef } from "../../../types";
 import { CH3_TOWN_LEGEND } from "../legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 export const CH3_CARAVAN: MapDef = {
   id: "ch3-caravan",
@@ -65,19 +65,19 @@ export const CH3_CARAVAN: MapDef = {
       id: "caravan-scholar",
       x: 5,
       y: 7,
-      art: "scholar",
+      art: "calcMaster",
       movement: "static",
       dialog: [
         {
           pages: [
-            "わしは たびの がくしゃじゃ。小数・分数・重さ・円を おしえておる。",
+            "わしは たびの 計算商人じゃ。小数・分数・重さ・円を おしえておる。",
             "0.1が 10こ あつまると 1。おぼえておくと つよいぞ!",
           ],
-          then: spellTestMenu([
-            { spellId: "shousuuRain", label: "ショウスウレイン (小数)" },
-            { spellId: "hafun", label: "ハーフン (分数)" },
-            { spellId: "omosaPress", label: "オモサプレス (重さ)" },
-            { spellId: "enCircle", label: "エンサークル (円と球)" },
+          then: teacherMenu([
+            { skillId: "g3_decimal", label: "小数", spellIds: ["shousuuRain"] },
+            { skillId: "g3_fraction", label: "分数", spellIds: ["hafun"] },
+            { skillId: "g3_weight", label: "重さ", spellIds: ["omosaPress"] },
+            { skillId: "g3_circle", label: "円と球", spellIds: ["enCircle"] },
           ]),
         },
       ],

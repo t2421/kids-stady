@@ -6,7 +6,7 @@
 import type { MapDef } from "../../../types";
 import { CH4_TOWN_LEGEND } from "../legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 export const CH4_KOGOE: MapDef = {
   id: "ch4-kogoe",
@@ -65,19 +65,19 @@ export const CH4_KOGOE: MapDef = {
       id: "kogoe-scholar",
       x: 5,
       y: 7,
-      art: "measurer",
+      art: "scaleQueen",
       movement: "static",
       dialog: [
         {
           pages: [
-            "わしは コゴエの ものしり。小数・分数・わり算・グラフを おしえておる。",
+            "わたくしは はかりの女王。コゴエでは 小数・分数・わり算・グラフを おしえています。",
             "1/4 と 2/4 は 分母が おなじだから そのまま たせるぞ!",
           ],
-          then: spellTestMenu([
-            { spellId: "decimaFreeze", label: "デシマフリーズ (小数の計算)" },
-            { spellId: "bunsuuHeal", label: "ブンスウヒール (同分母の分数)" },
-            { spellId: "warikiriBlade", label: "ワリキリブレード (2けたで わる)" },
-            { spellId: "graphEye", label: "グラフアイ (ひょうと グラフ)" },
+          then: teacherMenu([
+            { skillId: "g4_decimal", label: "小数の計算", spellIds: ["decimaFreeze"] },
+            { skillId: "g4_fraction_same", label: "同分母の分数", spellIds: ["bunsuuHeal"] },
+            { skillId: "g4_div_2digit", label: "2けたで わる わり算", spellIds: ["warikiriBlade"] },
+            { skillId: "g4_graph", label: "ひょうと グラフ", spellIds: ["graphEye"] },
           ]),
         },
       ],

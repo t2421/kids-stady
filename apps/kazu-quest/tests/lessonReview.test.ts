@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { advanceClock, resetClock } from "../src/lib/clock";
-import { masteredShardCount, reviewSelection } from "../src/lib/review";
+import { masteredShardCount, negariaStageFor, reviewSelection } from "../src/lib/review";
 import { defaultSave, type MasteryEntry, type SaveData } from "../src/lib/save";
 
 /*
@@ -104,5 +104,22 @@ describe("masteredShardCount", () => {
       e: { state: "none" },
     });
     expect(masteredShardCount(save)).toBe(2);
+  });
+});
+
+describe("negariaStageFor", () => {
+  it("しきい値ちょうどで段が上がる (0/8/16/24)", () => {
+    expect(negariaStageFor(0)).toBe(0);
+    expect(negariaStageFor(7)).toBe(0);
+    expect(negariaStageFor(8)).toBe(1);
+    expect(negariaStageFor(15)).toBe(1);
+    expect(negariaStageFor(16)).toBe(2);
+    expect(negariaStageFor(23)).toBe(2);
+    expect(negariaStageFor(24)).toBe(3);
+  });
+
+  it("24を超えても段3のまま (上限なし)", () => {
+    expect(negariaStageFor(30)).toBe(3);
+    expect(negariaStageFor(1000)).toBe(3);
   });
 });

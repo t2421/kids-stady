@@ -4,8 +4,8 @@ import { useEffect, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
 import { SKILLS, generate, type Problem } from "@/lib/curriculum";
 import { isAnswerCorrect } from "@/lib/curriculum/answer";
-import { masteryOf, onReviewResult } from "@/lib/mastery";
 import { autosave, updateSave } from "@/game/session";
+import { applyReviewResultExp } from "@/lib/learningExp";
 import { inputModeFor } from "@/lib/inputMode";
 import { dqWindow, actionButton, UI_COLORS } from "@/components/uiTheme";
 import { MathChoices } from "@/components/MathChoices";
@@ -18,7 +18,10 @@ import { Keypad } from "@/components/Keypad";
  * "review-finished" {results} を返す。
  *
  * mastered に昇格した単元があれば、その単元の学年 = 章の「数晶のかけら」
- * (kakera_<chapter>) を1個渡す (src/content/items.ts に登録済み)。
+ * (kakera_<chapter>) を1個渡す (src/content/items.ts に登録済み)。あわせて
+ * パーティ全員に「マスター」ぶんのEXPも渡す (学びの設計 LP-21。onReviewResult
+ * は mastery.ts の中で唯一 "mastered" を設定する場所なので、ここが正しい
+ * フック位置 — onTestResult 側は "mastered" にはならない)。
  */
 
 const QUESTIONS_PER_SKILL = 5;
@@ -86,12 +89,15 @@ export function ReviewScreen() {
 
     updateSave((save) => {
       let next = save;
+      /* applyReviewResultExp: mastery遷移 + can/mastered → mastered に
+       * 初めて到達したときの「マスター」ぶんのEXP付与 (LP-21) をまとめて行う。
+       * かけらの付与は justMastered を見てここで別途行う (かけらとEXPは
+       * 別の報酬なので責務を分けたまま — @/lib/learningExp のコメント参照) */
       const shardGains: Record<string, number> = {};
       for (const [i, skillId] of skillIds.entries()) {
-        const before = masteryOf(next, skillId).state;
-        next = onReviewResult(next, skillId, corrects[i], QUESTIONS_PER_SKILL);
-        const after = masteryOf(next, skillId).state;
-        if (before !== "mastered" && after === "mastered") {
+        const outcome = applyReviewResultExp(next, skillId, corrects[i], QUESTIONS_PER_SKILL);
+        next = outcome.save;
+        if (outcome.justMastered) {
           const grade = SKILLS.find((s) => s.id === skillId)?.grade;
           if (grade) {
             const itemId = `kakera_${grade}`;

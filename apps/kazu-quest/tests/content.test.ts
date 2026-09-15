@@ -119,6 +119,17 @@ function collectCommands(map: MapDef): EventCommand[] {
   return out;
 }
 
+/*
+ * openTeacherMenu (LP-18) の entries が持つ spellIds を1列に展開する。
+ * 旧 openSpellTest 1コマンド=1呪文だったのに対し、こちらは1コマンドに
+ * 複数単元・複数呪文がぶら下がる (章2 の g2_add_column のように1単元に
+ * 複数呪文が対応することもある) ので、まとめて数える
+ */
+function teacherMenuSpellIds(cmd: EventCommand): string[] {
+  if (cmd.type !== "openTeacherMenu") return [];
+  return cmd.entries.flatMap((entry) => entry.spellIds ?? []);
+}
+
 function inBounds(map: MapDef, x: number, y: number): boolean {
   return y >= 0 && y < map.grid.length && x >= 0 && x < map.grid[0].length;
 }
@@ -144,6 +155,7 @@ describe("flag reachability", () => {
         if (cmd.type === "setFlag") settable.add(cmd.flag);
         if (cmd.type === "battle" && cmd.winFlag) settable.add(cmd.winFlag);
         if (cmd.type === "openSpellTest") settable.add(`learned.${cmd.spellId}`);
+        for (const spellId of teacherMenuSpellIds(cmd)) settable.add(`learned.${spellId}`);
       }
       for (const ev of map.events) {
         if (ev.onceFlag) settable.add(ev.onceFlag);
@@ -309,6 +321,7 @@ describe("chapter progression", () => {
       for (const cmd of collectCommands(map)) {
         if (cmd.type === "openSpellTest") testable.add(cmd.spellId);
         if (cmd.type === "learnSpell") testable.add(cmd.spellId);
+        for (const spellId of teacherMenuSpellIds(cmd)) testable.add(spellId);
       }
     }
     /* 加入時に最初から覚えている呪文はテスト不要 */
@@ -471,6 +484,18 @@ describe.each(maps.map((m) => [m.id, m] as const))("map %s", (_id, map) => {
           SKILLS.some((s) => s.id === cmd.skillId && s.implemented),
           `openLesson の skill "${cmd.skillId}" が未実装/未登録`,
         ).toBe(true);
+      }
+      /* まなびやの先生メニュー (openTeacherMenu, LP-18) の skillId/spellIds も同様 */
+      if (cmd.type === "openTeacherMenu") {
+        for (const entry of cmd.entries) {
+          expect(
+            SKILLS.some((s) => s.id === entry.skillId && s.implemented),
+            `openTeacherMenu の skill "${entry.skillId}" が未実装/未登録`,
+          ).toBe(true);
+          for (const spellId of entry.spellIds ?? []) {
+            expect(SPELLS[spellId], `openTeacherMenu の呪文 "${spellId}"`).toBeDefined();
+          }
+        }
       }
       /* memberId タイポは勇者ステータスに静かにフォールバックしてしまう */
       if (cmd.type === "joinParty" || cmd.type === "learnSpell") {

@@ -5,6 +5,7 @@
 
 import type { MapDef } from "../../../types";
 import { shrineMenu } from "../../shrineMenu";
+import { teacherMenu } from "../../teacherMenu";
 import { CASTLE_LEGEND, INTERIOR_LEGEND } from "../legends";
 
 function exitEvents(
@@ -175,36 +176,19 @@ export const CH1_CAPITAL_CASTLE: MapDef = {
       id: "scholar",
       x: 2,
       y: 4,
-      art: "scholar",
+      art: "owlProfessor",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは しろの まなびや。じゅもんの テストが うけられるぞ。",
-            "10もん中 8もん せいかいで ごうかくじゃ!",
+            "わしは ふくろう博士。しろの まなびやで かずを おしえておる。",
+            "すきな たんげんを えらんで まなぶと よいぞ。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ヒキダマ (ひきざん) の テスト?",
-              yes: [{ type: "openSpellTest", spellId: "hikidama" }],
-              no: [
-                {
-                  type: "choice",
-                  prompt: "タシリア (たしざん) の テスト?",
-                  yes: [{ type: "openSpellTest", spellId: "tashiria" }],
-                  no: [
-                    {
-                      type: "choice",
-                      prompt: "かぞえスラッシュ (かぞえる) の テスト?",
-                      yes: [{ type: "openSpellTest", spellId: "kazoeSlash" }],
-                      no: [{ type: "message", pages: ["また おいで!"] }],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
+          then: teacherMenu([
+            { skillId: "g1_sub_nc", label: "ひきざん", spellIds: ["hikidama"] },
+            { skillId: "g1_add_nc", label: "たしざん", spellIds: ["tashiria"] },
+            { skillId: "g1_count", label: "かぞえる", spellIds: ["kazoeSlash"] },
+          ]),
         },
       ],
     },
@@ -358,36 +342,19 @@ export const CH1_MORIKAGE_MANABIYA: MapDef = {
       id: "scholar2",
       x: 4,
       y: 2,
-      art: "scholar",
+      art: "owlProfessor",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは モリカゲの まなびや。",
+            "ここは モリカゲの まなびや。ふくろう博士の でししが おしえておるぞ。",
             "くりあがり・くりさがりは 「10のまとまり」で かんがえるのじゃ。",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ヒキダマン (くりさがり) の テスト?",
-              yes: [{ type: "openSpellTest", spellId: "hikidaman" }],
-              no: [
-                {
-                  type: "choice",
-                  prompt: "タシリアン (くりあがり) の テスト?",
-                  yes: [{ type: "openSpellTest", spellId: "tashirian" }],
-                  no: [
-                    {
-                      type: "choice",
-                      prompt: "くらべシールド (くらべる) の テスト?",
-                      yes: [{ type: "openSpellTest", spellId: "kurabeShield" }],
-                      no: [{ type: "message", pages: ["また おいで!"] }],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
+          then: teacherMenu([
+            { skillId: "g1_sub_borrow", label: "くりさがりの ひきざん", spellIds: ["hikidaman"] },
+            { skillId: "g1_add_carry", label: "くりあがりの たしざん", spellIds: ["tashirian"] },
+            { skillId: "g1_compare", label: "かずの くらべかた", spellIds: ["kurabeShield"] },
+          ]),
         },
       ],
     },

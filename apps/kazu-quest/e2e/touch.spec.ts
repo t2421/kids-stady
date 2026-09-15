@@ -196,6 +196,7 @@ test("lint: この spec はキー入力 API を一切使わない", () => {
     "advanceDialog",
     "grindBattleUntilField",
     "takeSpellTestAllCorrect",
+    "openTeacherMenuAndPickUnit",
   ];
   for (const name of keyHelpers) {
     expect(src.includes(`${name}(`), `${name}( を使っている`).toBe(false);

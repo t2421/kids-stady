@@ -4,10 +4,11 @@ import {
   fieldPos,
   grindBattleUntilField,
   interactAndAdvance,
+  openTeacherMenuAndPickUnit,
   startGame,
   stepOnce,
-  takeSpellTestAllCorrect,
   teleport,
+  walkLessonToPass,
   warp,
 } from "./helpers";
 
@@ -38,9 +39,10 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
   expect(afterKing.flags["c1.metKing"]).toBe(true);
   expect(afterKing.inventory.gold).toBe(50);
 
-  /* まなびや: ヒキダマ習得テスト (賢者は (2,4)) */
+  /* まなびや: ふくろう博士のメニューから「ひきざん」→ ヒキダマ習得 (先生は (2,4)) */
   await teleport(page, 3, 4, "left");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g1_sub_nc");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -49,7 +51,6 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
 
   /* E2E用にレベルを上げてボス戦を短縮 (テストフック) */
   await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.grantLevel(12));
@@ -70,10 +71,11 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
     () => window.__KAZUQUEST_DEBUG__!.getSave().flags["c1.midboss"] === true,
   );
 
-  /* モリカゲ村のまなびや: ヒキダマン習得テスト (橋の番人ゲート解除) */
+  /* モリカゲ村のまなびや: 「くりさがりの ひきざん」→ ヒキダマン習得 (橋の番人ゲート解除) */
   await warp(page, "ch1-morikage-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g1_sub_borrow");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -82,7 +84,6 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
 
   /* 洞くつ最奥のボス イレイサー */
   await warp(page, "ch1-cave-boss", "entry");

@@ -1,10 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
-  advanceDialog,
   advanceLessonUntil,
   correctChoice,
+  openTeacherMenuAndPickUnit,
   startGame,
-  startSpellTest,
   teleport,
   walkLessonToPass,
   warp,
@@ -35,10 +34,10 @@ test("lesson practice: 間違えるとヒントが段階的に深くなり、そ
   test.setTimeout(240_000);
   await startGame(page);
 
-  /* 王城の まなびや (賢者は (2,4)) — ヒキダマ (g1_sub_nc、くりさがりなし の ひきざん) */
+  /* 王城の まなびや (ふくろう博士は (2,4)) — ヒキダマ (g1_sub_nc、くりさがりなし の ひきざん) */
   await warp(page, "ch1-capital-castle", "start");
   await teleport(page, 3, 4, "left");
-  await startSpellTest(page);
+  await openTeacherMenuAndPickUnit(page, "g1_sub_nc");
   await advanceLessonUntil(page, "lesson-practice");
 
   await expect(correctChoice(page)).toBeVisible({ timeout: 10_000 });
@@ -66,7 +65,6 @@ test("lesson practice: 間違えるとヒントが段階的に深くなり、そ
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
   const save = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave());
   expect(save.flags["learned.hikidama"]).toBe(true);
   /* れんしゅう中の不正解は まちがいノートに積まない (テスト不正解だけの仕様) */
@@ -79,10 +77,10 @@ test("lesson practice: cherry diagram hint for くりさがり (ヒキダマン)
   test.setTimeout(240_000);
   await startGame(page);
 
-  /* モリカゲ村の まなびや (賢者は (4,2)) — ヒキダマン (g1_sub_borrow → さくらんぼ図) */
+  /* モリカゲ村の まなびや (ふくろう博士は (4,2)) — ヒキダマン (g1_sub_borrow → さくらんぼ図) */
   await warp(page, "ch1-morikage-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await startSpellTest(page);
+  await openTeacherMenuAndPickUnit(page, "g1_sub_borrow");
   await advanceLessonUntil(page, "lesson-practice");
 
   await expect(correctChoice(page)).toBeVisible({ timeout: 10_000 });
@@ -103,5 +101,4 @@ test("lesson practice: cherry diagram hint for くりさがり (ヒキダマン)
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
 });

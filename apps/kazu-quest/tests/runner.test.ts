@@ -245,6 +245,22 @@ describe("event runner", () => {
     expect(r.state.save.flags.after).toBe(true);
   });
 
+  it("openTeacherMenu surfaces the entries as a UI effect then continues (LP-18)", () => {
+    const entries = [
+      { skillId: "g1_add_nc", label: "たしざん" },
+      { skillId: "g1_sub_nc", label: "ひきざん", spellIds: ["hikidama"] },
+    ];
+    const commands: EventCommand[] = [
+      { type: "openTeacherMenu", entries },
+      { type: "setFlag", flag: "after" },
+    ];
+    let r = step(startRun(commands, defaultSave()));
+    expect(r.effect).toEqual({ kind: "openTeacherMenu", entries });
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
   it("transfer aborts remaining commands", () => {
     const commands: EventCommand[] = [
       { type: "transfer", mapId: "dev-field", spawn: "from-village" },

@@ -5,8 +5,8 @@ import { EventBus } from "@/game/EventBus";
 import { getLesson } from "@/content/lessons/index";
 import type { LessonDef } from "@/content/lessons/types";
 import { autosave, updateSave } from "@/game/session";
-import { onLessonStarted, onTestResult } from "@/lib/mastery";
 import { testPassed } from "@/lib/curriculum/lessonPractice";
+import { applyLessonStartExp, applyTestResultExp } from "@/lib/learningExp";
 import { dqWindow, UI_COLORS } from "@/components/uiTheme";
 import { LessonNextButton, LessonPageBody } from "@/components/lessonShared";
 import { LessonWorkedExample } from "@/components/LessonWorkedExample";
@@ -28,7 +28,8 @@ import { LessonTest } from "@/components/LessonTest";
  *
  * 呪文の習得 (learnSpell) はここでは行わない — spellTestFlow.ts が
  * "lesson-finished" {outcome:"passed"} を受けて行う (単元テストと呪文習得の
- * 責務分離。LP-09 §4 の「シンプルな統合」)。ここで行うのは mastery の更新だけ。
+ * 責務分離。LP-09 §4 の「シンプルな統合」)。ここで行うのは mastery の更新と、
+ * その状態遷移にひもづく「学びの経験値」の付与 (LP-21, @/lib/learningExp)。
  */
 
 type PracticeStage = "practiceLv1" | "practiceLv2" | "practiceLv3";
@@ -101,7 +102,10 @@ export function LessonScreen() {
     const onOpen = (payload: OpenLessonPayload) => {
       const lesson = getLesson(payload.skillId);
       if (!lesson) return; /* lessonFlow は hasLesson を先に見ているので通常は起きない */
-      updateSave((save) => onLessonStarted(save, payload.skillId));
+      /* applyLessonStartExp: none→practicing (このレッスンを開くのが初めて)
+       * の瞬間だけ「レッスン完了」ぶんのEXPを渡す (LP-21, @/lib/learningExp
+       * のコメント参照) */
+      updateSave((save) => applyLessonStartExp(save, payload.skillId));
       autosave();
       setState({
         skillId: payload.skillId,
@@ -120,7 +124,9 @@ export function LessonScreen() {
   const finishPassed = (correct: number, total: number) => {
     const current = stateRef.current;
     if (!current) return;
-    updateSave((save) => onTestResult(save, current.skillId, true));
+    /* applyTestResultExp: can に初めて到達したときだけ「テスト合格」ぶんの
+     * EXPを渡す (LP-21)。すでに can (再受験など) なら渡さない */
+    updateSave((save) => applyTestResultExp(save, current.skillId, true));
     autosave();
     setState(null);
     const result: LessonFinishedPayload = {
@@ -137,7 +143,7 @@ export function LessonScreen() {
   const restartAfterFailedTest = () => {
     const current = stateRef.current;
     if (!current) return;
-    updateSave((save) => onTestResult(save, current.skillId, false));
+    updateSave((save) => applyTestResultExp(save, current.skillId, false));
     autosave();
     setState((s) => (s ? { ...s, stage: "altExplain", pageIndex: 0 } : s));
   };

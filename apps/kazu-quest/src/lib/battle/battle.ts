@@ -10,9 +10,9 @@
 import type { MonsterDef, SpellDef } from "../../content/types";
 import type { PartyMember } from "../save";
 import type { Rng } from "../curriculum/types";
-import { levelForExp } from "./stats";
-import { memberName, memberStats } from "./members";
+import { memberName } from "./members";
 import { equippedStats } from "./equipment";
+import { applyExpToParty, type LevelUp } from "./expGrant";
 
 export interface Combatant {
   id: string;
@@ -431,38 +431,23 @@ export function submitRound(
 export interface VictoryOutcome {
   party: PartyMember[];
   gold: number;
-  levelUps: { memberId: string; from: number; to: number }[];
+  levelUps: LevelUp[];
 }
 
-/* 勝利結果をセーブのパーティへ適用。レベルアップで全回復 (子供向け) */
+/*
+ * 勝利結果をセーブのパーティへ適用。レベルアップで全回復 (子供向け)。
+ * EXP付与のコアロジックは expGrant.ts (レッスン/テスト/マスターの
+ * 経験値付与 (../learningExp.ts) と共有 — LP-21)
+ */
 export function applyVictory(
   party: PartyMember[],
   battle: BattleState,
   exp: number,
   gold: number,
 ): VictoryOutcome {
-  const levelUps: VictoryOutcome["levelUps"] = [];
-  const updated = party.map((member) => {
-    const combatant = battle.members.find((c) => c.id === member.memberId);
-    const newExp = member.exp + exp;
-    const newLevel = levelForExp(newExp);
-    const stats = memberStats(member.memberId, newLevel);
-    if (newLevel > member.level) {
-      levelUps.push({ memberId: member.memberId, from: member.level, to: newLevel });
-      return {
-        ...member,
-        exp: newExp,
-        level: newLevel,
-        hp: stats.maxHp,
-        mp: stats.maxMp,
-      };
-    }
-    return {
-      ...member,
-      exp: newExp,
-      hp: Math.min(combatant?.hp ?? member.hp, stats.maxHp),
-      mp: Math.min(combatant?.mp ?? member.mp, stats.maxMp),
-    };
+  const { party: updated, levelUps } = applyExpToParty(party, exp, (memberId) => {
+    const combatant = battle.members.find((c) => c.id === memberId);
+    return combatant ? { hp: combatant.hp, mp: combatant.mp } : undefined;
   });
   return { party: updated, gold, levelUps };
 }

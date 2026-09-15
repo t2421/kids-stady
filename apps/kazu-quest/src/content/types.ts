@@ -52,6 +52,19 @@ export type EventCommand =
   | { type: "openReview" }
   /* ほこらの「さきどり」: 前提を満たす未受講単元の一覧 (LP-11) */
   | { type: "openPreview" }
+  /*
+   * まなびやの先生メニュー (LP-18): 呪文名でなく単元名で 並べる一覧。
+   * spellIds は任意 — 単元が旧来の呪文の学習テスト対象 (learnTest.skillIds[0])
+   * だったときだけ付け、TeacherMenu.tsx がレッスン合格時に習得させる
+   * (フラグゲートや golden path が前提とする「習得」を保つため)。
+   * 複数の呪文が同じ単元に学習テスト対象を持つ場合 (例: 章2 g2_add_column が
+   * ヒッサンブレイクとタシリアーダの両方) は配列で両方渡す — 1つの単元一覧に
+   * まとめても、まなびやで習得できる呪文が減らないようにするため
+   */
+  | {
+      type: "openTeacherMenu";
+      entries: { skillId: string; label: string; spellIds?: string[] }[];
+    }
   | { type: "savePoint" }
   /* ボス前の すいしょうレベル看板: 推奨Lv と いまの勇者Lv を並べて見せる (入室制限はしない) */
   | { type: "levelSign"; level: number }

@@ -111,6 +111,71 @@ export const ACTOR_ART: Record<string, PixelArt> = {
       "..kBBBbbbbBBBk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
     ],
   },
+  /*
+   * 章の先生 (学びの設計 LP-18)。まなびやの旧「学者」使い回しをやめ、章ごとに
+   * 個性のある姿にする (色違いではなく輪郭・小物から作る — measurer 等の色違い
+   * 方式とは別枠)。
+   */
+  /* ふくろう博士 (第1章): 丸めがねと 羽の房かざり、小わきに本 */
+  owlProfessor: {
+    palette: { k: "#201a14", H: "#e8dcc0", h: "#b89a68", t: "#6b4a2e", S: "#e8ae82", s: "#c98a5a", g: "#e6bd43", w: "#eaf4ff", l: "#7a5a34", b: "#5c3a22", B: "#3c2415", y: "#f2d675" },
+    rows: [
+      "...t.kkkkkk.t...", "....kHHHHHHk....", "...kthHHHHhtk...", "...kgkSSSSkgk...",
+      "...kSkwSSswSk...", "...kSSssssSSk...", "....kttttsk.....", "....ktHtHtk.....",
+      "...kklbbbblkk...", "..kskbbbybbksk..", "..khkbbbbbbkhk..", "...kBBbbybyyk...",
+      "..kBBBbbbbyyyk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
+    ],
+  },
+  /* そろばん船長 (第2章): 白い船長ぼうしと そろばんを かかえる */
+  abacusCaptain: {
+    palette: { k: "#141b26", c: "#f2eee1", C: "#2a4a78", a: "#8a5a2e", H: "#e2c68a", h: "#a9863f", S: "#e8ae82", s: "#c98a5a", b: "#2a4a78", B: "#17304f", l: "#4c7aa8", w: "#f2eee1", y: "#f2d675" },
+    rows: [
+      "..cccccccccccc..", "...CCCCCCCCCC...", "...kahHHHHhak...", "...khkSSSSkhk...",
+      "...kSksSSskSk...", "...kSSssssSSk...", "....kshhhsk.....", "....khHhHhk.....",
+      "...kklbbbblkk...", ".wwskbbbybbksk..", ".wawkbbbbbbkhk..", ".wwkBBbbybBBk...",
+      ".wawBBbbbbBBBk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
+    ],
+  },
+  /* 計算商人 (第3章): 帳簿と 金貨。隊商の商人 (merchant) とは別の役どころ */
+  calcMaster: {
+    palette: { k: "#1c1710", e: "#c9922f", H: "#efe6d0", h: "#c0aa78", S: "#e8ae82", s: "#c98a5a", g: "#3f7a4a", b: "#2f6b3d", B: "#1c4526", l: "#4c8a55", w: "#f2eee1", y: "#f2d675" },
+    rows: [
+      "....ekkkkkke....", "....kHHHHHHk....", "...kghHHHHhgk...", "...khkSSSSkhk...",
+      "...kSksSSskSk...", "...kSSssssSSk...", "....ksehhsk.....", "....khHhHhk.....",
+      "...kklbbbblkk...", "..kskbbbybbkyy..", ".wkhkbbbbbbkyw..", ".w.kBBbeybBByy..",
+      ".wkBBBbbbbBByk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
+    ],
+  },
+  /* はかりの女王 (第4章): 王冠と てんびん */
+  scaleQueen: {
+    palette: { k: "#1c1420", c: "#f2c84b", C: "#a97420", H: "#e8dcf0", h: "#c0a8d0", S: "#e8ae82", s: "#c98a5a", b: "#6b3f8a", B: "#452a5c", l: "#9a6ab8", w: "#f2eee1", y: "#f2d675" },
+    rows: [
+      "....ckckckkc....", "...cCcCcCcCc....", "...kHhHHHHhHk...", "...khkSSSSkhk...",
+      "...kSksSSskSk...", "...kSSssssSSk...", "....kshhhsk.....", "....khHhHhk.....",
+      ".wwkklbbbblkk...", "wkwwkbbbybbkswkw", ".wwhkbbbbbbkhk..", "..kkBBbbybBBk...",
+      "..kBBBbbbbBBBk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
+    ],
+  },
+  /* 割合ギルド長 (第5章): フードに ギルドしょうの「%」バッジ */
+  percentGuildMaster: {
+    palette: { k: "#161c1a", H: "#e4ddc8", h: "#b8ac8a", g: "#e6bd43", S: "#e8ae82", s: "#c98a5a", b: "#2f6f6a", B: "#1c4542", l: "#4f9a92", y: "#f2d675" },
+    rows: [
+      ".....gkkkkg.....", "....kHHHHHHk....", "...kHhHgHHhHk...", "...khkSSSSkhk...",
+      "...kSksSSskSk...", "...kSSssssSSk...", "....ksghhgk.....", "....khHhHhk.....",
+      "...kklbbbblkk...", "..kskbybyybksk..", "..khkbbyybbkhk..", "...kBBybyyBBk...",
+      "..kBBBbbbbBBBk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
+    ],
+  },
+  /* 星読み (第6章): 星のしるしと ぼうえんきょう */
+  stargazer: {
+    palette: { k: "#12141f", H: "#dfe6f5", h: "#a9b4cc", y: "#f2d675", p: "#6b5a9e", S: "#e8ae82", s: "#c98a5a", b: "#243a6b", B: "#152547", l: "#4a68a8", w: "#c8d4e8" },
+    rows: [
+      ".....kkkkkk.....", "....kHyHHHHk....", "...kHyHyHHhHk...", "...khkSSSSkhk...",
+      "...kSksSSskSk...", "...kSSssssSSk...", "....ksphhpk.....", "....khHhHhk.....",
+      "...kklbbbblkkw..", "..kskbbbybbksww.", "..khkbbbbbbkwk..", "...kBBbbybBwk...",
+      "..kBBBbbbbwBBk..", ".kBBBBbbbbBBBBk.", ".kBBBBBBBBBBBBk.", "..kkkkkkkkkkkk..",
+    ],
+  },
 };
 
 /* 雪国の村人 (第4章 — あつい コートと マフラー。村人の色違い) */

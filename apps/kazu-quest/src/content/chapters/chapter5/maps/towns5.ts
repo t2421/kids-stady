@@ -6,7 +6,7 @@
 import type { MapDef } from "../../../types";
 import { CH5_TOWN_LEGEND } from "../legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 export const CH5_BARGAIN: MapDef = {
   id: "ch5-bargain",
@@ -68,17 +68,17 @@ export const CH5_BARGAIN: MapDef = {
       id: "bargain-scholar",
       x: 5,
       y: 7,
-      art: "scholar",
+      art: "percentGuildMaster",
       movement: "static",
       dialog: [
         {
           pages: [
-            "1あたりの りょうを かんがえると、どっちが おとくか すぐ わかる。",
+            "わたしは 割合ギルド長だ。1あたりの りょうを かんがえると、どっちが おとくか すぐ わかる。",
             "3こ 240円と 5こ 380円、どっちが やすい? …単位量あたりの 出番だ!",
           ],
-          then: spellTestMenu([
-            { spellId: "tanniAttack", label: "タンイアタック (単位量あたり)" },
-            { spellId: "taisekiPress", label: "タイセキプレス (体せき)" },
+          then: teacherMenu([
+            { skillId: "g5_unit_rate", label: "単位量あたり", spellIds: ["tanniAttack"] },
+            { skillId: "g5_volume", label: "体せき", spellIds: ["taisekiPress"] },
           ]),
         },
       ],
@@ -170,17 +170,17 @@ export const CH5_BUNSUU: MapDef = {
       id: "bunsuu-scholar",
       x: 10,
       y: 5,
-      art: "scholar",
+      art: "percentGuildMaster",
       movement: "static",
       dialog: [
         {
           pages: [
-            "この しまは 6つの 島が 1/2、1/3、1/6… と わかれておる。",
+            "わたしも 割合ギルドの一員だ。この しまは 6つの 島が 1/2、1/3、1/6… と わかれておる。",
             "分母が ちがう 分数は 通分してから たすのじゃ!",
           ],
-          then: spellTestMenu([
-            { spellId: "tsuubunSlash", label: "ツウブンスラッシュ (異分母の分数)" },
-            { spellId: "sankakuMirror", label: "サンカクミラー (三角形の面せき)" },
+          then: teacherMenu([
+            { skillId: "g5_fraction_diff", label: "異分母の分数", spellIds: ["tsuubunSlash"] },
+            { skillId: "g5_area", label: "三角形の面せき", spellIds: ["sankakuMirror"] },
           ]),
         },
       ],

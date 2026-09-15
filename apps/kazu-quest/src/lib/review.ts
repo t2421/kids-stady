@@ -24,3 +24,15 @@ export function reviewSelection(save: SaveData): string[] {
 export function masteredShardCount(save: SaveData): number {
   return Object.values(save.mastery).filter((entry) => entry.state === "mastered").length;
 }
+
+/*
+ * ネガリアの色戻し演出 (LP-22) の段。学年を問わず 全単元のマスター数で決まる
+ * (冥王ゼロムは「数をなくす」存在なので、どの学年の単元をマスターしても
+ * ネガリアに色が戻る、という演出意図)。しきい値は 0 / 8 / 16 / 24
+ */
+export function negariaStageFor(masteredCount: number): 0 | 1 | 2 | 3 {
+  if (masteredCount >= 24) return 3;
+  if (masteredCount >= 16) return 2;
+  if (masteredCount >= 8) return 1;
+  return 0;
+}

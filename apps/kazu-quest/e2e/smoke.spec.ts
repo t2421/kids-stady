@@ -5,10 +5,11 @@ import {
   fieldPos,
   grindBattleUntilField,
   interactAndAdvance,
+  openTeacherMenuAndPickUnit,
   startGame,
   stepOnce,
-  takeSpellTestAllCorrect,
   teleport,
+  walkLessonToPass,
   walkUntil,
   warp,
 } from "./helpers";
@@ -110,10 +111,11 @@ test("spell casting: learn ヒキダマ at the scholar, then cast it in battle",
   test.setTimeout(300_000);
   await startGame(page);
 
-  /* ユーザー報告の再現経路: まなびやで習得 → 戦闘で使用 (賢者は (2,4)) */
+  /* ユーザー報告の再現経路: まなびやで習得 → 戦闘で使用 (ふくろう博士は (2,4)) */
   await warp(page, "ch1-capital-castle", "start");
   await teleport(page, 3, 4, "left");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g1_sub_nc");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -122,7 +124,6 @@ test("spell casting: learn ヒキダマ at the scholar, then cast it in battle",
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
 
   await warp(page, "ch1-world", "from-hajimari");
   await teleport(page, 8, 4, "right");

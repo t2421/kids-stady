@@ -81,6 +81,12 @@ test("lesson: 穴埋めのあと れんしゅう Lv1〜3 → テスト まで合
   test.setTimeout(180_000);
   await startGame(page);
 
+  /* LP-21: パーティのEXPがレッスン完了/テスト合格ぶん増えることを、この
+     合格までの通しテストの前後で確認する (増分の内訳はVitest側で検証済み) */
+  const expBefore = await page.evaluate(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().party[0].exp,
+  );
+
   await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.openLesson("g1_add_nc"));
 
   const screen = page.locator('[data-testid="lesson-screen"]');
@@ -117,4 +123,10 @@ test("lesson: 穴埋めのあと れんしゅう Lv1〜3 → テスト まで合
     () => window.__KAZUQUEST_DEBUG__!.getSave().mastery,
   );
   expect(mastery.g1_add_nc?.state).toBe("can");
+
+  /* LP-21: レッスン完了 + テスト合格ぶんのEXPがパーティに渡っている */
+  const expAfter = await page.evaluate(
+    () => window.__KAZUQUEST_DEBUG__!.getSave().party[0].exp,
+  );
+  expect(expAfter).toBeGreaterThan(expBefore);
 });

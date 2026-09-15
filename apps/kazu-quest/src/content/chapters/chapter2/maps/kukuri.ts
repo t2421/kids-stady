@@ -2,6 +2,7 @@
 
 import type { MapDef } from "../../../types";
 import { VILLAGE_LEGEND, INTERIOR_LEGEND } from "../../chapter1/legends";
+import { teacherMenu } from "../../teacherMenu";
 
 export const CH2_KUKURI: MapDef = {
   id: "ch2-kukuri",
@@ -93,43 +94,20 @@ export const CH2_KUKURI_MANABIYA: MapDef = {
       id: "scholar4",
       x: 4,
       y: 2,
-      art: "scholar",
+      art: "abacusCaptain",
       movement: "static",
       dialog: [
         {
           pages: [
-            "ここは ククリの まなびや。れんぞくわざと たんい、とけいを おしえておる。",
+            "わしは そろばん船長。ククリの まなびやで れんぞくわざと たんい、とけいを おしえておる。",
             "ながさは cm と mm、かさは L と dL。10ずつの かんけいじゃ!",
           ],
-          then: [
-            {
-              type: "choice",
-              prompt: "ダンダンづき (九九・れんぞく) の テスト?",
-              yes: [{ type: "openSpellTest", spellId: "dandanZuki" }],
-              no: [
-                {
-                  type: "choice",
-                  prompt: "ナガサビーム (ながさ) の テスト?",
-                  yes: [{ type: "openSpellTest", spellId: "nagasaBeam" }],
-                  no: [
-                    {
-                      type: "choice",
-                      prompt: "カサミスト (かさ) の テスト?",
-                      yes: [{ type: "openSpellTest", spellId: "kasaMist" }],
-                      no: [
-                        {
-                          type: "choice",
-                          prompt: "トキシフト (とけい) の テスト?",
-                          yes: [{ type: "openSpellTest", spellId: "tokiShift" }],
-                          no: [{ type: "message", pages: ["また おいで!"] }],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
+          then: teacherMenu([
+            { skillId: "g2_kuku", label: "九九・れんぞくわざ", spellIds: ["dandanZuki"] },
+            { skillId: "g2_length", label: "ながさ", spellIds: ["nagasaBeam"] },
+            { skillId: "g2_volume", label: "かさ", spellIds: ["kasaMist"] },
+            { skillId: "g2_time", label: "とけい", spellIds: ["tokiShift"] },
+          ]),
         },
       ],
     },

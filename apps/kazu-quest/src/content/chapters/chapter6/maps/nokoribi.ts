@@ -6,7 +6,7 @@
 import type { MapDef } from "../../../types";
 import { CH6_TOWN_LEGEND } from "../legends";
 import { shrineMenu } from "../../shrineMenu";
-import { spellTestMenu } from "../../spellTestMenu";
+import { teacherMenu } from "../../teacherMenu";
 
 export const CH6_NOKORIBI: MapDef = {
   id: "ch6-nokoribi",
@@ -67,19 +67,19 @@ export const CH6_NOKORIBI: MapDef = {
       id: "nokoribi-scholar",
       x: 5,
       y: 7,
-      art: "scholar",
+      art: "stargazer",
       movement: "static",
       dialog: [
         {
           pages: [
-            "わしは ノコリビの ものしり。速さ・円・比・場合の数を つたえておる。",
+            "わしは 星読み。ノコリビでは 速さ・円・比・場合の数を つたえておる。",
             "速さ = 道のり ÷ 時間。これを わすれねば ゼロムの 「時を とめる」まほうも こわくない。",
           ],
-          then: spellTestMenu([
-            { spellId: "speedStar", label: "スピードスター (速さ)" },
-            { spellId: "enNoHadou", label: "エンノハドウ (円の面せき)" },
-            { spellId: "ratioBreak", label: "レシオブレイク (比)" },
-            { spellId: "baainoKazu", label: "バアイノカズ (場合の数)" },
+          then: teacherMenu([
+            { skillId: "g6_speed", label: "速さ", spellIds: ["speedStar"] },
+            { skillId: "g6_circle_area", label: "円の面せき", spellIds: ["enNoHadou"] },
+            { skillId: "g6_ratio", label: "比", spellIds: ["ratioBreak"] },
+            { skillId: "g6_combination", label: "場合の数", spellIds: ["baainoKazu"] },
           ]),
         },
       ],

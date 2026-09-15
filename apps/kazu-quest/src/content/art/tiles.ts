@@ -335,5 +335,86 @@ TILE_ART.locZeromCastle = {
   rows: TILE_ART.locDarkCastle.rows,
 };
 
+/*
+ * ネガリアの色戻し演出 (LP-22)。マスター単元数が増えるほど、開けた土地
+ * (大地・海・木・拠点アイコン) だけ 上の世界と同じ色に もどっていく。
+ * ゼロム城 (locZeromCastle) と 洞くつの darkWall/darkFloor 系は 第5章の
+ * 魔王城とも共用しており、かつ「まだ倒していない敵の城」は色が戻る
+ * 対象ではないので ふくめない。
+ *
+ * 各キーの stage0 (このオブジェクトに もとから ある色) が いちばん くらい状態。
+ * stage3 は 対応する 上の世界タイルの色と ぴったり同じになるよう 補間する。
+ * key@1 / key@2 / key@3 という 名前で TILE_ART に足し、テクスチャは
+ * generateAllTextures が ふつうのタイルと同じように 生成する。
+ */
+const NEGARIA_BRIGHT_TARGET: Record<string, string> = {
+  negaGround: "grass",
+  negaGround2: "grass2",
+  negaPath: "path",
+  negaSea: "water",
+  negaTree: "tree",
+  locNegaVillage: "locVillage",
+  locNegaTown: "locCastle",
+  locSpeedHall: "locTower",
+  locEnTemple: "locSeaTemple",
+  locPitagora: "locRuins",
+};
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (v: number) => Math.round(Math.min(255, Math.max(0, v)));
+  const toHex = (v: number) => clamp(v).toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function lerpColor(from: string, to: string, t: number): string {
+  const [fr, fg, fb] = hexToRgb(from);
+  const [tr, tg, tb] = hexToRgb(to);
+  return rgbToHex(fr + (tr - fr) * t, fg + (tg - fg) * t, fb + (tb - fb) * t);
+}
+
+/* dark 側の キーぞろえで補間する (bright に無い文字は 変化させず そのまま) */
+function lerpPalette(
+  dark: Record<string, string>,
+  bright: Record<string, string>,
+  t: number,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [ch, color] of Object.entries(dark)) {
+    out[ch] = lerpColor(color, bright[ch] ?? color, t);
+  }
+  return out;
+}
+
+for (const [darkKey, brightKey] of Object.entries(NEGARIA_BRIGHT_TARGET)) {
+  const darkArt = TILE_ART[darkKey];
+  const brightArt = TILE_ART[brightKey];
+  for (const stage of [1, 2, 3]) {
+    TILE_ART[`${darkKey}@${stage}`] = {
+      palette: lerpPalette(darkArt.palette, brightArt.palette, stage / 3),
+      rows: darkArt.rows,
+    };
+  }
+}
+
+/* この art名 が マスター段階で色を変える対象かどうか (MapView が使う) */
+export function isNegariaStagedArt(art: string): boolean {
+  return art in NEGARIA_BRIGHT_TARGET;
+}
+
+/*
+ * stage0 は もとの art名 そのまま (くらい状態)。stage1〜3 は上で生成した
+ * `<art>@<stage>` テクスチャ。対象外の art名 は stage に関わらず そのまま返す
+ * (章1〜5のタイルや ゼロム城には 影響しない)。
+ */
+export function negariaStageArtKey(art: string, stage: 0 | 1 | 2 | 3): string {
+  if (stage === 0 || !isNegariaStagedArt(art)) return art;
+  return `${art}@${stage}`;
+}
+
 /* 終章「ムゲンのらせん」の色ちがいタイル (KQ-30b)。元タイルの rows を参照するので最後に足す */
 Object.assign(TILE_ART, spiralTiles(TILE_ART));

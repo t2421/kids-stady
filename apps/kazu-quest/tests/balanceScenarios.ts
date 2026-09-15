@@ -10,6 +10,8 @@
 
 import type { MonsterDef } from "../src/content/types";
 import { getMonster } from "../src/content/monsters";
+import { SKILLS } from "../src/lib/curriculum";
+import { expForLessonOutcome } from "../src/lib/learningExp";
 import type { SimMemberSpec } from "../src/lib/battle/simulate";
 import {
   bestShopEquipment,
@@ -120,4 +122,20 @@ export function scenarioMonsters(s: BalanceScenario): MonsterDef[][] {
 
 export function partyLabel(s: BalanceScenario): string {
   return s.members.map((m) => m.memberId).join("+");
+}
+
+/*
+ * 章 N の学年 (章と学年は1:1対応) の全単元を「レッスン完了 + テスト合格」まで
+ * 進めた場合の合計EXP (学びの設計 LP-21)。章ゲート (LP-23: can 未満で番人が
+ * 残る) の設計により、章Nをクリアするまでにその学年の単元は少なくとも can
+ * まで進んでいる、という前提の概算。マスター (間隔復習を経て日単位でしか
+ * 進まない) は「必須戦闘だけで想定Lvに届くか」という概算の趣旨 (グラインド
+ * 不要か) に合わないため、ここには含めない。章7 (終章) には対応する学年が
+ * 無いので 0 になる
+ */
+export function learningExpForChapter(chapter: number): number {
+  return SKILLS.filter((s) => s.grade === chapter).reduce(
+    (sum, s) => sum + expForLessonOutcome(s.grade, "lesson") + expForLessonOutcome(s.grade, "test"),
+    0,
+  );
 }

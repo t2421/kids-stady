@@ -8,9 +8,11 @@ import type { Scene } from "phaser";
 import type Phaser from "phaser";
 import type { MapDef, TileSpec } from "../../content/types";
 import type { SaveData } from "../../lib/save";
-import { TILE_SIZE } from "../../content/art/tiles";
+import { TILE_SIZE, isNegariaStagedArt, negariaStageArtKey } from "../../content/art/tiles";
 import { TILE_ANIMATIONS } from "../../content/art/tileAnims";
 import { evalCond } from "../../lib/events/runner";
+import { masteredShardCount, negariaStageFor } from "../../lib/review";
+import { getSave } from "../session";
 import { actorTextureKey, tileTextureKey } from "../textures";
 
 /* タイルアニメの切替間隔 (2コマをのんびり往復) */
@@ -34,6 +36,11 @@ export function pickTileArt(spec: TileSpec, x: number, y: number): string {
   return pool[hash];
 }
 
+/* ネガリアの色戻し (LP-22): 全学年ぶんの mastered 単元数から いまの段を決める */
+function currentNegariaStage(): 0 | 1 | 2 | 3 {
+  return negariaStageFor(masteredShardCount(getSave()));
+}
+
 /* キャラの足元に落とす楕円の影 (接地感を出す)。プレイヤーとNPCで共用 */
 export function addFootShadow(
   scene: Scene,
@@ -55,6 +62,9 @@ export class MapView {
   private animTiles: { img: Phaser.GameObjects.Image; frames: [string, string] }[] =
     [];
   private animFrame = 0;
+  /* ネガリアの色戻し対象タイル (LP-22): 段が変わったら貼りかえる */
+  private negariaTiles: { img: Phaser.GameObjects.Image; baseArt: string }[] = [];
+  private negariaStage: 0 | 1 | 2 | 3 = 0;
 
   constructor(
     private readonly scene: Scene,
@@ -68,20 +78,25 @@ export class MapView {
      * 描画されなかった (M4スパイクの結論)。マップは最大でも数千タイルなので
      * 静的 Image で十分。性能が問題になったらチャンク化を検討する。
      */
+    this.negariaStage = currentNegariaStage();
     this.map.grid.forEach((row, y) => {
       [...row].forEach((ch, x) => {
         const spec = this.map.legend[ch];
         if (!spec) return;
         const art = pickTileArt(spec, x, y);
+        const resolvedArt = negariaStageArtKey(art, this.negariaStage);
         const img = this.scene.add
-          .image(...tileCenter(x, y), tileTextureKey(art))
+          .image(...tileCenter(x, y), tileTextureKey(resolvedArt))
           .setDepth(0);
         this.tileImages.push(img);
-        const animArt = TILE_ANIMATIONS[art];
+        if (isNegariaStagedArt(art)) {
+          this.negariaTiles.push({ img, baseArt: art });
+        }
+        const animArt = TILE_ANIMATIONS[resolvedArt];
         if (animArt) {
           this.animTiles.push({
             img,
-            frames: [tileTextureKey(art), tileTextureKey(animArt)],
+            frames: [tileTextureKey(resolvedArt), tileTextureKey(animArt)],
           });
         }
       });
@@ -135,8 +150,23 @@ export class MapView {
     });
   }
 
+  /*
+   * ネガリアの色戻し (LP-22): マスター数の段が変わっていたら 対象タイルだけ
+   * 貼りかえる。専用の EventBus 通知は無いので、既存の refresh() 呼び出し
+   * (戦闘勝利後・イベント終了後) に相乗りする。段が変わらなければ何もしない
+   */
+  private refreshNegariaStage(): void {
+    const stage = currentNegariaStage();
+    if (stage === this.negariaStage) return;
+    this.negariaStage = stage;
+    for (const { img, baseArt } of this.negariaTiles) {
+      img.setTexture(tileTextureKey(negariaStageArtKey(baseArt, stage)));
+    }
+  }
+
   /* フラグ変化を反映: 開いた宝箱・条件を満たした hideIf NPC を消す */
   refresh(flags: SaveData["flags"]): void {
+    this.refreshNegariaStage();
     for (const ev of this.map.events) {
       const sprite = this.eventSprites.get(ev.id);
       if (!sprite) continue;

@@ -4,11 +4,12 @@ import {
   answerCorrectOnce,
   grindBattleUntilField,
   interactAndAdvance,
+  openTeacherMenuAndPickUnit,
   seedChapter,
   stepOnce,
-  takeSpellTestAllCorrect,
   teleport,
   waitForAnswerable,
+  walkLessonToPass,
   warp,
 } from "./helpers";
 
@@ -108,10 +109,11 @@ test("chapter 4 golden path: chief → shop → learn カクドスピン → ice
   await options.last().click();
   await advanceDialog(page); /* まいど ありがとう! */
 
-  /* まなびや: 学者 (4,2) の最初の選択肢 = カクドスピン を はい で受けて全問正解 */
+  /* まなびや: はかりの女王 (4,2) の一覧から「角度」を選んで全問正解 */
   await warp(page, "ch4-majoria-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g4_angle");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -120,7 +122,6 @@ test("chapter 4 golden path: chief → shop → learn カクドスピン → ice
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
   await flag(page, "learned.kakudoSpin");
 
   /* せつげんから 氷の洞くつ入口 (20,11) を踏んで入る */

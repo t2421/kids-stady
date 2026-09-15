@@ -113,3 +113,31 @@ export function handleOpenPreview(ui: UiScene, advance: () => void): void {
   EventBus.on("preview-closed", onClosed);
   EventBus.emit("open-preview");
 }
+
+/* まなびやの先生メニュー (openTeacherMenu, LP-18) の一覧項目 */
+export interface TeacherMenuEntry {
+  skillId: string;
+  label: string;
+  /* 旧・呪文の学習テスト対象単元だったときだけ付ける (TeacherMenu.tsx が習得させる) */
+  spellIds?: string[];
+}
+
+/*
+ * まなびやの先生 (openTeacherMenu): 単元一覧を TeacherMenu.tsx へ渡し、
+ * "teacher-menu-closed" (項目タップで即 open-lesson を発火したあとも必ず出る)
+ * を待って advance() する。handleOpenPreview と同じ「即 advance、レッスンの
+ * 決着は非同期」の構造 — 呪文の習得 (spellId がある場合) は TeacherMenu.tsx が
+ * タップした項目についてだけ lesson-finished を見て行う
+ */
+export function handleOpenTeacherMenu(
+  ui: UiScene,
+  entries: readonly TeacherMenuEntry[],
+  advance: () => void,
+): void {
+  const onClosed = () => {
+    EventBus.off("teacher-menu-closed", onClosed);
+    advance();
+  };
+  EventBus.on("teacher-menu-closed", onClosed);
+  EventBus.emit("open-teacher-menu", { entries });
+}

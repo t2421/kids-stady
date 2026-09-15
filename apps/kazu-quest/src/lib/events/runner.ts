@@ -29,6 +29,11 @@ export type RunnerEffect =
   | { kind: "openLesson"; skillId: string }
   | { kind: "openReview" }
   | { kind: "openPreview" }
+  /* まなびやの先生メニュー (LP-18) */
+  | {
+      kind: "openTeacherMenu";
+      entries: { skillId: string; label: string; spellIds?: string[] }[];
+    }
   | { kind: "savePoint" }
   | { kind: "choice"; prompt: string }
   | { kind: "quiz"; skillId: string }
@@ -362,6 +367,12 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
         return {
           state: { stack, save, pending: cmd },
           effect: { kind: "openPreview" },
+          done: false,
+        };
+      case "openTeacherMenu":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openTeacherMenu", entries: cmd.entries },
           done: false,
         };
       case "savePoint":

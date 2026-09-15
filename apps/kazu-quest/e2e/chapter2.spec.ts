@@ -4,10 +4,11 @@ import {
   correctChoice,
   grindBattleUntilField,
   interactAndAdvance,
+  openTeacherMenuAndPickUnit,
   startGame,
   stepOnce,
-  takeSpellTestAllCorrect,
   teleport,
+  walkLessonToPass,
   warp,
 } from "./helpers";
 
@@ -61,10 +62,11 @@ test("chapter 2 golden path: ship → tasuku joins → learn ククダマ → to
     () => window.__KAZUQUEST_DEBUG__!.getSave().party.length === 2,
   );
 
-  /* まなびやで ククダマ習得 (塔の門番ゲート解除) */
+  /* まなびや (そろばん船長) で「九九」→ ククダマ習得 (塔の門番ゲート解除) */
   await warp(page, "ch2-minatos-manabiya", "start");
   await teleport(page, 4, 3, "up");
-  await takeSpellTestAllCorrect(page);
+  await openTeacherMenuAndPickUnit(page, "g2_kuku");
+  await walkLessonToPass(page);
   await page.waitForFunction(
     () =>
       window.__KAZUQUEST_DEBUG__!.getSave().party[0].learnedSpells.includes(
@@ -73,7 +75,6 @@ test("chapter 2 golden path: ship → tasuku joins → learn ククダマ → to
     undefined,
     { timeout: 15_000 },
   );
-  await advanceDialog(page);
 
   /* 九九の塔: 4つのクイズ扉を正解で のぼる */
   await warp(page, "ch2-tower-1", "start");

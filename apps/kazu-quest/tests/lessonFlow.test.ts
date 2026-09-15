@@ -46,9 +46,8 @@ vi.mock("../src/content/lessons/index", async (importOriginal) => {
 });
 
 const { EventBus } = await import("../src/game/EventBus");
-const { handleOpenLesson, handleOpenPreview, handleOpenReview } = await import(
-  "../src/game/field/lessonFlow"
-);
+const { handleOpenLesson, handleOpenPreview, handleOpenReview, handleOpenTeacherMenu } =
+  await import("../src/game/field/lessonFlow");
 const { handleSpellTest, PRACTICE_BEFORE_TEST_PROMPT } = await import(
   "../src/game/field/spellTestFlow"
 );
@@ -332,5 +331,26 @@ describe("handleOpenPreview (LP-11)", () => {
     expect(advance).toHaveBeenCalledTimes(1);
 
     EventBus.off("open-preview", onOpen);
+  });
+});
+
+describe("handleOpenTeacherMenu (LP-18)", () => {
+  it("open-teacher-menu を entries つきで発火し、teacher-menu-closed で advance する", () => {
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpen = vi.fn();
+    EventBus.on("open-teacher-menu", onOpen);
+
+    const entries = [{ skillId: "g1_add_nc", label: "たしざん" }];
+    handleOpenTeacherMenu(ui, entries, advance);
+
+    expect(ui.showMessage).not.toHaveBeenCalled();
+    expect(onOpen).toHaveBeenCalledWith({ entries });
+    expect(advance).not.toHaveBeenCalled();
+
+    EventBus.emit("teacher-menu-closed");
+    expect(advance).toHaveBeenCalledTimes(1);
+
+    EventBus.off("open-teacher-menu", onOpen);
   });
 });
