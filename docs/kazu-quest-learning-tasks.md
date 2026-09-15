@@ -115,7 +115,7 @@ save.mastery: Record<string, MasteryEntry>     // skillId → 状態。normalize
 
 ## 2. 波1: 基盤 (並列可: LP-01 / LP-02 / LP-03 / LP-04)
 
-#### LP-01 [M] レッスンのスキーマ・登録表・バリデーション・コマンド — 状態: 未
+#### LP-01 [M] レッスンのスキーマ・登録表・バリデーション・コマンド — 状態: 済
 
 - **目的**: §1.1 の型、`src/content/lessons/index.ts` (`LESSONS: Record<skillId, LessonDef>`、`getLesson`)、
   `tests/lessons.test.ts`、EventCommand 3種 + `FlagCond` の skill 条件を入れる
@@ -133,7 +133,7 @@ save.mastery: Record<string, MasteryEntry>     // skillId → 状態。normalize
   新コマンドを受け入れる
 - **スコープ外**: 画面 (LP-08)、mastery の実体 (LP-04 — `evalCond` は `save.mastery ?? {}` で読む)
 
-#### LP-02 [M] 生成器の level 対応 (小1〜小3の 20 単元) — 状態: 未
+#### LP-02 [M] 生成器の level 対応 (小1〜小3の 20 単元) — 状態: 済
 
 - **目的**: `generate(skillId, rng, { level })` を実装し、g1〜g3 の各単元を 3 段階に分ける
 - **触るファイル**: `src/lib/curriculum/index.ts` (シグネチャ、省略時 = 2)、`grade1.ts` `grade2.ts` `grade3.ts`
@@ -149,7 +149,7 @@ save.mastery: Record<string, MasteryEntry>     // skillId → 状態。normalize
   それぞれ Lv2 / Lv3 を明示して呼ぶ
 - **スコープ外**: g4〜g6 (LP-02b として同形で後続。1セッション)
 
-#### LP-03 [M] 段階ヒントと誤答診断 — 状態: 未
+#### LP-03 [M] 段階ヒントと誤答診断 — 状態: 済
 
 - **目的**: `Problem.hints: [string, string, string]` (考え方 → 途中まで → 直前) と
   `Problem.choiceTags: [MistakePattern, MistakePattern, MistakePattern]` を全生成器に付け、
@@ -168,7 +168,7 @@ save.mastery: Record<string, MasteryEntry>     // skillId → 状態。normalize
 - **スコープ外**: レッスンの `mistakes` 表との結合 (LP-08 が `LessonDef.mistakes` を優先し、無ければ
   `diagnose` の既定文言を出す)
 
-#### LP-04 [M] 単元の状態 (mastery) と間隔復習のスケジューラ — 状態: 未
+#### LP-04 [M] 単元の状態 (mastery) と間隔復習のスケジューラ — 状態: 済
 
 - **目的**: §1.2 の `save.mastery` と純ロジック `src/lib/mastery.ts`
 - **API**: `masteryOf(save, skillId)`, `onLessonStarted(save, skillId, now)` (none→practicing),
@@ -194,17 +194,17 @@ save.mastery: Record<string, MasteryEntry>     // skillId → 状態。normalize
 `revealSteps` 系はプロパティで段階表示。テストは `tests/figures.test.tsx` (react-dom/server で
 renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」タブを足して全 kind のサンプルを一覧。
 
-#### LP-05 [M] 第1群: tenFrame / numberLine / cherry (既存を包む) / columnCalc / array / kukuTable — 状態: 未
+#### LP-05 [M] 第1群: tenFrame / numberLine / cherry (既存を包む) / columnCalc / array / kukuTable — 状態: 済
 
 - columnCalc は くり上がりメモ (小さな 1) と `revealSteps` で 1 桁ずつ見せる。÷ は 立てる→かける→ひく→おろす の4段
 - 受け入れ: 6 kind がギャラリーで表示、Vitest 緑、`/gallery` の E2E スモーク (`e2e/gallery.spec.ts` 新: 各 kind の `lesson-figure` が 1 つ以上)
 
-#### LP-06 [M] 第2群: fractionBar / placeValue / areaGrid / protractor / clock — 状態: 未
+#### LP-06 [M] 第2群: fractionBar / placeValue / areaGrid / protractor / clock — 状態: 済
 
 - protractor は内側と外側の目盛りを両方描き、`showReading` で読む側を強調。clock は針を `second` で「あと」を示す
 - 受け入れ: LP-05 と同じ
 
-#### LP-07 [M] 第3群: percentBar / tapeDiagram / treeDiagram / letterBox / balance / measureCup — 状態: 未
+#### LP-07 [M] 第3群: percentBar / tapeDiagram / treeDiagram / letterBox / balance / measureCup — 状態: 済
 
 - percentBar は「もとにする量」を常に 100% の帯で示す。treeDiagram は最大 4 段
 - 受け入れ: LP-05 と同じ
@@ -255,7 +255,7 @@ renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」�
   案内される経路: `setFlag` 等で g1_add_nc を none にして g1_add_carry を開く)
 - **受け入れ条件**: Vitest + E2E。前提が can 以上のときは readiness 画面が出ない
 
-#### LP-11 [M] 単元マップ・おさらい・さきどり・保護者向け — 状態: 一部済 (依存: LP-04, LP-08)
+#### LP-11 [M] 単元マップ・おさらい・さきどり・保護者向け — 状態: 済 (残りは LP-11b で完了) (依存: LP-04, LP-08)
 
 > **実装済み**: `openReview`/`openPreview` の実体 (`ReviewScreen.tsx`/`PreviewMenu.tsx`/
 > `src/lib/review.ts`)、かけらの付与 (mastered 到達時に `kakera_<grade>` を +1、
@@ -323,13 +323,13 @@ workedExample (steps 2〜5、図つき) / faded 2〜3 問 / levels の label / a
 受け入れ条件 (各学年共通): `tests/lessons.test.ts` 緑、`e2e/lesson-gradeN.spec.ts` でその学年の中核 1 単元を
 通し (story → test 合格)、ルビ記法のバリデーション緑、`npm run typecheck`。
 LP-12 小1 / LP-13 小2 / LP-14 小3 / LP-15 小4 / LP-16 小5 / LP-17 小6 — 状態: すべて 未。
-(LP-02b: g4〜g6 の level 対応は LP-15 の前に 1 セッションで済ませる — 状態: 未)
+(LP-02b: g4〜g6 の level 対応は LP-15 の前に 1 セッションで済ませる — 状態: 済)
 
 ---
 
 ## 6. 波5: 物語への組み込み
 
-#### LP-18 [M] 先生キャラと まなびやの刷新 — 状態: 未 (依存: LP-08)
+#### LP-18 [M] 先生キャラと まなびやの刷新 — 状態: 済 (依存: LP-08)
 
 - 章ごとの先生 (章1 ふくろう博士 / 章2 そろばん船長 / 章3 計算商人 / 章4 はかりの女王 / 章5 割合ギルド長 /
   章6 星読み) のアート (`art/actors.ts` に 6 体、16x16、色違い不可 = 個性を出す)、まなびやの内装に
@@ -338,7 +338,7 @@ LP-12 小1 / LP-13 小2 / LP-14 小3 / LP-15 小4 / LP-16 小5 / LP-17 小6 — 
 - 受け入れ: 6 章のまなびやで `teacher-menu` が開き、任意の単元で `lesson-screen` が出る E2E (章1・章4)。
   章 golden path E2E は呪文習得の入口が変わるので更新して緑
 
-#### LP-19 [M] なかまが教える場面 — 状態: 未 (依存: LP-09, LP-18)
+#### LP-19 [M] なかまが教える場面 — 状態: 済 (依存: LP-09, LP-18)
 
 - 加入イベント直後に、その なかまの得意分野の短いレッスン (concept 1 ページ + 穴埋め 1 問) を
   `openLesson { entry: "concept" }` で差し込む (タスク=g2_add_column、カケル=g3_mul_column、リトル=g4_decimal)。
@@ -355,13 +355,13 @@ LP-12 小1 / LP-13 小2 / LP-14 小3 / LP-15 小4 / LP-16 小5 / LP-17 小6 — 
   (`__KAZUQUEST_DEBUG__.setMastery(skillId, state)` を追加してよい)。既存セーブは
   `initMasteryFromFlags` で詰まらない (learned.* → can) ことを Vitest で
 
-#### LP-21 [S] 学びの経験値 — 状態: 未 (依存: LP-09)
+#### LP-21 [S] 学びの経験値 — 状態: 済 (依存: LP-09)
 
 - レッスン完了 +EXP (章の雑魚 3 戦分)、テスト合格 +EXP (5 戦分)、マスター +EXP (10 戦分)。
   `tests/balanceScenarios.ts` の想定 Lv 到達の概算に加える (`docs/kazu-quest-balance.md` 再生成)
 - 受け入れ: Vitest、章1 E2E でレッスン合格後に exp が増える
 
-#### LP-22 [S] ネガリアの色戻し演出 — 状態: 未 (依存: LP-04)
+#### LP-22 [S] ネガリアの色戻し演出 — 状態: 済 (依存: LP-04)
 
 - 章6 のマップ (`tilesNega.ts` のパレット) を、mastered 単元数 0 / 8 / 16 / 24+ の 4 段で明るくする
   (`BootScene` でテクスチャを 4 セット生成、`MapView` が段を選ぶ)。受け入れ: Vitest (段の選択)、章6 E2E 緑
