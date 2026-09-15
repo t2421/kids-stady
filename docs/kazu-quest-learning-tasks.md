@@ -334,7 +334,7 @@ LP-12 小1 / LP-13 小2 / LP-14 小3 / LP-15 小4 / LP-16 小5 / LP-17 小6 — 
   concept の 2 ページ目の後に加入済みなら 1 行挟む
 - 受け入れ: 章2〜4 golden path E2E 更新して緑、Vitest (companionLines の memberId 実在)
 
-#### LP-20 [M] 章ゲートの再設計 (中核 3 単元が can) — 状態: 未 (依存: LP-04, LP-09, LP-12〜17)
+#### LP-20 [M] 章ゲートの再設計 (中核 3 単元が can) — 状態: 済 (依存: LP-04, LP-09, LP-12〜17)
 
 - 各章のボス前の番人 (`hideIf`) を `{ skill: <core>, state: "can" }` × 3 に (複数条件は番人を 3 人並べる
   現行方式か、`hideIf: FlagCond[]` の AND 対応を runner に足すか — 後者を採用し `content.test.ts` を更新)。

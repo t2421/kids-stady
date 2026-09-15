@@ -224,6 +224,18 @@ test("chapter 5 golden path: queen → shop → learn パーセンフレア → 
   await fightBossAt(page, 6, 3, 200);
   await flag(page, "c5.seaKey");
 
+  /*
+   * LP-20: 城の門番 (castle-gate-guard) は 波のかぎ (順番ゲート、上で取得済み) に加え、
+   * 章5の中核3単元 (小数のかけ算わり算・分数のひきざん・割合) が すべて「できる」でも
+   * 消える AND 条件になった。割合 (g5_percent) は上のレッスンで実際に学んだので、
+   * 残り2つを E2E ショートカットで can にする (これが無いと この先の門番の前で
+   * 実際にブロックされ、次の歩行アサーションが失敗する)
+   */
+  await page.evaluate(() => {
+    window.__KAZUQUEST_DEBUG__!.setMastery("g5_decimal_muldiv", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g5_fraction_diff", "can");
+  });
+
   /* マイナドス城: 門番 (13,2) が消えているので from-castle (13,2) から 門 (13,1) を踏む */
   await warp(page, "ch5-world", "from-castle");
   await teleport(page, 13, 2, "up");

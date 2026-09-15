@@ -117,8 +117,11 @@ export interface NpcDef {
   /* ドット絵テクスチャ名 (art/actors.ts のキー) */
   art: string;
   movement: "static" | "wander";
-  /* 条件が成立したら消える (橋の番人など)。省略 = 常に表示 */
-  hideIf?: FlagCond;
+  /*
+   * 条件が成立したら消える (橋の番人など)。省略 = 常に表示。
+   * 配列は AND (LP-20: 章の中核3単元が「できる」全部そろって初めて道が開く番人)。
+   */
+  hideIf?: FlagCond | FlagCond[];
   dialog: DialogEntry[];
 }
 

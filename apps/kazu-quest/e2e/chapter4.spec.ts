@@ -163,6 +163,16 @@ test("chapter 4 golden path: chief → shop → learn カクドスピン → ice
    * ブロックされたままになる */
   await walkLessonToPass(page);
 
+  /*
+   * LP-20: 遺跡の番人は 章4の中核3単元 (角度・小数・2桁でわるわり算) が
+   * すべて「できる」で消える。角度 (g4_angle) は上のレッスンで実際に学んだので、
+   * 残り2つを E2E ショートカットで can にする
+   */
+  await page.evaluate(() => {
+    window.__KAZUQUEST_DEBUG__!.setMastery("g4_decimal", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g4_div_2digit", "can");
+  });
+
   /* せつげんから 角度の遺跡入口 (20,4) を踏んで入る */
   await warp(page, "ch4-world", "from-angle-ruins");
   await stepOnce(page, "ArrowRight");

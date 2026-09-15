@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventCommand } from "../src/content/types";
 import { defaultSave, type SaveData } from "../src/lib/save";
-import { evalCond, levelSignPages, startRun, step } from "../src/lib/events/runner";
+import { evalCond, evalHideIf, levelSignPages, startRun, step } from "../src/lib/events/runner";
 
 describe("evalCond", () => {
   const flags = { done: true, count: 3, zero: 0, off: false };
@@ -70,6 +70,52 @@ describe("evalCond", () => {
         }
       }
     });
+  });
+});
+
+/* npc.hideIf 専用ラッパー (LP-20): 単一条件はそのまま、配列は AND */
+describe("evalHideIf", () => {
+  const flags = { done: true };
+  const mastery = {
+    g1_count: { state: "can" },
+    g1_add_carry: { state: "can" },
+    g1_sub_borrow: { state: "practicing" },
+  };
+
+  it("undefined hideIf never hides the NPC", () => {
+    expect(evalHideIf(undefined, flags, mastery)).toBe(false);
+  });
+
+  it("single condition form behaves exactly like evalCond", () => {
+    expect(evalHideIf({ flag: "done", op: "set" }, flags)).toBe(true);
+    expect(evalHideIf({ skill: "g1_count", state: "can" }, flags, mastery)).toBe(true);
+    expect(evalHideIf({ skill: "g1_sub_borrow", state: "can" }, flags, mastery)).toBe(false);
+  });
+
+  it("array form is AND: hides only once every condition holds", () => {
+    const gate = [
+      { skill: "g1_count", state: "can" as const },
+      { skill: "g1_add_carry", state: "can" as const },
+      { skill: "g1_sub_borrow", state: "can" as const },
+    ];
+    /* g1_sub_borrow はまだ practicing なので、まだ番人は消えない */
+    expect(evalHideIf(gate, flags, mastery)).toBe(false);
+
+    const allCan = { ...mastery, g1_sub_borrow: { state: "can" } };
+    expect(evalHideIf(gate, flags, allCan)).toBe(true);
+  });
+
+  it("array form can mix flag and skill conditions (chapter5/6 order-gate + mastery)", () => {
+    const gate = [
+      { flag: "c5.seaKey", op: "set" as const },
+      { skill: "g1_count", state: "can" as const },
+    ];
+    expect(evalHideIf(gate, { "c5.seaKey": false }, mastery)).toBe(false);
+    expect(evalHideIf(gate, { "c5.seaKey": true }, mastery)).toBe(true);
+  });
+
+  it("empty array never hides (vacuous AND) — content shouldn't rely on this, but it's well-defined", () => {
+    expect(evalHideIf([], flags, mastery)).toBe(true);
   });
 });
 

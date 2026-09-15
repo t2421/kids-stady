@@ -187,6 +187,18 @@ test("chapter 6 golden path: elder → sequential gate → speed seal → en sea
   await stepIntoBattleEvent(page, 3, "c6.trialSeal", 300);
   expect((await getSave(page)).inventory.items.pitagoraNoKen ?? 0).toBeGreaterThan(0);
 
+  /*
+   * LP-20: 城の門番 (castle-gate-guard6) は 3つの印 (順番ゲート、上で取得済み) に加え、
+   * 章6の中核3単元 (分数のかけ算わり算・比・はやさ) が すべて「できる」でも消える
+   * AND 条件になった。この golden path は どの単元も実レッスンでは教えないので、
+   * 3つとも E2E ショートカットで can にする
+   */
+  await page.evaluate(() => {
+    window.__KAZUQUEST_DEBUG__!.setMastery("g6_fraction_muldiv", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g6_ratio", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g6_speed", "can");
+  });
+
   /* ゼロム城 1かい: 宝箱 (2,5) → x の とびら (6,0) */
   await warp(page, "ch6-zerom-1", "entrance");
   await openChest(page, 2, 5, "c6.zeromChest");

@@ -143,13 +143,23 @@ export const CH5_WORLD: MapDef = {
       y: 2,
       art: "scholar",
       movement: "static",
-      hideIf: { flag: "c5.seaKey", op: "set" },
+      /*
+       * LP-20: 順番ゲート (星のかぎ→波のかぎ) はそのまま維持しつつ、章5の中核3単元
+       * (小数のかけ算わり算・分数のひきざん・割合) も すべて「できる」で開く AND 条件に拡張。
+       */
+      hideIf: [
+        { flag: "c5.seaKey", op: "set" },
+        { skill: "g5_decimal_muldiv", state: "can" },
+        { skill: "g5_fraction_diff", state: "can" },
+        { skill: "g5_percent", state: "can" },
+      ],
       dialog: [
         {
           pages: [
             "きたの マイナドス城の 門は かたく とざされておる。",
             "海底神殿の 「波のかぎ」が なければ ひらかぬ。",
             "まずは 星のかぎ、つぎに 波のかぎ。じゅんばんじゃ。",
+            "そして 小数・分数・割合の力、3つとも「できる」に なっておるか。",
           ],
         },
       ],

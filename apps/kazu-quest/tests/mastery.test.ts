@@ -295,4 +295,36 @@ describe("initMasteryFromFlags", () => {
     const twice = initMasteryFromFlags(once);
     expect(twice).toEqual(once);
   });
+
+  /*
+   * LP-20 の章ゲート互換性: 各章の番人が「learned.<呪文>」1つだけを見ていた頃の
+   * 既存セーブ (mastery データが一切無く、章の3つの呪文を すべて learned.* にしている
+   * だけ) が、新しい「中核3単元 can」ゲートでも詰まらないこと。src/content/spells.ts の
+   * learnTest.skillIds が各章の中核skillIdと1:1対応しているはずなので、その呪文を
+   * すべて learned にしていれば initMasteryFromFlags だけで 3単元とも can に上がる。
+   */
+  describe("章ゲート互換性 (LP-20): 中核3単元ぶんの学習済みフラグから can へ", () => {
+    const CHAPTER_CORE_SPELLS: { chapter: number; spellIds: string[]; skillIds: string[] }[] = [
+      { chapter: 1, spellIds: ["kazoeSlash", "tashirian", "hikidaman"], skillIds: ["g1_count", "g1_add_carry", "g1_sub_borrow"] },
+      { chapter: 2, spellIds: ["tashiriada", "kukudama", "tokiShift"], skillIds: ["g2_add_column", "g2_kuku", "g2_time"] },
+      { chapter: 3, spellIds: ["waridama", "amariBind", "hafun"], skillIds: ["g3_div", "g3_div_remainder", "g3_fraction"] },
+      { chapter: 4, spellIds: ["kakudoSpin", "decimaFreeze", "warikiriBlade"], skillIds: ["g4_angle", "g4_decimal", "g4_div_2digit"] },
+      { chapter: 5, spellIds: ["shousuuStorm", "tsuubunSlash", "percenFlare"], skillIds: ["g5_decimal_muldiv", "g5_fraction_diff", "g5_percent"] },
+      { chapter: 6, spellIds: ["bunsuuNova", "ratioBreak", "speedStar"], skillIds: ["g6_fraction_muldiv", "g6_ratio", "g6_speed"] },
+    ];
+
+    for (const { chapter, spellIds, skillIds } of CHAPTER_CORE_SPELLS) {
+      it(`章${chapter}: mastery データなしの旧セーブでも 3単元とも can になる`, () => {
+        const flags: Record<string, boolean> = {};
+        for (const spellId of spellIds) flags[`learned.${spellId}`] = true;
+        const save: SaveData = { ...defaultSave(), flags, mastery: {} };
+
+        const after = initMasteryFromFlags(save);
+
+        for (const skillId of skillIds) {
+          expect(masteryOf(after, skillId).state).toBe("can");
+        }
+      });
+    }
+  });
 });

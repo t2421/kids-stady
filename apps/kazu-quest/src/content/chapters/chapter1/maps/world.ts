@@ -89,12 +89,17 @@ export const CH1_WORLD: MapDef = {
       y: 12,
       art: "villager",
       movement: "static",
-      hideIf: { flag: "learned.hikidaman", op: "set" },
+      /* LP-20: 章1の中核3単元 (かぞえる・くりあがり・くりさがり) が すべて「できる」で開く */
+      hideIf: [
+        { skill: "g1_count", state: "can" },
+        { skill: "g1_add_carry", state: "can" },
+        { skill: "g1_sub_borrow", state: "can" },
+      ],
       dialog: [
         {
           pages: [
             "はしの さきは かぞえの どうくつ。",
-            "くりさがりの じゅもん ヒキダマンが ないと きけんだ!",
+            "かぞえる・くりあがり・くりさがり。3つとも「できる」に ならないと とおれないぞ!",
             "モリカゲむらの まなびやで テストに ごうかく してきな。",
           ],
         },

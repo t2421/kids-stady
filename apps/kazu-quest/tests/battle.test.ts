@@ -178,6 +178,44 @@ describe("battle rounds", () => {
     expect(s2.enemies[0].hp).toBeLessThan(50);
   });
 
+  /* 数晶ボーナス (LP-20): 章のかけら6つ完成で powerMultiplier が乗る */
+  it("a spell cast with powerMultiplier deals more damage than the same cast without it (same rng)", () => {
+    const withoutBonus = createBattle([HERO], [{ ...KESHIGOMUN, hp: 999 }], false);
+    const withBonus = createBattle([HERO], [{ ...KESHIGOMUN, hp: 999 }], false);
+    const cast = (powerMultiplier?: number) => ({
+      kind: "spell" as const,
+      memberId: "hero",
+      spell: HIKIDAMA,
+      targetId: withoutBonus.enemies[0].id,
+      outcome: { correct: true, critical: false },
+      powerMultiplier,
+    });
+
+    const { state: noBonusResult } = submitRound(withoutBonus, [cast(undefined)], mulberry32(42));
+    const { state: bonusResult } = submitRound(withBonus, [cast(1.2)], mulberry32(42));
+
+    const noBonusDamage = 999 - noBonusResult.enemies[0].hp;
+    const bonusDamage = 999 - bonusResult.enemies[0].hp;
+    expect(bonusDamage).toBeGreaterThan(noBonusDamage);
+  });
+
+  it("powerMultiplier of 1 (or omitted) leaves damage unchanged (same rng)", () => {
+    const a = createBattle([HERO], [{ ...KESHIGOMUN, hp: 999 }], false);
+    const b = createBattle([HERO], [{ ...KESHIGOMUN, hp: 999 }], false);
+    const cast = (powerMultiplier?: number) => ({
+      kind: "spell" as const,
+      memberId: "hero",
+      spell: HIKIDAMA,
+      targetId: a.enemies[0].id,
+      outcome: { correct: true, critical: false },
+      powerMultiplier,
+    });
+
+    const { state: r1 } = submitRound(a, [cast(undefined)], mulberry32(5));
+    const { state: r2 } = submitRound(b, [cast(1)], mulberry32(5));
+    expect(r1.enemies[0].hp).toBe(r2.enemies[0].hp);
+  });
+
   it("flee always succeeds against non-boss", () => {
     const state = createBattle([HERO], [KESHIGOMUN, KESHIGOMUN], false);
     const { state: s2, events } = submitRound(

@@ -10,7 +10,7 @@ import type { MapDef, TileSpec } from "../../content/types";
 import type { SaveData } from "../../lib/save";
 import { TILE_SIZE, isNegariaStagedArt, negariaStageArtKey } from "../../content/art/tiles";
 import { TILE_ANIMATIONS } from "../../content/art/tileAnims";
-import { evalCond } from "../../lib/events/runner";
+import { evalCond, evalHideIf } from "../../lib/events/runner";
 import { masteredShardCount, negariaStageFor } from "../../lib/review";
 import { getSave } from "../session";
 import { actorTextureKey, tileTextureKey } from "../textures";
@@ -104,7 +104,7 @@ export class MapView {
     this.startTileAnimations();
 
     for (const npc of this.map.npcs) {
-      if (npc.hideIf && evalCond(npc.hideIf, flags)) continue;
+      if (evalHideIf(npc.hideIf, flags, getSave().mastery)) continue;
       const [px, py] = tileCenter(npc.x, npc.y);
       this.npcShadows.set(npc.id, addFootShadow(this.scene, px, py));
       const sprite = this.scene.add
@@ -178,7 +178,7 @@ export class MapView {
     for (const npc of this.map.npcs) {
       if (!npc.hideIf) continue;
       const sprite = this.npcSprites.get(npc.id);
-      if (sprite && evalCond(npc.hideIf, flags)) {
+      if (sprite && evalHideIf(npc.hideIf, flags, getSave().mastery)) {
         this.scene.tweens.killTweensOf(sprite);
         sprite.destroy();
         this.npcSprites.delete(npc.id);

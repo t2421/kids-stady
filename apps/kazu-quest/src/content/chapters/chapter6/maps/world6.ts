@@ -99,12 +99,22 @@ export const CH6_WORLD: MapDef = {
       y: 2,
       art: "measurer",
       movement: "static",
-      hideIf: { flag: "c6.trialSeal", op: "set" },
+      /*
+       * LP-20: 3つの印 (順番ゲート) はそのまま維持しつつ、章6の中核3単元
+       * (分数のかけ算わり算・比・はやさ) も すべて「できる」で開く AND 条件に拡張。
+       */
+      hideIf: [
+        { flag: "c6.trialSeal", op: "set" },
+        { skill: "g6_fraction_muldiv", state: "can" },
+        { skill: "g6_ratio", state: "can" },
+        { skill: "g6_speed", state: "can" },
+      ],
       dialog: [
         {
           pages: [
             "ゼロム城の 門には 3つの 印が きざまれておる。",
             "はやさ・円・ピタゴラ。すべてが そろわねば 門は ひらかぬ。",
+            "そして 分数・比・はやさの力、3つとも「できる」に なっておるか。",
             "…そなたの 父も、この 門の 前で とらわれたと きく。",
           ],
         },

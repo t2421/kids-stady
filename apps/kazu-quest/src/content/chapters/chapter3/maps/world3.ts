@@ -113,13 +113,18 @@ export const CH3_WORLD: MapDef = {
       y: 6,
       art: "villager",
       movement: "static",
-      hideIf: { flag: "learned.waridama", op: "set" },
+      /* LP-20: 章3の中核3単元 (わり算・あまりのあるわり算・分数) が すべて「できる」で開く */
+      hideIf: [
+        { skill: "g3_div", state: "can" },
+        { skill: "g3_div_remainder", state: "can" },
+        { skill: "g3_fraction", state: "can" },
+      ],
       dialog: [
         {
           pages: [
             "この さきは わけまえの ピラミッド。",
-            "とびらは 「わけまえ」= わり算の といに こたえないと ひらかない。",
-            "ワケーラの まなびやで ワリダマを おぼえてから いくんだな。",
+            "とびらは 「わけまえ」= わり算・あまり・分数、3つとも「できる」に ならないと ひらかない。",
+            "ワケーラの まなびやで おぼえてから いくんだな。",
           ],
         },
       ],

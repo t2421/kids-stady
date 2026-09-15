@@ -5,7 +5,14 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { advanceClock, resetClock } from "../src/lib/clock";
-import { masteredShardCount, negariaStageFor, reviewSelection } from "../src/lib/review";
+import {
+  CHAPTER_CRYSTAL_POWER_MULTIPLIER,
+  chapterCrystalMultiplier,
+  hasChapterCrystal,
+  masteredShardCount,
+  negariaStageFor,
+  reviewSelection,
+} from "../src/lib/review";
 import { defaultSave, type MasteryEntry, type SaveData } from "../src/lib/save";
 
 /*
@@ -104,6 +111,37 @@ describe("masteredShardCount", () => {
       e: { state: "none" },
     });
     expect(masteredShardCount(save)).toBe(2);
+  });
+});
+
+/* 数晶 (LP-11/LP-20): 章のかけら (kakera_<chapter>) が 6つで完成 */
+describe("hasChapterCrystal / chapterCrystalMultiplier", () => {
+  const withKakera = (chapter: number, count: number): SaveData => ({
+    ...defaultSave(),
+    inventory: { gold: 0, items: { [`kakera_${chapter}`]: count } },
+  });
+
+  it("5つでは未完成", () => {
+    expect(hasChapterCrystal(withKakera(3, 5), 3)).toBe(false);
+    expect(chapterCrystalMultiplier(withKakera(3, 5), 3)).toBe(1);
+  });
+
+  it("6つで完成", () => {
+    expect(hasChapterCrystal(withKakera(3, 6), 3)).toBe(true);
+    expect(chapterCrystalMultiplier(withKakera(3, 6), 3)).toBe(CHAPTER_CRYSTAL_POWER_MULTIPLIER);
+  });
+
+  it("6つを超えていても完成のまま (上限なし)", () => {
+    expect(hasChapterCrystal(withKakera(3, 9), 3)).toBe(true);
+  });
+
+  it("かけらが無ければ未完成 (0扱い)", () => {
+    expect(hasChapterCrystal(defaultSave(), 3)).toBe(false);
+    expect(chapterCrystalMultiplier(defaultSave(), 3)).toBe(1);
+  });
+
+  it("章が違えば かけらは別集計 (章3の6つは章4の判定に影響しない)", () => {
+    expect(hasChapterCrystal(withKakera(3, 6), 4)).toBe(false);
   });
 });
 

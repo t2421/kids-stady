@@ -113,12 +113,17 @@ export const CH4_WORLD: MapDef = {
       y: 5,
       art: "measurer",
       movement: "static",
-      hideIf: { flag: "learned.kakudoSpin", op: "set" },
+      /* LP-20: 章4の中核3単元 (角度・小数・2桁でわるわり算) が すべて「できる」で開く */
+      hideIf: [
+        { skill: "g4_angle", state: "can" },
+        { skill: "g4_decimal", state: "can" },
+        { skill: "g4_div_2digit", state: "can" },
+      ],
       dialog: [
         {
           pages: [
             "この さきは 角度の遺跡。とびらは 分度器の しかけだ。",
-            "角度の じゅもん カクドスピンを おぼえてから いくのが よかろう。",
+            "角度・小数・2桁でわる わり算。3つとも「できる」に ならないと ひらかぬ。",
             "メジャーリアの まなびやで おぼえられるぞ。",
           ],
         },

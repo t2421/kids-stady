@@ -7,6 +7,7 @@ import { getSpell } from "../../content/spells";
 import { chapterForMap, getChapter } from "../../content/chapters";
 import type { SpellDef } from "../../content/types";
 import { mulberry32 } from "../../lib/curriculum/types";
+import { chapterCrystalMultiplier } from "../../lib/review";
 import { autosave, getSave, tickPlaytime, updateSave } from "../session";
 import { monsterTextureKey } from "../textures";
 import { GAME_HEIGHT, GAME_WIDTH } from "../main";
@@ -393,6 +394,14 @@ export class BattleScene extends Scene {
     this.busy = true;
     this.menu.clear();
     this.msgText.setText(`${spell.name}の じゅもんを となえる…`);
+    /*
+     * 数晶ボーナス (LP-20): 呪文は章に厳密には紐付いていないため、
+     * いる場所の章 (chapterForMap) を優先し、取れなければ save.chapter.current を
+     * 近似として使う (attack() の出題プール選択と同じ方針 — KQ-30b)。
+     */
+    const save = getSave();
+    const chapter = chapterForMap(save.location.mapId) ?? getChapter(save.chapter.current);
+    const powerMultiplier = chapterCrystalMultiplier(save, chapter?.grade ?? save.chapter.current);
     requestBattleMath("spell", spell.skillIds, spell.battleTimeLimitMs, (outcome) => {
       const targetId =
         spell.kind === "attack" || spell.kind === "debuff"
@@ -406,6 +415,7 @@ export class BattleScene extends Scene {
         spell,
         targetId,
         outcome,
+        powerMultiplier,
       });
     });
   }

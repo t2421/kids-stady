@@ -80,6 +80,16 @@ test("chapter 2 golden path: ship → tasuku joins → learn ククダマ → to
     { timeout: 15_000 },
   );
 
+  /*
+   * LP-20: 塔の門番は 章2の中核3単元 (ひっ算のたし算・九九・とけい) が
+   * すべて「できる」で消える。九九 (g2_kuku) は上のレッスンで実際に学んだので、
+   * 残り2つを E2E ショートカットで can にする
+   */
+  await page.evaluate(() => {
+    window.__KAZUQUEST_DEBUG__!.setMastery("g2_add_column", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g2_time", "can");
+  });
+
   /* 九九の塔: 4つのクイズ扉を正解で のぼる */
   await warp(page, "ch2-tower-1", "start");
   for (let floor = 1; floor <= 4; floor++) {

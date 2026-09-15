@@ -60,6 +60,13 @@ export type PlayerCommand =
       targetId: string;
       /* 算数プロンプトの結果 (M7 で接続)。省略 = 成功・かいしんなし */
       outcome?: { correct: boolean; critical: boolean };
+      /*
+       * 章の数晶 (かけら6つ) 完成ボーナス (LP-20)。spell.power に掛ける倍率。
+       * 省略 = 1 (無補正)。呼び出し側 (BattleScene) が
+       * src/lib/review.ts の chapterCrystalMultiplier で計算して渡す —
+       * battle.ts 自体は save や章の概念を持たない純粋な状態機械のまま保つ
+       */
+      powerMultiplier?: number;
     }
   | { kind: "defend"; memberId: string }
   | { kind: "item"; memberId: string; itemId: string; heal: number }
@@ -286,6 +293,8 @@ export function submitRound(
           mpLeft: actor.mp,
         });
         const spell = cmd.spell;
+        /* 数晶ボーナス (LP-20): 章の power 倍率。省略時は 1 = 無補正 */
+        const power = spell.power * (cmd.powerMultiplier ?? 1);
         const dealDamage = (target: EnemyCombatant, amount: number) => {
           target.hp = Math.max(0, target.hp - amount);
           const killed = target.hp === 0;
@@ -299,7 +308,7 @@ export function submitRound(
           if (spell.target === "allEnemies") {
             /* 全体攻撃 (ククダマ): 1体あたり威力 80% */
             for (const target of livingEnemies(next)) {
-              dealDamage(target, spellAmount(spell.power * 0.8, outcome.critical, rng));
+              dealDamage(target, spellAmount(power * 0.8, outcome.critical, rng));
             }
           } else {
             const hits = Math.max(1, spell.hits ?? 1);
@@ -312,7 +321,7 @@ export function submitRound(
                   ? living[Math.floor(rng() * living.length)]
                   : (findEnemy(cmd.targetId) ?? living[0]);
               if (target.hp <= 0) target = living[0];
-              dealDamage(target, spellAmount(spell.power, outcome.critical, rng));
+              dealDamage(target, spellAmount(power, outcome.critical, rng));
             }
           }
         } else if (spell.kind === "heal") {
@@ -323,7 +332,7 @@ export function submitRound(
           for (const target of targets) {
             const healed = Math.min(
               target.maxHp - target.hp,
-              spellAmount(spell.power, outcome.critical, rng),
+              spellAmount(power, outcome.critical, rng),
             );
             target.hp += healed;
             events.push({ type: "heal", targetId: target.id, amount: healed, onParty: true });

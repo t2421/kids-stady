@@ -139,6 +139,12 @@ function isWalkableTile(map: MapDef, x: number, y: number): boolean {
   return !!spec?.walkable;
 }
 
+/* hideIf は単一条件 or 配列 (AND, LP-20) — どちらも同じ配列として扱えるように正規化する */
+function hideIfConds(npc: { hideIf?: FlagCond | FlagCond[] }): FlagCond[] {
+  if (!npc.hideIf) return [];
+  return Array.isArray(npc.hideIf) ? npc.hideIf : [npc.hideIf];
+}
+
 /*
  * フラグ到達可能性: 条件 (dialog if / npc hideIf) が参照するフラグは、
  * どこかの setFlag / onceFlag / battle winFlag / 習得テスト合格
@@ -161,8 +167,10 @@ describe("flag reachability", () => {
         if (ev.onceFlag) settable.add(ev.onceFlag);
       }
       for (const npc of map.npcs) {
-        if (npc.hideIf && "flag" in npc.hideIf) {
-          referenced.set(npc.hideIf.flag, `${map.id}/npc:${npc.id}`);
+        for (const cond of hideIfConds(npc)) {
+          if ("flag" in cond) {
+            referenced.set(cond.flag, `${map.id}/npc:${npc.id}`);
+          }
         }
         for (const entry of npc.dialog) {
           if (entry.if && "flag" in entry.if) {
@@ -186,8 +194,10 @@ describe("flag reachability", () => {
     const skillConds: { cond: Extract<FlagCond, { skill: string }>; where: string }[] = [];
     for (const map of maps) {
       for (const npc of map.npcs) {
-        if (npc.hideIf && "skill" in npc.hideIf) {
-          skillConds.push({ cond: npc.hideIf, where: `${map.id}/npc:${npc.id} hideIf` });
+        for (const cond of hideIfConds(npc)) {
+          if ("skill" in cond) {
+            skillConds.push({ cond, where: `${map.id}/npc:${npc.id} hideIf` });
+          }
         }
         for (const entry of npc.dialog) {
           if (entry.if && "skill" in entry.if) {

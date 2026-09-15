@@ -71,7 +71,7 @@ const MASTERY_ORDER: Record<string, number> = {
  * 厳密な型を import せず構造的に必要な部分だけを受け取る。
  * TODO(LP-04): save.mastery が型付けされたら SaveData["mastery"] を直接受け取るよう厳格化する
  */
-type MasteryLookup = Record<string, { state?: string } | undefined> | undefined;
+export type MasteryLookup = Record<string, { state?: string } | undefined> | undefined;
 
 export function evalCond(
   cond: FlagCond | undefined,
@@ -95,6 +95,22 @@ export function evalCond(
     case ">=":
       return typeof value === "number" && value >= (cond.value ?? 0);
   }
+}
+
+/*
+ * npc.hideIf 専用の評価ラッパー (LP-20)。単一条件はそのまま evalCond に委譲し、
+ * 配列は AND (全条件が成立して初めて true = 番人が消える)。
+ * hideIf 省略時は false (番人は常に表示) — evalCond(undefined,...) の
+ * 「条件なし=true」という別の意味論 (dialog.if 等) と混同しないよう分ける。
+ */
+export function evalHideIf(
+  hideIf: FlagCond | FlagCond[] | undefined,
+  flags: SaveData["flags"],
+  mastery?: MasteryLookup,
+): boolean {
+  if (!hideIf) return false;
+  const conds = Array.isArray(hideIf) ? hideIf : [hideIf];
+  return conds.every((cond) => evalCond(cond, flags, mastery));
 }
 
 export function startRun(

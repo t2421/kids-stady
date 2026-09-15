@@ -87,12 +87,17 @@ export const CH2_WORLD: MapDef = {
       y: 9,
       art: "villager",
       movement: "static",
-      hideIf: { flag: "learned.kukudama", op: "set" },
+      /* LP-20: 章2の中核3単元 (ひっ算のたし算・九九・とけい) が すべて「できる」で開く */
+      hideIf: [
+        { skill: "g2_add_column", state: "can" },
+        { skill: "g2_kuku", state: "can" },
+        { skill: "g2_time", state: "can" },
+      ],
       dialog: [
         {
           pages: [
             "この さきは 九九の塔。とびらは ぜんぶ 九九の クイズだ。",
-            "九九の じゅもん ククダマを おぼえてから いくのが おすすめだぞ。",
+            "ひっ算のたし算・九九・とけい。3つとも「できる」に ならないと ひらかないぞ。",
             "ミナトスの まなびやで おぼえられる。",
           ],
         },

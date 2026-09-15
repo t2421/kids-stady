@@ -52,6 +52,16 @@ test("chapter 1 golden path: mother → king → learn → gates → boss → cl
     { timeout: 15_000 },
   );
 
+  /*
+   * LP-20: 橋の番人は 章1の中核3単元 (かぞえる・くりあがり・くりさがり) が
+   * すべて「できる」で消える。くりさがり (g1_sub_borrow) は上のレッスンで
+   * 実際に学んだので、残り2つを E2E ショートカットで can にする
+   */
+  await page.evaluate(() => {
+    window.__KAZUQUEST_DEBUG__!.setMastery("g1_count", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g1_add_carry", "can");
+  });
+
   /* E2E用にレベルを上げてボス戦を短縮 (テストフック) */
   await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.grantLevel(12));
 

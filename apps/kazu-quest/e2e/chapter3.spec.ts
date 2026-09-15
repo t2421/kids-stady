@@ -113,6 +113,16 @@ test("chapter 3 golden path: chief → kakeru joins → shop → learn ワリダ
   );
   expect(items.hagaNeNoTsurugi ?? 0).toBeGreaterThan(0);
 
+  /*
+   * LP-20: ピラミッドの番人は 章3の中核3単元 (わり算・あまり・分数) が
+   * すべて「できる」で消える。わり算 (g3_div) は上のレッスンで実際に学んだので、
+   * 残り2つを E2E ショートカットで can にする
+   */
+  await page.evaluate(() => {
+    window.__KAZUQUEST_DEBUG__!.setMastery("g3_div_remainder", "can");
+    window.__KAZUQUEST_DEBUG__!.setMastery("g3_fraction", "can");
+  });
+
   /* さばくから ピラミッド入口 (20,5) を踏んで入る */
   await warp(page, "ch3-world", "from-pyramid");
   await stepOnce(page, "ArrowRight");

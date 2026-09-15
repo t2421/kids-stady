@@ -5,6 +5,62 @@
 
 ## 設計変更ログ
 
+- **2026-09-15 (LP-20: 章ゲートの再設計 + 数晶ボーナス)**: 各章のボス前の番人を
+  「呪文1つ学習済み」から「中核3単元が すべて できる」に切り替えた。
+  - **`hideIf` を `FlagCond | FlagCond[]` に拡張** (`content/types.ts`)。配列は AND
+    (全条件が成立して初めて番人が消える)。単一条件はそのまま `evalCond` に委譲する
+    ラッパー `evalHideIf` を `runner.ts` に追加し、`MapView.ts` の2箇所 (build/refresh)
+    をこれに置き換え (`getSave().mastery` を渡す)。`content.test.ts` の hideIf 検証
+    (フラグ到達可能性・skill条件の実在チェック) も配列対応に拡張
+  - **章1〜4**: 単一の `{flag: "learned.<spell>", op:"set"}` を丸ごと
+    `[{skill,state:"can"}] × 3` (中核3単元) に置き換え。中核skillIdは
+    `coreOfChapter: true` を実データから grep して確認 (章1=g1_count/g1_add_carry/
+    g1_sub_borrow、章2=g2_add_column/g2_kuku/g2_time、章3=g3_div/g3_div_remainder/
+    g3_fraction、章4=g4_angle/g4_decimal/g4_div_2digit)
+  - **章5・章6**: 既存の「順番ゲート」(星のかぎ→波のかぎ、3つの印) は物語上の別の
+    ゲートなので温存し、ボス直前の最終番人 (castle-gate-guard / castle-gate-guard6)
+    だけ `hideIf` を「既存の flag 条件 + 中核3単元 can」の混在4条件配列に**拡張**
+    (置き換えではなく追加)。章5=g5_decimal_muldiv/g5_fraction_diff/g5_percent、
+    章6=g6_fraction_muldiv/g6_ratio/g6_speed。章7はゲート自体が無いため対象外
+  - **既存セーブ互換**: `initMasteryFromFlags` (LP-04で実装済み・変更なし) が
+    全 `SPELLS` を汎用的に走査して `learned.<id>` → `learnTest.skillIds` を can に
+    昇格させる作りだったため、18個の中核skillIdすべてに対応する呪文が
+    既に1:1で存在することを確認し (表は上記)、追加のマッピングテーブルは不要と判断。
+    Vitest (`tests/mastery.test.ts`) に 章1〜6 ぶんの回帰テストを追加
+  - **数晶ボーナス**: `src/lib/review.ts` に `hasChapterCrystal(save, chapter)` /
+    `chapterCrystalMultiplier(save, chapter)` を追加。章のかけら
+    (`kakera_<chapter>`) が **6個** で数晶完成、呪文の power に **×1.2** (+20%、
+    計画§4.2/ロードマップの想定値を採用)。呪文は章に厳密には紐付いていないため、
+    戦闘中は「いる場所の章 (`chapterForMap`) → 取れなければ `save.chapter.current`」
+    を近似として使う (`BattleScene.castSpell` で計算し `PlayerCommand.powerMultiplier`
+    として `submitRound` に渡す — `battle.ts` 自体は save/章の概念を持たない純関数のまま)
+  - **E2E**: 章1〜6の golden path に `__KAZUQUEST_DEBUG__.setMastery` を追加し、
+    実レッスンで学ばない残り2〜3の中核単元を can にしてから ボス/門番の区間へ進める
+    ように更新 (章5は実際に歩いて城門を通る箇所があるため機能的に必須、他は
+    warp で番人区間を素通りするため必須ではないが一貫性のため追加)
+  - 単元マップ画面 (LP-11bで計画されていたもの) は本タスクのスコープ外のまま
+    (数晶ボーナスは戦闘ダメージの数字と純関数テストで検証可能なため画面なしで完結)
+
+- **2026-09-15 (LP-19: なかまが教える場面)**: 加入イベント直後に、その なかまの得意分野の
+  単元を `{ type: "openLesson", skillId, entry: "concept", skipReadiness: true }` で
+  差し込む (タスク=g2_add_column、カケル=g3_mul_column、リトル=g4_decimal)。
+  - **entry/skipReadiness を EventCommand→RunnerEffect→handleOpenLesson まで貫通**
+    (`content/types.ts` の `LessonEntryPoint`、`runner.ts`、`lessonFlow.ts` の
+    `OpenLessonOptions`)。`LessonScreen.tsx` は元から `entry` に対応済みだったため無改修
+  - **readiness ゲートは意図的にバイパス** (`skipReadiness: true`)。加入直後の
+    「Xが なかまに くわわった!」の直後に前提チェック (ReadinessScreen) の割り込みを
+    出すと唐突なため。プレイヤー自身がまなびやを訪ねる通常経路はこのフラグを立てない
+    狭い特例で、readiness ゲートそのものの弱体化は意図していない
+  - **companionLines の表示位置**: concept の 2ページ目 (0-based index 1) を読み終えて
+    「つぎへ」を押した瞬間に、いま パーティに いる なかまの一言 (`LessonDef.companionLines`)
+    を 図なしの1ページとして割り込ませ、次に「つぎへ」を押すと通常の3ページ目
+    (または concept が2ページのみなら workedExample) へ進む。複数の加入済みなかまが
+    同じ単元に一言を持つ場合は party 配列の並び順で最初の1件だけを採用 (現状の3組では
+    起きないが念のため)
+  - 3件とも `concept` が3〜4ページのため、実際には「2ページ目の直後に割り込み、
+    3ページ目以降へ続く」経路のみ通る (2ページのみ→workedExampleへの分岐は
+    今後そのような単元が増えたときのための保険)
+
 - **2026-09-14 (ユーザー指示: 戦闘外でも回復できるように)**: メニューの「じゅもん」「もちもの」
   タブに「つかう」ボタンを追加。回復呪文 (kind: heal) は戦闘外でも使え、**戦闘と同じく算数の
   出題あり** (時間無制限・小3以降はテンキー)。正解で MP 消費 + 回復 (戦闘の回復式、かいしんなし、
