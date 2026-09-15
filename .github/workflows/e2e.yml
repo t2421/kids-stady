@@ -80,9 +80,11 @@ jobs:
         run: npx playwright install-deps chromium
 
       # ---- smoke (既定) ----------------------------------------------------
-      - name: Smoke — smoke + orientation
+      # lesson.spec.ts (LP-23): 学びの設計の核 (レッスン画面の一通りの流れ) を
+      # 常時のスモークにも含める。速い (~30秒) ので smoke 側に置く。
+      - name: Smoke — smoke + orientation + lesson
         if: inputs.suite != 'full'
-        run: npx playwright test e2e/smoke.spec.ts e2e/orientation.spec.ts --reporter=line,html
+        run: npx playwright test e2e/smoke.spec.ts e2e/orientation.spec.ts e2e/lesson.spec.ts --reporter=line,html
 
       # touch.spec.ts (iPad プロジェクト) は別タスクで追加予定。存在するときだけ実行する。
       # レポート出力先を分けて 1 本目の HTML レポートを上書きしない。
