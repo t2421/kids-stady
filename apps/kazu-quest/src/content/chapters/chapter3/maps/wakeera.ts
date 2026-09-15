@@ -90,6 +90,8 @@ export const CH3_WAKEERA: MapDef = {
           then: [
             { type: "joinParty", memberId: "kakeru", level: 13 },
             { type: "setFlag", flag: "c3.metKakeru" },
+            /* なかまが教える場面 (LP-19): カケルの得意分野を加入直後の短いレッスンで */
+            { type: "openLesson", skillId: "g3_mul_column", entry: "concept", skipReadiness: true },
           ],
         },
       ],

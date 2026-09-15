@@ -132,4 +132,8 @@ export const G2_ADD_COLUMN: LessonDef = {
     { pattern: "placeShift", feedback: "くらいが ずれていないか たしかめよう。いちのくらいは いちのくらいどうし" },
   ],
   coreOfChapter: true,
+  /* なかまが教える場面 (LP-19)。タスクは「たしざんの いのり」の使い手 */
+  companionLines: {
+    tasuku: "くらいを そろえて たすのは、たしざんの いのりと おなじ かんじだよ!",
+  },
 };

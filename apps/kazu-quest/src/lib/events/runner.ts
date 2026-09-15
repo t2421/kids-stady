@@ -11,7 +11,7 @@
  * 適用され、UI が必要なコマンドだけが effect として外に出る。
  */
 
-import type { EventCommand, FlagCond } from "../../content/types";
+import type { EventCommand, FlagCond, LessonEntryPoint } from "../../content/types";
 import type { SaveData } from "../save";
 import { MEMBERS, memberStats } from "../battle/members";
 import { expForLevel } from "../battle/stats";
@@ -25,8 +25,9 @@ export type RunnerEffect =
   | { kind: "openSpellTest"; spellId: string }
   | { kind: "openDrillBoard" }
   | { kind: "openReviewQuest" }
-  /* LP-08/LP-11 が React 画面に差し替えるまでは FieldScene が仮メッセージを出す */
-  | { kind: "openLesson"; skillId: string }
+  /* LP-08/LP-11 が React 画面に差し替えるまでは FieldScene が仮メッセージを出す。
+   * entry/skipReadiness は EventCommand の openLesson と同じ意味 (LP-19) */
+  | { kind: "openLesson"; skillId: string; entry?: LessonEntryPoint; skipReadiness?: boolean }
   | { kind: "openReview" }
   | { kind: "openPreview" }
   /* まなびやの先生メニュー (LP-18) */
@@ -354,7 +355,12 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
       case "openLesson":
         return {
           state: { stack, save, pending: cmd },
-          effect: { kind: "openLesson", skillId: cmd.skillId },
+          effect: {
+            kind: "openLesson",
+            skillId: cmd.skillId,
+            entry: cmd.entry,
+            skipReadiness: cmd.skipReadiness,
+          },
           done: false,
         };
       case "openReview":

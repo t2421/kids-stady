@@ -114,4 +114,8 @@ export const G4_DECIMAL: LessonDef = {
     { pattern: "other", feedback: "こたえの けたすうが ちがうかも。もういちど けいさんしよう。" },
   ],
   coreOfChapter: true,
+  /* なかまが教える場面 (LP-19)。リトルは 小数・分数の まほうの つかいて */
+  companionLines: {
+    little: "0.1が 10こ あつまれば 1。くらいさえ そろえれば しょうすうも こわくないわ。",
+  },
 };

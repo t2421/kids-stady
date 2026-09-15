@@ -272,6 +272,73 @@ describe("handleOpenLesson: readiness ゲート (LP-10)", () => {
   });
 });
 
+/*
+ * LP-19 (なかまが教える場面) が handleOpenLesson に足した options 引数。
+ * entry は open-lesson の payload にそのまま渡り、skipReadiness は
+ * readiness ゲート (前提チェック) そのものをバイパスする — 加入直後の
+ * 短いレッスンをいきなり concept から開くための専用の抜け道
+ */
+describe("handleOpenLesson: options (LP-19 なかまが教える場面)", () => {
+  it("entry オプションが open-lesson の payload に そのまま渡る", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpenLesson = vi.fn();
+    EventBus.on("open-lesson", onOpenLesson);
+
+    handleOpenLesson(ui, "g1_add_nc", advance, { entry: "concept" });
+
+    expect(onOpenLesson).toHaveBeenCalledWith({ skillId: "g1_add_nc", entry: "concept" });
+
+    EventBus.off("open-lesson", onOpenLesson);
+  });
+
+  it("skipReadiness: true のとき、前提が不足していても open-readiness を経由せず open-lesson を直接発火する", () => {
+    /* defaultSave() では g1_add_carry の前提 g1_add_nc が未習得 (readinessRequired が上のテストで確認済み) */
+    updateSave(() => defaultSave());
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpenReadiness = vi.fn();
+    const onOpenLesson = vi.fn();
+    EventBus.on("open-readiness", onOpenReadiness);
+    EventBus.on("open-lesson", onOpenLesson);
+
+    handleOpenLesson(ui, "g1_add_carry", advance, { entry: "concept", skipReadiness: true });
+
+    expect(onOpenReadiness).not.toHaveBeenCalled();
+    expect(onOpenLesson).toHaveBeenCalledWith({ skillId: "g1_add_carry", entry: "concept" });
+    expect(advance).not.toHaveBeenCalled();
+
+    EventBus.emit("lesson-finished", {
+      skillId: "g1_add_carry",
+      outcome: "passed",
+      correct: 1,
+      total: 1,
+    });
+    expect(advance).toHaveBeenCalledTimes(1);
+
+    EventBus.off("open-readiness", onOpenReadiness);
+    EventBus.off("open-lesson", onOpenLesson);
+  });
+
+  it("skipReadiness を渡さない (省略 = false) ときは従来どおり readiness ゲートが働く", () => {
+    updateSave(() => defaultSave());
+    const ui = mockUi();
+    const advance = vi.fn();
+    const onOpenReadiness = vi.fn();
+    EventBus.on("open-readiness", onOpenReadiness);
+
+    handleOpenLesson(ui, "g1_add_carry", advance);
+
+    expect(onOpenReadiness).toHaveBeenCalledWith({
+      skillId: "g1_add_carry",
+      prerequisites: ["g1_add_nc"],
+    });
+
+    EventBus.off("open-readiness", onOpenReadiness);
+  });
+});
+
 describe("handleOpenReview (LP-11)", () => {
   it("期日の来た単元 (reviewSelection) を open-review で渡し、review-finished で advance する", () => {
     updateSave(() => ({

@@ -85,6 +85,8 @@ export const CH2_MINATOS: MapDef = {
           then: [
             { type: "joinParty", memberId: "tasuku", level: 6 },
             { type: "setFlag", flag: "c2.metTasuku" },
+            /* なかまが教える場面 (LP-19): タスクの得意分野を加入直後の短いレッスンで */
+            { type: "openLesson", skillId: "g2_add_column", entry: "concept", skipReadiness: true },
           ],
         },
       ],

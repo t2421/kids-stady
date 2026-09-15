@@ -245,6 +245,29 @@ describe("event runner", () => {
     expect(r.state.save.flags.after).toBe(true);
   });
 
+  /* LP-19: なかまが教える場面が使う openLesson の entry/skipReadiness が effect まで往復する */
+  it("openLesson passes entry and skipReadiness through to the effect (LP-19)", () => {
+    const commands: EventCommand[] = [
+      {
+        type: "openLesson",
+        skillId: "g2_add_column",
+        entry: "concept",
+        skipReadiness: true,
+      },
+      { type: "setFlag", flag: "after" },
+    ];
+    let r = step(startRun(commands, defaultSave()));
+    expect(r.effect).toEqual({
+      kind: "openLesson",
+      skillId: "g2_add_column",
+      entry: "concept",
+      skipReadiness: true,
+    });
+    r = step(r.state);
+    expect(r.done).toBe(true);
+    expect(r.state.save.flags.after).toBe(true);
+  });
+
   it("openTeacherMenu surfaces the entries as a UI effect then continues (LP-18)", () => {
     const entries = [
       { skillId: "g1_add_nc", label: "たしざん" },

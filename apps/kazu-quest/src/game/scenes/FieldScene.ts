@@ -664,7 +664,11 @@ export class FieldScene extends Scene {
           handleReviewQuest(this.ui, () => advance());
           break;
         case "openLesson":
-          handleOpenLesson(this.ui, effect.skillId, () => advance());
+          /* entry/skipReadiness (LP-19): なかまが教える場面が使う (省略時は既定の story + readiness ゲート) */
+          handleOpenLesson(this.ui, effect.skillId, () => advance(), {
+            entry: effect.entry,
+            skipReadiness: effect.skipReadiness,
+          });
           break;
         case "openReview":
           handleOpenReview(this.ui, () => advance());

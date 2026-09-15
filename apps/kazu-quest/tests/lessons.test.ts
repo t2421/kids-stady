@@ -6,10 +6,11 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { validateAllLessons, validateLesson } from "../src/content/lessons/index";
+import { LESSONS, validateAllLessons, validateLesson } from "../src/content/lessons/index";
 import type { FigureSpec, LessonDef } from "../src/content/lessons/types";
 import { SKILLS } from "../src/lib/curriculum";
 import type { Problem } from "../src/lib/curriculum/types";
+import { MEMBERS } from "../src/lib/battle/members";
 
 const skillIds = new Set(SKILLS.map((s) => s.id));
 
@@ -141,5 +142,46 @@ describe("validateLesson", () => {
       mistakes: [{ pattern: "notAPattern" as never, feedback: "x" }],
     };
     expect(validateLesson(broken, skillIds)).toMatch(/mistakes/);
+  });
+});
+
+/*
+ * companionLines (LP-19: なかまが教える場面) の memberId が実在の
+ * パーティメンバーであることを、全44単元 (LESSONS) について検査する。
+ * 正典は src/lib/battle/members.ts の MEMBERS (hero/tasuku/kakeru/little)
+ */
+describe("LESSONS companionLines", () => {
+  const memberIds = new Set(Object.keys(MEMBERS));
+
+  it("既知の memberId が1件は存在する (テストの自己検査)", () => {
+    expect(memberIds.size).toBeGreaterThan(0);
+  });
+
+  it("すべての LessonDef の companionLines のキーが 実在の memberId である", () => {
+    const offenders: string[] = [];
+    for (const [skillId, lesson] of Object.entries(LESSONS)) {
+      for (const memberId of Object.keys(lesson.companionLines ?? {})) {
+        if (!memberIds.has(memberId)) {
+          offenders.push(`${skillId}: companionLines["${memberId}"] は 未知の memberId`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("companionLines の値は空文字ではない", () => {
+    const offenders: string[] = [];
+    for (const [skillId, lesson] of Object.entries(LESSONS)) {
+      for (const [memberId, line] of Object.entries(lesson.companionLines ?? {})) {
+        if (!line.trim()) offenders.push(`${skillId}: companionLines["${memberId}"] が からっぽ`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("波5で追加した3単元 (g2_add_column/g3_mul_column/g4_decimal) がそれぞれの担当なかまの一言を持つ", () => {
+    expect(LESSONS.g2_add_column.companionLines?.tasuku).toBeTruthy();
+    expect(LESSONS.g3_mul_column.companionLines?.kakeru).toBeTruthy();
+    expect(LESSONS.g4_decimal.companionLines?.little).toBeTruthy();
   });
 });

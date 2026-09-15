@@ -18,6 +18,7 @@ import { readinessRequired } from "../../content/lessons/prereqs";
 import { reviewSelection } from "../../lib/review";
 import { getSave } from "../session";
 import type { UiScene } from "../scenes/UiScene";
+import type { LessonEntryPoint } from "../../content/types";
 
 export interface LessonFinishedPayload {
   skillId: string;
@@ -36,17 +37,38 @@ export interface ReadinessFinishedPayload {
 const PREPARING_PAGES = ["じゅんびちゅう…"];
 
 /*
+ * handleOpenLesson の任意オプション (LP-19)。
+ * - entry: レッスンを途中のステージから開く (LessonScreen.tsx が既に対応済み)。
+ *   省略時は "story"
+ * - skipReadiness: 前提チェック (readiness, LP-10) を素通りして直接レッスンを開く。
+ *   「なかまが教える場面」専用の抜け道 — 加入直後の「Xが なかまに くわわった!」の
+ *   よろこびの直後に ReadinessScreen の割り込みポップアップを出すと 唐突なため、
+ *   物語進行 (プレイヤー自身がまなびやを訪ねたのではない) のときだけ true にする。
+ *   通常のまなびや訪問 (プレイヤーが自分で単元を選ぶ経路) はこのフラグを渡さない —
+ *   まなびやの読解チェックそのものを弱める意図は無い、狭い特例
+ */
+export interface OpenLessonOptions {
+  entry?: LessonEntryPoint;
+  skipReadiness?: boolean;
+}
+
+/*
  * まなびやの先生 (openLesson): レッスンが実装済みなら開き、終わったら advance()。
  * 前提単元 (readinessRequired) が「できる」未満で残っていれば、本編の前に
  * readiness (前提チェック, LP-10) を挟む。2/3 以上正解すれば本編へ、
  * 不足なら最初にまちがえた前提のレッスンへ回り道させ (登録が無ければ
  * ブロックせずそのまま本編へ進める — §3.4 の「学んでいない単元でも進める」方針)。
+ * options.skipReadiness が true のときは この readiness ゲートそのものを
+ * 経由せず openLessonNow() へ直行する (LP-19、上の OpenLessonOptions 参照)
  */
 export function handleOpenLesson(
   ui: UiScene,
   skillId: string,
   advance: () => void,
+  options: OpenLessonOptions = {},
 ): void {
+  const entry: LessonEntryPoint = options.entry ?? "story";
+
   if (!hasLesson(skillId)) {
     ui.showMessage(PREPARING_PAGES, advance);
     return;
@@ -59,8 +81,13 @@ export function handleOpenLesson(
       advance();
     };
     EventBus.on("lesson-finished", onFinished);
-    EventBus.emit("open-lesson", { skillId, entry: "story" });
+    EventBus.emit("open-lesson", { skillId, entry });
   };
+
+  if (options.skipReadiness) {
+    openLessonNow();
+    return;
+  }
 
   const unmetPrereqs = readinessRequired(getSave(), skillId);
   if (unmetPrereqs.length === 0) {
@@ -76,7 +103,9 @@ export function handleOpenLesson(
       return;
     }
     if (result.weakest && hasLesson(result.weakest)) {
-      handleOpenLesson(ui, result.weakest, () => handleOpenLesson(ui, skillId, advance));
+      handleOpenLesson(ui, result.weakest, () =>
+        handleOpenLesson(ui, skillId, advance, options),
+      );
       return;
     }
     /* 弱点の前提にレッスンがまだ無い (未登録単元) — 塞がずそのまま本編へ */

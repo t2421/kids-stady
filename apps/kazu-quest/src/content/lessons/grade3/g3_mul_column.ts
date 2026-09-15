@@ -110,4 +110,8 @@ export const G3_MUL_COLUMN: LessonDef = {
     { pattern: "offByOne", feedback: "10 おおいか すくないよ。もういちど けいさんしよう" },
     { pattern: "echoOperand", feedback: "かける かずを そのまま こたえに していないか たしかめよう" },
   ],
+  /* なかまが教える場面 (LP-19)。カケルは「かける (×)」の わざを みがく ぶとうか */
+  companionLines: {
+    kakeru: "かけざんは れんぞくこうげきと おなじ! じゅんばんに じゅんばんに、きめるぜ!",
+  },
 };

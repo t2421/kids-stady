@@ -61,6 +61,10 @@ test("chapter 2 golden path: ship → tasuku joins → learn ククダマ → to
   await page.waitForFunction(
     () => window.__KAZUQUEST_DEBUG__!.getSave().party.length === 2,
   );
+  /* なかまが教える場面 (LP-19): タスクの得意分野 (たしざんの ひっさん) の
+   * 短いレッスンが加入直後に開く。最後まで進めて閉じないと以降の操作が
+   * ブロックされたままになる */
+  await walkLessonToPass(page);
 
   /* まなびや (そろばん船長) で「九九」→ ククダマ習得 (塔の門番ゲート解除) */
   await warp(page, "ch2-minatos-manabiya", "start");

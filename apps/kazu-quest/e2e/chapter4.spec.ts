@@ -158,6 +158,10 @@ test("chapter 4 golden path: chief → shop → learn カクドスピン → ice
   const party = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave().party);
   expect(party.some((m) => m.memberId === "little")).toBe(true);
   expect(party.length).toBe(4);
+  /* なかまが教える場面 (LP-19): リトルの得意分野 (小数の 計算) の
+   * 短いレッスンが加入直後に開く。最後まで進めて閉じないと以降の操作が
+   * ブロックされたままになる */
+  await walkLessonToPass(page);
 
   /* せつげんから 角度の遺跡入口 (20,4) を踏んで入る */
   await warp(page, "ch4-world", "from-angle-ruins");

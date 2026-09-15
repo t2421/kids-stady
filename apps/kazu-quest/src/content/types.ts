@@ -24,6 +24,9 @@ export interface TileSpec {
 
 export type FlagValue = number | boolean;
 
+/* レッスン画面 (LessonScreen.tsx) を開始するステージ。省略時は "story" (LP-08〜09/19) */
+export type LessonEntryPoint = "story" | "concept" | "faded" | "practice" | "test";
+
 export type FlagCond =
   | { flag: string; op: "set" | "unset" | ">="; value?: number }
   /* 単元の習熟状態が指定状態「以上」で成立 (LP-01/LP-04。順序 none < practicing < can < mastered) */
@@ -46,8 +49,17 @@ export type EventCommand =
   | { type: "openDrillBoard" }
   /* ふくしゅうのほこら: 弱点スキル3つから10問 → ひらめきメダル + ゴールド (設計 A6) */
   | { type: "openReviewQuest" }
-  /* まなびやの先生: 単元1つのレッスン画面を開く (LP-08) */
-  | { type: "openLesson"; skillId: string }
+  /*
+   * まなびやの先生: 単元1つのレッスン画面を開く (LP-08)。
+   * entry (LP-19): 途中のステージから開く (LessonScreen.tsx が既に対応)。
+   * 省略時は "story"。「なかまが教える場面」(加入直後の短いレッスン) だけが
+   * "concept" を使う想定
+   * skipReadiness (LP-19): 前提チェック (readiness, LP-10) をバイパスして
+   * 直接レッスンを開く。加入直後の物語進行という文脈上プレイヤーの意志で
+   * 開いたのではないため、ReadinessScreen の割り込みを挟まない専用フラグ。
+   * 通常のまなびや訪問 (プレイヤーが自分で選ぶ経路) では立てない
+   */
+  | { type: "openLesson"; skillId: string; entry?: LessonEntryPoint; skipReadiness?: boolean }
   /* ほこら/まなびやの「おさらい」: 期日の来た単元を自動選択して5問 (LP-11) */
   | { type: "openReview" }
   /* ほこらの「さきどり」: 前提を満たす未受講単元の一覧 (LP-11) */

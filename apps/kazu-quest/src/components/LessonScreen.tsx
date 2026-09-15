@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
 import { getLesson } from "@/content/lessons/index";
 import type { LessonDef } from "@/content/lessons/types";
-import { autosave, updateSave } from "@/game/session";
+import { autosave, getSave, updateSave } from "@/game/session";
 import { testPassed } from "@/lib/curriculum/lessonPractice";
 import { applyLessonStartExp, applyTestResultExp } from "@/lib/learningExp";
 import { dqWindow, UI_COLORS } from "@/components/uiTheme";
@@ -62,6 +62,27 @@ interface OpenState {
   /* story/concept/altExplain ステージ内の 0-based ページ番号。
    * workedExample/faded/練習Lv1-3/test は自前で持つ */
   pageIndex: number;
+  /*
+   * concept の 2ページ目 (0-based index 1) の直後に挟む なかまの一言 (LP-19)。
+   * 表示中は非nullで pageIndex はまだ 1 のまま止め、「つぎへ」で null に戻して
+   * 通常どおり pageIndex を進める。null = 通常のページ表示
+   */
+  companionLine: string | null;
+}
+
+/*
+ * lesson.companionLines のうち、いま パーティに いる なかまの ぶんを1件返す
+ * (LP-19)。複数の加入済みなかまが同じレッスンに一言を持つケースは
+ * いまの3組 (タスク/カケル/リトル) では起きないが、念のため party の並び順で
+ * 最初に見つかった1件だけを採用する (2件以上は表示しない — 過剰な演出を避ける)
+ */
+function findCompanionLine(lesson: LessonDef): string | null {
+  const party = getSave().party;
+  for (const member of party) {
+    const line = lesson.companionLines?.[member.memberId];
+    if (line) return line;
+  }
+  return null;
 }
 
 const STAGE_ORDER: Stage[] = ["story", "concept", "workedExample", "faded"];
@@ -112,6 +133,7 @@ export function LessonScreen() {
         lesson,
         stage: stageForEntry(payload.entry),
         pageIndex: 0,
+        companionLine: null,
       });
     };
     EventBus.on("open-lesson", onOpen);
@@ -159,6 +181,33 @@ export function LessonScreen() {
     });
   };
 
+  /*
+   * concept ページの「つぎへ」(LP-19)。2ページ目 (0-based index 1) を
+   * 読み終えて次へ進もうとした瞬間に、加入済みの なかまの一言があれば
+   * 1ページぶん割り込ませる (companionLine)。すでに割り込み中なら
+   * それを閉じて通常どおり次のページ/ステージへ進む。pageIndex は
+   * 割り込み中ずっと 1 のまま (companionLine が実ページの代わりに表示される)
+   * ので、この判定は概念ページを進むあいだに一度しか成立しない
+   */
+  const advanceConcept = () => {
+    const current = stateRef.current;
+    if (!current) return;
+    const conceptPages = current.lesson.concept;
+    if (current.companionLine) {
+      setState((s) => (s ? { ...s, companionLine: null } : s));
+      advanceWithinPages(conceptPages.length);
+      return;
+    }
+    if (current.pageIndex === 1) {
+      const line = findCompanionLine(current.lesson);
+      if (line) {
+        setState((s) => (s ? { ...s, companionLine: line } : s));
+        return;
+      }
+    }
+    advanceWithinPages(conceptPages.length);
+  };
+
   if (!state) return null;
 
   /* 背景タップでは閉じない (誤タップ対策)。タップはゲームへ伝えない */
@@ -175,10 +224,12 @@ export function LessonScreen() {
     );
   } else if (state.stage === "concept") {
     const pages = state.lesson.concept;
+    /* companionLine (LP-19): 2ページ目の直後に挟む なかまの一言。図は出さない */
+    const page = state.companionLine ? { text: state.companionLine } : pages[state.pageIndex];
     body = (
       <>
-        <LessonPageBody index={state.pageIndex} page={pages[state.pageIndex]} />
-        <LessonNextButton onClick={() => advanceWithinPages(pages.length)} />
+        <LessonPageBody index={state.pageIndex} page={page} />
+        <LessonNextButton onClick={advanceConcept} />
       </>
     );
   } else if (state.stage === "workedExample") {

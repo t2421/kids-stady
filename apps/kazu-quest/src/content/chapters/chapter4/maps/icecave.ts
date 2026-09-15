@@ -102,6 +102,8 @@ export const CH4_ICECAVE_2: MapDef = {
           then: [
             { type: "joinParty", memberId: "little", level: 20 },
             { type: "setFlag", flag: "c4.metLittle" },
+            /* なかまが教える場面 (LP-19): リトルの得意分野を加入直後の短いレッスンで */
+            { type: "openLesson", skillId: "g4_decimal", entry: "concept", skipReadiness: true },
           ],
         },
         {

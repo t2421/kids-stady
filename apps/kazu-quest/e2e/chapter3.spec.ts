@@ -63,6 +63,10 @@ test("chapter 3 golden path: chief → kakeru joins → shop → learn ワリダ
   await flag(page, "c3.metKakeru");
   const party = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave().party);
   expect(party.some((m) => m.memberId === "kakeru")).toBe(true);
+  /* なかまが教える場面 (LP-19): カケルの得意分野 (かけ算の ひっ算) の
+   * 短いレッスンが加入直後に開く。最後まで進めて閉じないと以降の操作が
+   * ブロックされたままになる */
+  await walkLessonToPass(page);
 
   /* どうぐや: 入口 (14,4) を踏んで入り、店主 (3,3) の品物リストを開いて やめる */
   await teleport(page, 14, 5, "up");
