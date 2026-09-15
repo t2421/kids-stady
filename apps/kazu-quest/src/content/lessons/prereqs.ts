@@ -6,11 +6,21 @@
  * LessonDef が明示的に prerequisites を持てば、そちらを優先する
  * (prerequisitesFor)。学年 = 物語の順序であって、学習の順序は常にこのグラフが決める
  * (学校で習っていない単元でも、前提さえ「できる」なら先取りできる — §0 の方針)。
+ *
+ * 【循環importに注意】このファイルはかつて index.ts から getLesson を直接
+ * importしていたが、波4で全単元の LessonDef が「prerequisites:
+ * defaultPrerequisites(skillId)」のようにモジュール読み込み時 (トップレベル)
+ * に defaultPrerequisites を呼ぶようになったため、
+ * index.ts -> grade単元ファイル -> prereqs.ts -> index.ts という循環が生まれ、
+ * prereqs.ts を起点に読み込まれる場合 (例: tests/prereqs.test.ts) に
+ * DEFAULT_PREREQUISITES が初期化される前に参照される TDZ エラーが発生した。
+ * 対策として index.ts への静的 import をやめ、registerLessonLookup() で
+ * index.ts 側から遅延登録してもらう形にした (index.ts の末尾を参照)。
  */
 
-import { getLesson } from "./index";
 import { masteryOf } from "../../lib/mastery";
 import type { MasteryState, SaveData } from "../../lib/save";
+import type { LessonDef } from "./types";
 
 /* 計画 §3.4 の前提グラフの表を、そのままデータにしたもの。無いキーは [] 扱い */
 const DEFAULT_PREREQUISITES: Record<string, string[]> = {
@@ -39,12 +49,26 @@ export function defaultPrerequisites(skillId: string): string[] {
 }
 
 /*
+ * index.ts の getLesson を実行時に受け取るための差し込み口 (循環import回避)。
+ * index.ts が自分のモジュール評価の最後 (LESSONS/getLesson 定義後) に一度だけ呼ぶ。
+ * 未登録 (null) のときは「LessonDef 自身の prerequisites」が無いものとして扱う
+ * だけなので、prerequisitesFor は常に安全に動く。
+ */
+let lessonLookup: ((skillId: string) => LessonDef | undefined) | null = null;
+
+export function registerLessonLookup(
+  lookup: (skillId: string) => LessonDef | undefined,
+): void {
+  lessonLookup = lookup;
+}
+
+/*
  * ある単元の前提を1本にまとめる。LessonDef 自身が prerequisites を持てば
  * それを使い (波4以降、単元ごとに作者が明示したものを優先する)、無い/空なら
  * 既定表 (defaultPrerequisites) にフォールバックする。
  */
 export function prerequisitesFor(skillId: string): string[] {
-  const own = getLesson(skillId)?.prerequisites;
+  const own = lessonLookup?.(skillId)?.prerequisites;
   if (own && own.length > 0) return own;
   return defaultPrerequisites(skillId);
 }

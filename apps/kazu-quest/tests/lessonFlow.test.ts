@@ -27,6 +27,24 @@ vi.mock("../src/game/EventBus", () => {
   return { EventBus };
 });
 
+/*
+ * g1_sub_nc は元々「まだレッスン未実装の単元」の代役としてこのファイルで使って
+ * いたが、波4 (LP-12) が全小1単元にレッスンを実装したため実際には登録済みに
+ * なった。「レッスンが無い単元」の分岐 (spellTestFlow.ts の従来フォールバック)
+ * は今後どの単元も実装が進めば実データでは再現できなくなるため、hasLesson だけ
+ * このテストファイル内に限定してモックし、g1_sub_nc を恒久的に「未登録」扱いに
+ * 固定して分岐そのものを検証し続ける (getLesson 等その他は実物のまま)。
+ */
+vi.mock("../src/content/lessons/index", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/content/lessons/index")>();
+  return {
+    ...actual,
+    hasLesson: (skillId: string) =>
+      skillId === "g1_sub_nc" ? false : actual.hasLesson(skillId),
+  };
+});
+
 const { EventBus } = await import("../src/game/EventBus");
 const { handleOpenLesson, handleOpenPreview, handleOpenReview } = await import(
   "../src/game/field/lessonFlow"
@@ -56,7 +74,7 @@ describe("handleOpenLesson", () => {
   it("レッスンが未登録の単元は じゅんびちゅう メッセージで advance する", () => {
     const ui = mockUi();
     const advance = vi.fn();
-    handleOpenLesson(ui, "g6_speed", advance);
+    handleOpenLesson(ui, "g1_sub_nc", advance);
     expect(ui.showMessage).toHaveBeenCalledWith(
       ["じゅんびちゅう…"],
       expect.any(Function),

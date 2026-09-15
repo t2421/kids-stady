@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { LessonDef } from "@/content/lessons/types";
 import type { Problem } from "@/lib/curriculum";
 import { generate } from "@/lib/curriculum";
@@ -15,6 +15,7 @@ import { MathChoices } from "@/components/MathChoices";
 import { Keypad } from "@/components/Keypad";
 import { MathHintBody } from "@/components/MathPracticeAids";
 import { UI_COLORS } from "@/components/uiTheme";
+import { setCurrentProblem } from "@/components/currentProblem";
 
 /*
  * れんしゅう (LP-09): 指定の Lv で generate() した問題を、3問連続で正解する
@@ -43,6 +44,17 @@ export function LessonPractice({
     generate(lesson.skillId, undefined, { level }),
   );
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+
+  /*
+   * テンキー入力 (小3以降) の E2E は DOM に答えを漏らさず
+   * window.__KAZUQUEST_DEBUG__.currentAnswer() 経由で答える (MathPromptPanel と
+   * 同じ約束)。ここは MathPromptPanel を使わず Keypad/MathChoices を直接
+   * 描画するので、自前で setCurrentProblem を呼ぶ必要がある。
+   */
+  useEffect(() => {
+    setCurrentProblem(problem);
+  }, [problem]);
+  useEffect(() => () => setCurrentProblem(null), []);
 
   const inputMode = inputModeFor("practice", lesson.skillId);
 

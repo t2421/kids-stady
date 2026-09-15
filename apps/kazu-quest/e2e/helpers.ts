@@ -381,10 +381,19 @@ export async function answerAllCorrectUntilHidden(
 /*
  * 学者の前で z → 最初の choice = はい で習得テストを受け、
  * 「とっくんしてから テストする?」は いいえ で飛ばして、1問目が出るまで待つ。
+ *
+ * 学びの設計 (LP-09) 波4で全44単元にレッスンが実装されたため、対象単元に
+ * レッスンがある呪文 (=いまや全ての呪文) は従来の「とっくん/テスト」ではなく
+ * open-lesson (LessonScreen) にまるごと委譲されるようになった
+ * (src/game/field/spellTestFlow.ts の delegateToLesson)。ここでは
+ * lesson-screen が開いた場合も検知して返す — 呼び出し側 (walkLessonToPass /
+ * takeSpellTestAllCorrect) がその後の分岐を担う。
  */
 export async function startSpellTest(page: Page) {
   await page.keyboard.press("z");
+  const lessonScreen = page.locator('[data-testid="lesson-screen"]');
   for (let i = 0; i < 30; i++) {
+    if (await lessonScreen.isVisible()) return;
     if ((await correctChoice(page).isVisible()) || (await keypadDisplay(page).isVisible())) {
       return;
     }
@@ -396,13 +405,71 @@ export async function startSpellTest(page: Page) {
 }
 
 /*
+ * 開いている lesson-screen を、指定の testid (例: "lesson-practice") が
+ * 見えるまで「つぎへ」/正解で進めて止まる (まだ答えない)。その画面固有の
+ * UI (テンキー/3択のキーサイズなど) を検証したいときに使う。
+ */
+export async function advanceLessonUntil(page: Page, testId: string, maxSteps = 40) {
+  const target = page.locator(`[data-testid="${testId}"]`);
+  const next = page.locator('[data-testid="lesson-next"]');
+  for (let i = 0; i < maxSteps; i++) {
+    if (await target.isVisible().catch(() => false)) return;
+    if (await next.isVisible().catch(() => false)) {
+      await next.click();
+      continue;
+    }
+    if (await isAnswerable(page)) {
+      await answerCorrectOnce(page);
+      await page.waitForTimeout(1_100);
+      continue;
+    }
+    await page.waitForTimeout(300);
+  }
+  throw new Error(`lesson が ${testId} まで進まない`);
+}
+
+/*
+ * 開いている lesson-screen を、内容 (単元/ページ数) を問わず最後まで進める:
+ * 「つぎへ」(story/concept/れい/べつのせつめい) はそのままクリックし、
+ * 出題パネル (穴埋め/れんしゅう/テスト、3択・テンキー両対応) は
+ * answerCorrectOnce で正解し続ける。常に正解するので不合格 (→べつのせつめい
+ * ループ) には入らず、テスト合格で画面が閉じて終わる。
+ */
+export async function walkLessonToPass(page: Page, maxSteps = 60) {
+  const screen = page.locator('[data-testid="lesson-screen"]');
+  const next = page.locator('[data-testid="lesson-next"]');
+  for (let i = 0; i < maxSteps; i++) {
+    if (!(await screen.isVisible())) return;
+    if (await next.isVisible().catch(() => false)) {
+      await next.click();
+      continue;
+    }
+    if (await isAnswerable(page)) {
+      await answerCorrectOnce(page);
+      await page.waitForTimeout(1_100); // AUTO_ADVANCE_MS (900) + 余裕
+      continue;
+    }
+    await page.waitForTimeout(300);
+  }
+  throw new Error("レッスンが終わらない");
+}
+
+/*
  * まなびやテストを最初の choice = はい で受け、全問正解で通す。
  * 「とっくんしてから テストする?」は いいえ で飛ばす (とっくんは practice.spec で検証)。
  * 問題数はコンテンツ (spell.learnTest.questions) 依存なので固定せず、
  * 進捗バナー (spell-test-banner) が消えるまで正解を押し続ける。
  * 小3以降の呪文はテンキーで答える (KQ-12)。
+ *
+ * 対象単元にレッスンがあれば (いまや全単元) walkLessonToPass に委譲する —
+ * どちらの経路でも最終的に呪文が習得される点は変わらないので、呼び出し側の
+ * ゴールデンパステストはこの分岐を意識しなくてよい。
  */
 export async function takeSpellTestAllCorrect(page: Page, maxQuestions = 40) {
   await startSpellTest(page);
+  if (await page.locator('[data-testid="lesson-screen"]').isVisible()) {
+    await walkLessonToPass(page);
+    return;
+  }
   await answerAllCorrectUntilHidden(page, "spell-test-banner", maxQuestions);
 }

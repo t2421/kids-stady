@@ -1,8 +1,14 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { SKILLS } from "../src/lib/curriculum";
-import { defaultPrerequisites, prerequisitesFor, readinessRequired } from "../src/content/lessons/prereqs";
+import {
+  defaultPrerequisites,
+  prerequisitesFor,
+  readinessRequired,
+  registerLessonLookup,
+} from "../src/content/lessons/prereqs";
 import { defaultSave } from "../src/lib/save";
 import type { SaveData } from "../src/lib/save";
+import type { LessonDef } from "../src/content/lessons/types";
 
 /*
  * 前提グラフ (LP-10, §3.4) のバリデーションと readiness ゲートの純関数テスト。
@@ -57,19 +63,24 @@ describe("defaultPrerequisites / prerequisitesFor: グラフの健全性", () =>
     expect(prerequisitesFor("g1_add_carry")).toEqual(["g1_add_nc"]);
   });
 
-  it("prerequisitesFor は LessonDef 自身の prerequisites を既定表より優先する", async () => {
-    vi.resetModules();
-    vi.doMock("../src/content/lessons/index", () => ({
-      getLesson: (skillId: string) =>
-        skillId === "g6_ratio" ? { skillId: "g6_ratio", prerequisites: ["g1_add_nc"] } : undefined,
-    }));
-    const { prerequisitesFor: prerequisitesForMocked } = await import("../src/content/lessons/prereqs");
-
-    /* 既定表なら g6_ratio ← g5_percent のはずだが、LessonDef 自身の指定が優先される */
-    expect(prerequisitesForMocked("g6_ratio")).toEqual(["g1_add_nc"]);
-
-    vi.doUnmock("../src/content/lessons/index");
-    vi.resetModules();
+  it("prerequisitesFor は LessonDef 自身の prerequisites を既定表より優先する", () => {
+    /*
+     * index.ts は自分のモジュール評価の最後で registerLessonLookup(getLesson) を
+     * 呼ぶ (循環import回避、prereqs.ts 冒頭のコメント参照)。ここでは index.ts を
+     * 経由せず、その差し込み口を直接使って LessonDef 優先の挙動だけを検証する。
+     */
+    registerLessonLookup((skillId) =>
+      skillId === "g6_ratio"
+        ? ({ skillId: "g6_ratio", prerequisites: ["g1_add_nc"] } as LessonDef)
+        : undefined,
+    );
+    try {
+      /* 既定表なら g6_ratio ← g5_percent のはずだが、LessonDef 自身の指定が優先される */
+      expect(prerequisitesFor("g6_ratio")).toEqual(["g1_add_nc"]);
+    } finally {
+      /* 他のテストに影響しないよう、必ず未登録状態に戻す */
+      registerLessonLookup(() => undefined);
+    }
   });
 });
 

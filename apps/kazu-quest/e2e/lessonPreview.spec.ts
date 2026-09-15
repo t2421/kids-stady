@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { startGame } from "./helpers";
+import { SKILLS } from "../src/lib/curriculum";
+
+/* 波4 (LP-12〜17) で全44単元にレッスンが実装された今、「学べる単元が無い」
+ * 状態を作るには g1_add_nc だけでなく全単元を can 以上にする必要がある
+ * (前提が g1_add_nc だけの単元も、他の前提なし単元も、none のままなら
+ * 一覧に出てしまうため) */
+const ALL_SKILL_IDS = SKILLS.map((s) => s.id);
 
 /*
  * PreviewMenu.tsx (さきどり, LP-11 §4.3) の単体検証。まだマップ側に「さきどり」の
@@ -35,8 +42,13 @@ test("preview: 学べる単元が無ければ案内メッセージが出て、�
   test.setTimeout(30_000);
   await startGame(page);
 
-  /* g1_add_nc をすでに can にしておくと (none 以外) 一覧の唯一の候補が消える */
-  await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.setMastery("g1_add_nc", "can"));
+  /* 全単元をすでに can にしておくと、一覧に出せる候補 (mastery が none で
+     前提を満たす単元) が無くなる */
+  await page.evaluate((skillIds) => {
+    for (const skillId of skillIds) {
+      window.__KAZUQUEST_DEBUG__!.setMastery(skillId, "can");
+    }
+  }, ALL_SKILL_IDS);
 
   await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.openPreview());
 

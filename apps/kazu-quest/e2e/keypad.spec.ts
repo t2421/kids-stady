@@ -1,12 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
-  answerAllCorrectUntilHidden,
+  advanceLessonUntil,
   correctChoice,
   keypadDisplay,
   seedChapter,
   startGame,
   startSpellTest,
   teleport,
+  walkLessonToPass,
   warp,
 } from "./helpers";
 
@@ -16,6 +17,12 @@ import {
  *   正解を打って全問通すと習得する
  * - 章1 王城のまなびや (ヒキダマ = g1_sub_nc): 引き続き3択
  * default (デスクトップ) と ipad の両プロジェクトで走る (playwright.config.ts)。
+ *
+ * 学びの設計 (LP-09) 波4で全単元にレッスンが実装されたため、呪文の習得は
+ * いまや従来の「しゅうとくテスト」バナーではなく open-lesson (LessonScreen)
+ * に委譲される (spellTestFlow.ts の delegateToLesson)。テンキー/3択の
+ * 検証ポイントは「れんしゅう Lv1」画面 (lesson-practice) に移った —
+ * inputModeFor は変わらず単元の学年で決まるので、検証の意味は同じ。
  */
 
 const KEY_MIN_PX = 72;
@@ -34,21 +41,18 @@ test("keypad: chapter 3 spell test uses the keypad (keys >= 72px) and passes wit
   const start = await seedChapter(page, 3);
   expect(start.mapId).toBe("ch3-wakeera");
 
-  /* まなびや: 学者 (4,2) の最初の選択肢 = ワリダマ */
+  /* まなびや: 学者 (4,2) の最初の選択肢 = ワリダマ (g3_div、レッスンに委譲) */
   await warp(page, "ch3-wakeera-manabiya", "start");
   await teleport(page, 4, 3, "up");
   await startSpellTest(page);
 
-  /* テンキーが出て、3択は出ない。パネルは keypad モードを名乗る */
+  /* レッスンの story/concept/れい/穴埋め (常に3択) を抜けて、
+     れんしゅう Lv1 まで進める — ここが検証ポイント */
+  await advanceLessonUntil(page, "lesson-practice");
+
+  /* テンキーが出て、3択は出ない */
   await expect(keypadDisplay(page)).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('[data-testid="math-choice"]')).toHaveCount(0);
-  await expect(page.locator('[data-testid="math-prompt"]')).toHaveAttribute(
-    "data-input-mode",
-    "keypad",
-  );
-  await expect(page.locator('[data-testid="spell-test-banner"]')).toContainText(
-    "しゅうとくテスト: ワリダマ",
-  );
 
   /* 全キー (0〜9 . / けす こたえる) が指向けサイズ */
   const keys = page.locator(
@@ -78,8 +82,8 @@ test("keypad: chapter 3 spell test uses the keypad (keys >= 72px) and passes wit
   await expect(keypadDisplay(page)).not.toHaveText("7");
   await expect(page.locator('[data-testid="keypad-submit"]')).toBeDisabled();
 
-  /* 正解を打って全問通す → 習得 */
-  await answerAllCorrectUntilHidden(page, "spell-test-banner");
+  /* 残りのれんしゅう・テストを正解し続けて終わらせる → 習得 */
+  await walkLessonToPass(page);
   await learned(page, "waridama");
 });
 
@@ -87,15 +91,14 @@ test("keypad: chapter 1 spell test still uses the three choices", async ({ page 
   test.setTimeout(120_000);
   await startGame(page);
 
-  /* 王城の まなびや (賢者は (2,4)) — ヒキダマ (小1) */
+  /* 王城の まなびや (賢者は (2,4)) — ヒキダマ (g1_sub_nc、小1、レッスンに委譲) */
   await warp(page, "ch1-capital-castle", "start");
   await teleport(page, 3, 4, "left");
   await startSpellTest(page);
 
+  /* れんしゅう Lv1 まで進める (小1単元は穴埋め同様ずっと3択のはず) */
+  await advanceLessonUntil(page, "lesson-practice");
+
   await expect(correctChoice(page)).toBeVisible({ timeout: 10_000 });
   await expect(keypadDisplay(page)).toHaveCount(0);
-  await expect(page.locator('[data-testid="math-prompt"]')).toHaveAttribute(
-    "data-input-mode",
-    "choices",
-  );
 });

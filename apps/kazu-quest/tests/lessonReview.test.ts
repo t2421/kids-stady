@@ -3,7 +3,7 @@
  * 別ファイル tests/review.test.ts は KQ-13 の「ふくしゅうのほこら」
  * (src/lib/curriculum/review.ts) 用で、無関係の既存機能なので混同しないこと。
  */
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { advanceClock, resetClock } from "../src/lib/clock";
 import { masteredShardCount, reviewSelection } from "../src/lib/review";
 import { defaultSave, type MasteryEntry, type SaveData } from "../src/lib/save";
@@ -11,8 +11,22 @@ import { defaultSave, type MasteryEntry, type SaveData } from "../src/lib/save";
 /*
  * src/lib/review.ts (LP-11) の純ロジック検証。
  *   - g1_add_nc はレッスン実装済み (hasLesson === true)
- *   - g1_sub_nc はレッスン未実装 (LESSONS に無い) — おさらい対象から除外されること
+ *   - g1_sub_nc は元々「レッスン未実装」の代役だったが、波4 (LP-12) が小1全単元に
+ *     レッスンを実装したため実際には登録済みになった。「レッスンが無い単元は
+ *     おさらい対象から除外される」分岐は今後どの単元も実装が進めば実データでは
+ *     再現できなくなるため、hasLesson だけこのテストファイル内に限定してモックし、
+ *     g1_sub_nc を恒久的に「未登録」扱いに固定して分岐そのものを検証し続ける。
  */
+vi.mock("../src/content/lessons/index", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/content/lessons/index")>();
+  return {
+    ...actual,
+    hasLesson: (skillId: string) =>
+      skillId === "g1_sub_nc" ? false : actual.hasLesson(skillId),
+  };
+});
+
 const WITH_LESSON = "g1_add_nc";
 const NO_LESSON = "g1_sub_nc";
 
