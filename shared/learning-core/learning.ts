@@ -58,11 +58,27 @@ export interface LearningDaily {
   w: number;
 }
 
+/*
+ * 単元の習熟状態 (LP-11b (3)): none=未着手 / practicing=とっくん中 /
+ * can=できる / mastered=マスター。kazu-quest の src/lib/save.ts 内
+ * MasteryState と同じ4値だが、learning-core はアプリ非依存に保つため
+ * 独立して定義する (import で結合しない)
+ */
+export type MasteryState = "none" | "practicing" | "can" | "mastered";
+
 export interface LearningLog {
   version: 1;
   skills: Record<string, LearningSkill>;
   /* "YYYY-MM-DD" → その日の正誤数。cap LEARNING_DAILY_LIMIT 日 */
   daily: Record<string, LearningDaily>;
+  /*
+   * 任意フィールド (LP-11b (3), docs/save-data.md §4): skillId → 習熟状態。
+   * 書き込みは kazu-quest のみ (単元マップ・間隔復習の元データをせいせき画面外へも
+   * 共有するため)。mathematics/keisan-shooter はこのフィールドを一切参照せず、
+   * 存在しなくても壊れない (完全に後方互換) — normalizeLog は raw に無ければ
+   * このキー自体を出力に含めない
+   */
+  mastery?: Record<string, MasteryState>;
 }
 
 function key(profileId: string): string {
@@ -110,7 +126,26 @@ export function normalizeLog(raw: unknown): LearningLog {
     }
   }
 
-  return { version: 1, skills, daily };
+  const mastery = normalizeMasteryMap(obj.mastery);
+  return mastery ? { version: 1, skills, daily, mastery } : { version: 1, skills, daily };
+}
+
+const MASTERY_STATES: readonly MasteryState[] = ["none", "practicing", "can", "mastered"];
+
+/*
+ * mastery は raw に無ければ undefined を返し (= 出力にキー自体を含めない)、
+ * 存在すれば不正なエントリだけ落として返す (空オブジェクトでも「フィールドは
+ * ある」を保つ — recordLearning 同様、上書きは呼び出し側の責務)
+ */
+function normalizeMasteryMap(raw: unknown): Record<string, MasteryState> | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const out: Record<string, MasteryState> = {};
+  for (const [skillId, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === "string" && (MASTERY_STATES as readonly string[]).includes(v)) {
+      out[skillId] = v as MasteryState;
+    }
+  }
+  return out;
 }
 
 export function loadLearning(profileId: string): LearningLog {
@@ -166,7 +201,26 @@ export function recordLearning(
     ...log.daily,
     [dk]: { c: day.c + (correct ? 1 : 0), w: day.w + (correct ? 0 : 1) },
   });
-  const next: LearningLog = { version: 1, skills, daily };
+  /* mastery は recordLearning の関知しない領域 (kazu-quest 専用の任意フィールド)。
+     ここで組み立て直すときに落とすと、他アプリの recordLearning 呼び出しが
+     既存の mastery を消してしまうので、あれば必ず引き継ぐ */
+  const next: LearningLog = log.mastery
+    ? { version: 1, skills, daily, mastery: log.mastery }
+    : { version: 1, skills, daily };
+  writeJSON(key(profileId), next);
+  return next;
+}
+
+/*
+ * 単元の習熟状態スナップショットを丸ごと置き換える (LP-11b (3))。書き手は
+ * kazu-quest のみ (autosave() から毎回呼ぶ) — skills/daily は一切触らない
+ */
+export function writeMastery(
+  profileId: string,
+  mastery: Record<string, MasteryState>,
+): LearningLog {
+  const log = loadLearning(profileId);
+  const next: LearningLog = { ...log, mastery };
   writeJSON(key(profileId), next);
   return next;
 }

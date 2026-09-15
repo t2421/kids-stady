@@ -80,3 +80,33 @@
     **このファイルは自動生成** (`cd apps/mathematics && npm run gen:learning`)。直接編集しない
     (§1 とまとめて再生成するなら `npm run gen:shared`)
 - プロフィール削除時はこのキーも削除してよい (削除実行アプリの責務)
+
+### 4.1 `mastery` (任意フィールド、kazu-quest 専用の書き込み — LP-11b)
+
+```json
+{
+  "version": 1,
+  "skills": { "...": "(§4 本体と同じ)" },
+  "daily": { "...": "(§4 本体と同じ)" },
+  "mastery": {
+    "kq_g3_div": "mastered",
+    "kq_g1_add_carry": "can"
+  }
+}
+```
+
+- kazu-quest の単元マップ (`src/components/MasteryMap.tsx`) と間隔復習が使う単元の習熟状態
+  (`none` / `practicing` / `can` / `mastered`。kazu-quest 内部の `MasteryState` — `src/lib/save.ts` — と同じ4値)
+  を、せいせき画面の外からも見えるように写した任意フィールド
+- キーは `skills` と同じ規約で `kq_` 接頭辞を付ける (kazu-quest 内部の skillId、例 `g3_div` → `kq_g3_div`)
+- **書き込みは kazu-quest のみ**: `src/game/session.ts` の `autosave()` から毎回、
+  `save.mastery` (全単元) を丸ごと置き換える (`shared/learning-core/learning.ts` の `writeMastery`)。
+  差分マージではなく完全な置換 — 書き手が1つだけなので単純さを優先した
+- **後方互換 (必須)**: `version`/`skills`/`daily` は一切変更していない。既存の `LearningLog` に
+  `mastery` キーが無い場合 (mathematics/keisan-shooter が書いたログ、または旧バージョンの記録) は
+  `normalizeLog` がこのキー自体を出力に含めない — 呼び出し側が存在チェックをしなくても
+  壊れない。mathematics/keisan-shooter はこのフィールドを**一切参照しない** (読み書きどちらもしない)。
+  両アプリの既存テストは無変更のまま green (2026-09-15 時点で確認: `apps/mathematics` の
+  `npm test` 79件 green。`apps/keisan-shooter` はそもそも `package.json`/自動テストを持たない
+  静的アプリなので該当テストなし — `progression.js`/`index.html` は `KidsLearning.record` のみ呼び、
+  `mastery` を読み書きしていないことをコードから確認済み)

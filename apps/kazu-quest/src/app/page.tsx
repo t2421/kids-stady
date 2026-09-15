@@ -88,6 +88,12 @@ const StatsScreen = dynamic(
   { ssr: false },
 );
 
+/* 単元マップ (LP-11b (1)): せいせき画面のボタンから EventBus "show-mastery-map" で開く */
+const MasteryMap = dynamic(
+  () => import("@/components/MasteryMap").then((m) => m.MasteryMap),
+  { ssr: false },
+);
+
 /* 戦闘後の まちがいノート (BattleScene と EventBus で往復する) */
 const MistakeNoteOverlay = dynamic(
   () => import("@/components/MistakeNoteOverlay").then((m) => m.MistakeNoteOverlay),
@@ -134,6 +140,7 @@ export default function Home() {
       <GameUiOverlay />
       <StatusPanelOverlay />
       <StatsScreen />
+      <MasteryMap />
       <MistakeNoteOverlay />
       <MenuButton />
       <TitleMenu />

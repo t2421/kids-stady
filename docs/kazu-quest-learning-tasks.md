@@ -278,7 +278,19 @@ renderToString がエラーなく SVG を含む) と、`/gallery` に「ず」�
   `advanceClock(3日)` → もう一度 → mastered、かけら +1、単元マップのセルが金。Vitest (かけら・強化)
 - **スコープ外**: 先生キャラの見た目 (LP-18)
 
-#### LP-11b [S] 単元マップ・かけら強化・共有学習ログ (LP-11 の残り) — 状態: 未 (依存: LP-11)
+#### LP-11b [S] 単元マップ・かけら強化・共有学習ログ (LP-11 の残り) — 状態: 済 (依存: LP-11)
+
+- **完了メモ (2026-09-15)**: (2) の かけら6個→呪文power+20% は本タスク着手前に LP-20 が
+  既に実装済みだった (`src/lib/review.ts` の `hasChapterCrystal`/`chapterCrystalMultiplier`/
+  `CHAPTER_CRYSTAL_POWER_MULTIPLIER`、`tests/lessonReview.test.ts` で検証済み・再実装せず
+  green を再確認しただけ)。本セッションで新規に作ったのは (1) 単元マップ画面
+  (`src/components/MasteryMap.tsx` + `src/lib/masteryMapData.ts`/`masteryColors.ts`、
+  StatsScreen.tsx のせいせき画面に「たんげんマップを みる」ボタンを追加) と
+  (3) 共有学習ログへの mastery 書き込み (`shared/learning-core/learning.ts` に任意フィールド
+  `mastery` を追加、`src/lib/sharedMasteryLog.ts` が `autosave()` から書く、
+  `docs/save-data.md` §4.1 に契約を追記)。mathematics (`npm test` 79件 green)・
+  keisan-shooter (静的アプリで自動テスト自体が無いことを確認、`shared/js/learning.js` は
+  無変更のため実行時の挙動もバイト単位で不変) の無傷を確認済み
 
 - **目的**: LP-11 で未実装のまま残した3点を仕上げる: (1) 単元マップ画面
   (`src/components/MasteryMap.tsx`、学年×単元のマス目を4色で。せいせきタブから開ける)、

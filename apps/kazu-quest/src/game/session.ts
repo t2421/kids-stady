@@ -9,6 +9,7 @@ import type { SaveData } from "../lib/save";
 import { defaultSave, loadSave, persistSave } from "../lib/save";
 import { addPlaytime } from "../lib/playtime";
 import { initMasteryFromFlags } from "../lib/mastery";
+import { writeMasterySnapshot } from "../lib/sharedMasteryLog";
 
 interface SessionState {
   profileId: string | null;
@@ -60,9 +61,15 @@ export function updateSave(updater: (save: SaveData) => SaveData): SaveData {
   return state.save;
 }
 
+/*
+ * LP-11b (3): mastery の共有ログへの書き出しもここに集約する。専用の呼び出し口を
+ * 増やすと呼び忘れが起きるため、セーブ全体の書き出しタイミング (autosave) と揃えた
+ * (呼び出し頻度は元々 transfer時・戦闘終了時・メニュー閉時など粗いので許容できる)
+ */
 export function autosave(): void {
   if (state.profileId) {
     persistSave(state.profileId, state.save);
+    writeMasterySnapshot(state.profileId, state.save);
   }
 }
 

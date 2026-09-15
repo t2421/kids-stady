@@ -161,6 +161,16 @@ export function StatsBody({ data }: { data: StatsData }) {
           {data.playtime}
         </div>
       </Section>
+
+      <Section title="たんげんマップ" full>
+        <button
+          data-testid="open-mastery-map"
+          style={{ ...actionButton("#2f6b3a"), minWidth: 220 }}
+          onClick={() => EventBus.emit("show-mastery-map")}
+        >
+          たんげんマップを みる
+        </button>
+      </Section>
     </div>
   );
 }
