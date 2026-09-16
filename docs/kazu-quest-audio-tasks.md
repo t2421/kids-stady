@@ -202,7 +202,7 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
 
 ## 5. 波3: レッスン中の曲 (依存: AU-03, AU-04)
 
-#### AU-05 [S] レッスン・テスト・おさらいで BGM を切り替える — 状態: 未
+#### AU-05 [S] レッスン・テスト・おさらいで BGM を切り替える — 状態: 済
 
 - **目的**: 学習中の空気を曲で作る。開く → `lesson`、テスト段階 → `test`、閉じる/合格 → 元の曲
 - **触るファイル**: `src/components/LessonScreen.tsx` (open で `pushBgm("lesson")`、stage が test で
