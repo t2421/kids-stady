@@ -217,19 +217,29 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
 
 ## 6. 波4: 曲と音の作り込み (アセット 0 のまま。AU-06 → AU-07 | AU-08 | AU-09)
 
-#### AU-06 [M] シーケンサの表現力 (4 声・パルス幅・ビブラート・エコー・32 小節) — 状態: 未 (依存: AU-03)
+#### AU-06 [M] シーケンサの表現力 (3和音のハモリ・パルス幅・ビブラート・エコー・32 小節) — 状態: 未 (依存: AU-03)
 
-- **目的**: 「薄い」の根本原因である 2 声・単一波形を解消する土台。曲データは触らない
-- **触るファイル**: `src/lib/music/notation.ts` (`SongDef` に `harmony?: string` (第 2 リード)、`arp?: string`
-  (高速アルペジオ用、1 小節 16 ステップ許可 = `stepsPerBar` 既存機構)、`MAX_BARS` 16→32、`SongDef.style?:
-  { pulse?: 0.125 | 0.25 | 0.5; vibrato?: number; echo?: number }`)、`src/game/audio/bgm.ts` (矩形波を
-  `PeriodicWave` のパルス波 (12.5 / 25 / 50%) に、ビブラートは LFO → `frequency`、エコーは `DelayNode` + 減衰 GainNode
-  を master に 1 系統)、`tests/music.test.ts` (新フィールドの文法・32 小節・style の値域)
-- **受け入れ条件**: 既存 7 曲 + `lesson`/`test` が **無変更で同じに鳴る** (style 省略 = 従来どおり 50% 矩形波・
-  エコーなし)。Vitest 緑。E2E `sound.spec.ts` 3 件緑
-- **スコープ外**: 曲の書き換え (AU-07 / AU-08)
+- **目的**: 「薄い」の根本原因である 2 声・単一波形を解消する土台。曲データは触らない。
+  **方針 (2026-09-16 決定)**: 曲は **常時 3 声を鳴らして三和音を作る** — lead (メロディ) / harmony
+  (3 度 or 5 度でハモる第 2 声、和音の性格を決める) / bass (根音)。ドラムは任意の 4 声目のまま。
+  効果音側の `crystal`/`colorReturn` (AU-02、実装済み) は既に 3 声同時発音で作ってあるので、
+  BGM もそれに揃える — 「3 和音」という時、和声的に厚みを持たせることを指す。将来 4 声目
+  (`arp`) を足す余地は残すが、本タスクの必須は 3 声
+- **触るファイル**: `src/lib/music/notation.ts` (`SongDef` に **`harmony: string` を必須の第 3 声として追加**
+  (lead/bass と同じ記法。省略不可 — 3和音が既定であることをスキーマで強制する)、`arp?: string` は任意の 4 声目
+  として残す (高速アルペジオ用、1 小節 16 ステップ許可 = `stepsPerBar` 既存機構)、`MAX_BARS` 16→32、
+  `SongDef.style?: { pulse?: 0.125 | 0.25 | 0.5; vibrato?: number; echo?: number }`)、`src/game/audio/bgm.ts`
+  (`harmony` 声部を lead と同じ音色 (矩形波) だが控えめな gain で鳴らす、矩形波を `PeriodicWave` のパルス波
+  (12.5 / 25 / 50%) に、ビブラートは LFO → `frequency`、エコーは `DelayNode` + 減衰 GainNode を master に
+  1 系統)、`tests/music.test.ts` (`harmony` が必須であることの検証・新フィールドの文法・32 小節・style の値域)
+- **移行**: 既存 9 曲 (title/town/field/dungeon/battle/boss/ending/lesson/test) は `harmony` が無いと
+  型エラーになるので、**このタスクで全曲に harmony 声部を 1 行ずつ足す** (lead の 3 度下 or 5 度下を
+  なぞる簡単な行で構わない — 曲としての作り込みは AU-07/AU-08 の仕事。ここでは「鳴る」ことが目的)
+- **受け入れ条件**: Vitest 緑 (`harmony` 必須の型・9 曲すべてに存在・32 小節・style の値域)。E2E
+  `sound.spec.ts` 5 件緑 (harmony 追加後も曲が同じ長さ・同じテーマ対応表で鳴ること)
+- **スコープ外**: 曲の書き込み内容の作り込み (AU-07 / AU-08 が harmony を活かした本格的な和声にする)
 
-#### AU-07 [L] 章ごとの町の曲 6 曲 (`town1`〜`town6`) — 状態: 未 (依存: AU-06)
+#### AU-07 [L] 章ごとの町の曲 6 曲・3和音で作曲 (`town1`〜`town6`) — 状態: 未 (依存: AU-06)
 
 - **目的**: 6 章の町を音で区別する。章の世界観 (章1 はじまりの村・王都 / 章2 港と九九 / 章3 砂漠の隊商 / 章4 氷と計測 /
   章5 割合の都 / 章6 ネガリア (色を失った町)) を短いモチーフで表す
@@ -238,16 +248,20 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
   `src/game/scenes/FieldScene.ts` (`songForTheme(...)` の 2 箇所を `songForMap(this.map)` に)、
   `tests/music.test.ts` (6 曲の文法、全マップで `songForMap` が定義済み ID を返す)、`e2e/sound.spec.ts` (章 3 の町で
   `current()` が `"town3"` の 1 件、`seedChapter(3)` を使う)
-- **手順**: 各曲 16〜32 小節、`harmony` を使う。章6 `town6` は短調・ゆっくり・`pulse: 0.125` で「色のない」感じ。
+- **手順**: 各曲 16〜32 小節、**harmony を本格的な三和音の第2声として書く** (lead=メロディ、harmony=3度/6度の
+  ハモり、bass=根音 — 3つ揃った瞬間に和音として聞こえることを確認する)。章6 `town6` は短調・ゆっくり・
+  `pulse: 0.125` で「色のない」感じ (harmony は不協和気味の音程で「色を失った」感を出してよい)。
   すべてオリジナル。曲名 (`title`) はひらがな
 - **受け入れ条件**: Vitest 緑、E2E 緑、章1〜7 golden path 無修正で緑。`town` (旧) は dev/maps のフォールバックとして残す
 - **スコープ外**: 旅・洞くつ・戦闘の曲 (AU-08)
 
-#### AU-08 [M] 既存 6 曲の作り込み (title / field / dungeon / battle / boss / ending) — 状態: 未 (依存: AU-06)
+#### AU-08 [M] 既存 6 曲の作り込み・3和音で本格化 (title / field / dungeon / battle / boss / ending) — 状態: 未 (依存: AU-06)
 
 - **目的**: 2 声 → 3〜4 声、8〜16 小節 → 16〜32 小節、イントロ 1 小節、`pulse` / `vibrato` / `echo` を曲ごとに
 - **触るファイル**: `src/content/music.ts` の該当 6 曲 (**`lesson`/`test`/町は触らない**)、`tests/music.test.ts`
-- **手順**: 旋律の核 (最初の 2 小節) は残して発展させる (プレイヤーが「同じ曲が良くなった」と感じる)。boss は
+- **手順**: 旋律の核 (最初の 2 小節) は残して発展させる (プレイヤーが「同じ曲が良くなった」と感じる)。
+  AU-06 が全曲に足した仮の harmony 行を、曲ごとに意味のある三和音 (主和音・属和音の交代など) に
+  書き直す — これが「作り込み」の中心。boss は
   `pulse: 0.25` + ベースを 16 分刻みに。ending は `echo` を強めに
 - **受け入れ条件**: Vitest 緑 (小節長 8〜32)、`e2e/sound.spec.ts` 緑、ギャラリーで 6 曲が試聴できる
 - **スコープ外**: 町 (AU-07)、効果音 (AU-09)
