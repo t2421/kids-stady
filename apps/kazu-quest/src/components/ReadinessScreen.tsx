@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
 import { playSfx } from "@/game/audio/sfx";
+import { popBgm, pushBgm } from "@/game/audio/bgm";
 import { getSave } from "@/game/session";
 import type { SaveData } from "@/lib/save";
 import type { Problem } from "@/lib/curriculum";
@@ -76,6 +77,9 @@ export function ReadinessScreen() {
         EventBus.emit("readiness-finished", result);
         return;
       }
+      /* AU-05: 画面が実際に見えるようになる瞬間だけ「まなびや」曲へ (前提0件の
+       * 早期returnは画面を出さないので push しない — pop 漏れの元になる) */
+      pushBgm("lesson");
       setState({
         skillId: payload.skillId,
         questionSkillIds,
@@ -123,6 +127,8 @@ export function ReadinessScreen() {
       };
       setState(null);
       playSfx(result.ok ? "correct" : "wrong");
+      /* AU-05: 合否どちらの終了パスもここに集約される (ok の値だけが違う) */
+      popBgm();
       EventBus.emit("readiness-finished", result);
     }, AUTO_ADVANCE_MS);
   };

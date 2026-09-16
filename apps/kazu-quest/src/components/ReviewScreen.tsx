@@ -3,6 +3,7 @@
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
 import { playSfx } from "@/game/audio/sfx";
+import { popBgm, pushBgm } from "@/game/audio/bgm";
 import { SKILLS, generate, type Problem } from "@/lib/curriculum";
 import { isAnswerCorrect } from "@/lib/curriculum/answer";
 import { autosave, getSave, updateSave } from "@/game/session";
@@ -60,6 +61,9 @@ export function ReviewScreen() {
   useEffect(() => {
     const onOpen = (payload: OpenReviewPayload) => {
       const skillIds = payload?.skillIds ?? [];
+      /* AU-05: おさらい画面が見えるようになる瞬間 (空の場合も とじる ボタン付きの
+       * 画面が見えるので同じく push する) に「まなびや」曲へ */
+      pushBgm("lesson");
       if (skillIds.length === 0) {
         EventBus.emit("review-finished", { results: [] });
         setState({ kind: "empty" });
@@ -142,6 +146,7 @@ export function ReviewScreen() {
 
     setState(null);
     setFeedback(null);
+    popBgm();
     EventBus.emit("review-finished", { results });
   };
 
@@ -207,7 +212,10 @@ export function ReviewScreen() {
         <button
           type="button"
           data-testid="review-close"
-          onClick={() => setState(null)}
+          onClick={() => {
+            setState(null);
+            popBgm();
+          }}
           style={{
             ...actionButton("#2d5a3d"),
             alignSelf: "flex-end",

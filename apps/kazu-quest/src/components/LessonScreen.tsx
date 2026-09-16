@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
 import { playSfx } from "@/game/audio/sfx";
+import { popBgm, pushBgm } from "@/game/audio/bgm";
 import { getLesson } from "@/content/lessons/index";
 import type { LessonDef } from "@/content/lessons/types";
 import { autosave, getSave, updateSave } from "@/game/session";
@@ -138,8 +139,13 @@ export function LessonScreen() {
         companionLine: null,
       });
       playSfx("lessonOpen");
+      /* AU-05: レッスンが開いた瞬間に「まなびや」曲へ (overlay 1段。§2.3) */
+      pushBgm("lesson");
       /* entry:"test" で直接テストへ入る場合も、通常経路と同じくテスト開始音を鳴らす */
-      if (stage === "test") playSfx("testStart");
+      if (stage === "test") {
+        playSfx("testStart");
+        pushBgm("test");
+      }
     };
     EventBus.on("open-lesson", onOpen);
     return () => {
@@ -157,6 +163,8 @@ export function LessonScreen() {
     autosave();
     setState(null);
     playSfx("testPass");
+    /* AU-05: testPass (約1秒) を聞かせてから overlay を外し base の曲へ戻す */
+    setTimeout(() => popBgm(), 1000);
     const result: LessonFinishedPayload = {
       skillId: current.skillId,
       outcome: "passed",
@@ -175,6 +183,8 @@ export function LessonScreen() {
     autosave();
     setState((s) => (s ? { ...s, stage: "altExplain", pageIndex: 0 } : s));
     playSfx("testFail");
+    /* AU-05: テスト曲の overlay を「まなびや」曲に置き換える (1段なので pop 不要) */
+    pushBgm("lesson");
   };
 
   const advanceWithinPages = (pageCount: number) => {
@@ -305,7 +315,11 @@ export function LessonScreen() {
             const nextStage = stageAfterPractice(practiceStage);
             /* Lv3 完了 → テストへ入る瞬間だけ testStart (Lv1→2/Lv2→3 の
              * practiceLevelUp は LessonPractice.tsx 自身が鳴らす) */
-            if (nextStage === "test") playSfx("testStart");
+            if (nextStage === "test") {
+              playSfx("testStart");
+              /* AU-05: れんしゅう→テストの瞬間にテスト曲へ切り替える */
+              pushBgm("test");
+            }
             return { ...s, stage: nextStage, pageIndex: 0 };
           })
         }

@@ -19,7 +19,29 @@ import {
  *
  * recentSfx() は直近32件しか保持しない。1レッスンの通しは軽く32件を超えるため、
  * 各フェーズの節目で clearSfx() してから次の部分列を確認する (§2.5 の想定どおり)。
+ *
+ * AU-05: あわせて __KAZUQUEST_BGM__ (§2.3) で「学びの画面が開いたら曲が
+ * 切り替わり、閉じたら元の曲に戻るか」を検証する。型は e2e/sound.spec.ts の
+ * declare global と同じ形 (TS の宣言マージで衝突しない)。
  */
+declare global {
+  interface Window {
+    __KAZUQUEST_BGM__?: {
+      current(): string | null;
+      base(): string | null;
+      overlay(): string | null;
+      push(id: string): void;
+      pop(): void;
+    };
+  }
+}
+
+const currentBgm = (page: Parameters<typeof startGame>[0]) =>
+  page.evaluate(() => window.__KAZUQUEST_BGM__?.current() ?? null);
+const baseBgm = (page: Parameters<typeof startGame>[0]) =>
+  page.evaluate(() => window.__KAZUQUEST_BGM__?.base() ?? null);
+const overlayBgm = (page: Parameters<typeof startGame>[0]) =>
+  page.evaluate(() => window.__KAZUQUEST_BGM__?.overlay() ?? null);
 
 function names(entries: { name: string; at: number }[]): string[] {
   return entries.map((e) => e.name);
@@ -47,6 +69,11 @@ test("lesson audio: g1_add_carry を開いて合格するまで、lessonOpen→p
 }) => {
   test.setTimeout(180_000);
   await startGame(page);
+  await page.waitForTimeout(400);
+  /* AU-05: レッスンを開く前に「地の曲」(フィールド系) を控えておき、
+   * 閉じたあとにここへ戻ることを確認する */
+  const originalBase = await baseBgm(page);
+  expect(["town", "field", "dungeon"]).toContain(originalBase);
   await clearSfx(page);
 
   await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.openLesson("g1_add_carry"));
@@ -55,6 +82,10 @@ test("lesson audio: g1_add_carry を開いて合格するまで、lessonOpen→p
 
   /* 開いた直後: lessonOpen だけが記録されている */
   expect(await recentSfxNames(page)).toEqual(["lessonOpen"]);
+  /* AU-05: 開いた瞬間に overlay が「まなびや」曲になり、base は据え置き (戻り先) */
+  expect(await overlayBgm(page)).toBe("lesson");
+  expect(await currentBgm(page)).toBe("lesson");
+  expect(await baseBgm(page)).toBe(originalBase);
   await clearSfx(page);
 
   /* story → concept → れい → 穴埋め (2問) を経て れんしゅう画面が見えるまで進める。
@@ -83,6 +114,10 @@ test("lesson audio: g1_add_carry を開いて合格するまで、lessonOpen→p
   expect(afterPractice.filter((n) => n === "practiceLevelUp").length).toBe(2);
   expect(afterPractice.filter((n) => n === "correct").length).toBe(9);
   expect(afterPractice[afterPractice.length - 1]).toBe("testStart");
+  /* AU-05: れんしゅう→テストの瞬間に overlay が「テスト」曲へ切り替わる */
+  expect(await overlayBgm(page)).toBe("test");
+  expect(await currentBgm(page)).toBe("test");
+  expect(await baseBgm(page)).toBe(originalBase);
   await clearSfx(page);
 
   /* テスト (10問) を全問正解して合格する。最後は testPass */
@@ -91,6 +126,13 @@ test("lesson audio: g1_add_carry を開いて合格するまで、lessonOpen→p
   const afterTest = await recentSfxNames(page);
   expect(isSubsequence(afterTest, ["correct", "testPass"])).toBe(true);
   expect(afterTest[afterTest.length - 1]).toBe("testPass");
+
+  /* AU-05: testPass を聞かせてから overlay を外す (setTimeout 1000ms)。
+   * 合格後は overlay が消え、地の曲 (originalBase) に戻っていること */
+  await expect
+    .poll(() => overlayBgm(page), { timeout: 5_000 })
+    .toBeNull();
+  expect(await currentBgm(page)).toBe(originalBase);
 
   const mastery = await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.getSave().mastery);
   expect(mastery.g1_add_carry?.state).toBe("can");
@@ -185,4 +227,89 @@ test("gate audio: 章1 中核3単元のうち2つだけ can では gateOpen が�
   const afterOpen = await fieldPos(page);
   expect(afterOpen.x).toBeGreaterThan(before.x);
   expect(afterOpen.y).toBe(12);
+});
+
+/*
+ * AU-05: ReviewScreen (おさらい) が開くと overlay が「まなびや」曲になり、
+ * 終了すると外れて地の曲へ戻ることを確認する。出題そのものは
+ * e2e/lessonReview.spec.ts が検証済みなので、ここでは BGM の push/pop だけを見る。
+ */
+test("review bgm: おさらいが開くと lesson へ、5問終えて閉じると地の曲へ戻る", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await startGame(page);
+  await page.waitForTimeout(400);
+  const originalBase = await baseBgm(page);
+
+  await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.setMastery("g1_add_nc", "can"));
+  await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.advanceClock(2 * 24 * 60 * 60 * 1000));
+
+  await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.openReview());
+  const screen = page.locator('[data-testid="review-screen"]');
+  await expect(screen).toBeVisible({ timeout: 10_000 });
+  expect(await overlayBgm(page)).toBe("lesson");
+  expect(await currentBgm(page)).toBe("lesson");
+
+  for (let i = 0; i < 5; i++) {
+    const choice = correctChoice(page);
+    await expect(choice).toBeVisible({ timeout: 10_000 });
+    await choice.click();
+    await page.waitForTimeout(1_100);
+  }
+  await expect(screen).toBeHidden({ timeout: 10_000 });
+
+  expect(await overlayBgm(page)).toBeNull();
+  expect(await currentBgm(page)).toBe(originalBase);
+});
+
+/*
+ * AU-05: 期日の来た単元が無い「即座に閉じる」経路 (review-close ボタン) でも
+ * push/pop が対になっていること (overlay が残留しない) を確認する。
+ */
+test("review bgm: おさらいが無い即閉じでも overlay が残らない", async ({ page }) => {
+  test.setTimeout(30_000);
+  await startGame(page);
+  await page.waitForTimeout(400);
+  const originalBase = await baseBgm(page);
+
+  await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.openReview());
+  const screen = page.locator('[data-testid="review-screen"]');
+  await expect(screen).toBeVisible({ timeout: 10_000 });
+  expect(await overlayBgm(page)).toBe("lesson");
+
+  await page.locator('[data-testid="review-close"]').click();
+  await expect(screen).toBeHidden({ timeout: 5_000 });
+  expect(await overlayBgm(page)).toBeNull();
+  expect(await currentBgm(page)).toBe(originalBase);
+});
+
+/*
+ * AU-05: ReadinessScreen (前提チェック) も同じく開閉で push/pop する。
+ */
+test("readiness bgm: 前提チェックが開くと lesson へ、正解して閉じると地の曲へ戻る", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await startGame(page);
+  await page.waitForTimeout(400);
+  const originalBase = await baseBgm(page);
+
+  await page.evaluate(() =>
+    window.__KAZUQUEST_DEBUG__!.openReadiness("g1_add_carry", ["g1_add_nc"]),
+  );
+  const screen = page.locator('[data-testid="readiness-screen"]');
+  await expect(screen).toBeVisible({ timeout: 10_000 });
+  expect(await overlayBgm(page)).toBe("lesson");
+  expect(await currentBgm(page)).toBe("lesson");
+
+  const readinessCorrectChoice = page.locator(
+    '[data-testid="math-choice"][data-answer="1"]',
+  );
+  await expect(readinessCorrectChoice).toBeVisible({ timeout: 10_000 });
+  await readinessCorrectChoice.click();
+  await expect(screen).toBeHidden({ timeout: 10_000 });
+
+  expect(await overlayBgm(page)).toBeNull();
+  expect(await currentBgm(page)).toBe(originalBase);
 });
