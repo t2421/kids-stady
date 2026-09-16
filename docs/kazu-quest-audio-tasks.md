@@ -162,7 +162,7 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
 
 ## 4. 波2: 学びの画面に音を通す (並列可: AU-03 | AU-04。依存: AU-01, AU-02)
 
-#### AU-03 [M] BGM の base / overlay と「まなびや」「テスト」の 2 曲 — 状態: 未 (依存: AU-01)
+#### AU-03 [M] BGM の base / overlay と「まなびや」「テスト」の 2 曲 — 状態: 済 (依存: AU-01)
 
 - **目的**: React のオーバーレイ画面が曲を要求し、閉じたら元に戻れる仕組み (§2.3) と、それに乗せる 2 曲 (§2.4)
 - **触るファイル**: `src/game/audio/bgm.ts` (`pushBgm` / `popBgm`、`requested` を base/overlay に分離、フック拡張)、
@@ -176,7 +176,7 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
   `"lesson"`、pop で `"town"`。既存 3 件緑
 - **スコープ外**: レッスン画面からの呼び出し (AU-05)、町 6 曲 (AU-07)
 
-#### AU-04 [M] 学びの全画面に効果音を差す — 状態: 未 (依存: AU-01, AU-02)
+#### AU-04 [M] 学びの全画面に効果音を差す — 状態: 済 (依存: AU-01, AU-02)
 
 - **目的**: §0 の穴 1 を塞ぐ。§2.1 の名前を **意図どおりの場面で** 鳴らす
 - **触るファイル** (すべて `src/components/`): `LessonScreen.tsx` (`lessonOpen` 開始時 / `pageTurn` は
