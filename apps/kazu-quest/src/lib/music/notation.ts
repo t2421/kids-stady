@@ -1,5 +1,5 @@
 /*
- * BGM の音符記法 (KQ-21)。純ロジック — WebAudio にも Phaser にも依存しない。
+ * BGM の音符記法 (KQ-21 → AU-06 で拡張)。純ロジック — WebAudio にも Phaser にも依存しない。
  *
  * 1 声部 = 文字列。小節は `|` で区切り、小節内は空白区切りのステップ列
  * (既定は 1 小節 8 ステップ = 8分音符)。
@@ -10,6 +10,27 @@
  *
  * parseVoice は { freq, startBeat, durBeats } の列に変換する (1 拍 = 4分音符)。
  * 文法エラーは NotationError で投げ、validateSong が文字列に変換して返す。
+ *
+ * AU-06 (2026-09-16、3和音を必須にする方針): 曲は常に lead / harmony / bass の
+ * 3 声を鳴らして三和音を作る。`harmony` は lead/bass と同じ記法の **必須** 第3声
+ * (省略すると型エラー。TS の型で必須にしてあるが、JS 側や実行時アサーションを
+ * 回避したケースに備えて compileSong でも実行時に検証する — 「3和音は省略できない」
+ * ことをスキーマそのものが強制する)。
+ *
+ * `arp` は将来の高速アルペジオ用の任意の第4声。**設計判断**: 専用の stepsPerBar は
+ * 設けない。曲全体の `stepsPerBar` をそのまま使う (単純さを優先。より細かい分解能が
+ * 要る曲は曲全体の `stepsPerBar` を上げればよい — compileSong は既に stepsPerBar を
+ * 1〜32 の範囲で受け付けている)。AU-06 自体は arp の実データを書かない。
+ *
+ * `style` は合成の質感 (パルス幅 / ビブラート / エコー) を曲ごとに指定する任意フィールド。
+ * 実際の音作りは src/game/audio/bgm.ts (と src/game/audio/pulseWave.ts) が行う:
+ *   - pulse: 矩形波の代わりに使うパルス幅 (デューティ比)。0.125 / 0.25 / 0.5 の3値
+ *   - vibrato: LFO によるピッチ変調の深さ。単位は detune のセント (音程ゆれの深さ)
+ *   - echo: ディレイのウェット/ドライ比 (0 = エコー無し 〜 1 = 最大)
+ * 省略時はすべて従来どおり (矩形波/三角波のみ・ビブラート無し・エコー無し) — 既存曲の
+ * 音を変えないための後方互換。
+ *
+ * MAX_BARS は 16 → 32 に拡張 (AU-07/AU-08 で 16〜32 小節の曲を書けるようにする)。
  */
 
 export interface NoteEvent {
@@ -18,10 +39,21 @@ export interface NoteEvent {
   durBeats: number;
 }
 
-export type VoiceName = "lead" | "bass" | "drum";
+/* AU-06: harmony (必須の第2声) と arp (任意の第4声) を追加 */
+export type VoiceName = "lead" | "harmony" | "bass" | "drum" | "arp";
 
 export interface CompiledEvent extends NoteEvent {
   voice: VoiceName;
+}
+
+/* AU-06: 合成の質感。すべて任意 — 省略時は従来どおりの音 */
+export interface SongStyle {
+  /* パルス波のデューティ比。省略時は矩形波 (50% 相当だが従来どおりの単純な square) */
+  pulse?: 0.125 | 0.25 | 0.5;
+  /* ビブラート LFO の深さ (detune のセント)。省略/0 で LFO 自体を作らない */
+  vibrato?: number;
+  /* エコーのウェット/ドライ比 (0〜1)。省略/0 でディレイ系を作らない */
+  echo?: number;
 }
 
 export interface SongDef {
@@ -32,8 +64,14 @@ export interface SongDef {
   /* 1 小節あたりのステップ数 (既定 8 = 8分音符刻み) */
   stepsPerBar?: number;
   lead: string;
+  /* AU-06: 第2声・必須。lead/bass と同じ記法 (3度/6度でハモる等) — 3和音を保証する */
+  harmony: string;
   bass: string;
   drum?: string;
+  /* AU-06: 任意の第4声 (高速アルペジオ用)。曲の stepsPerBar をそのまま使う */
+  arp?: string;
+  /* AU-06: 合成の質感。省略可 (省略時は従来どおりの音) */
+  style?: SongStyle;
 }
 
 export interface CompiledSong {
@@ -43,6 +81,8 @@ export interface CompiledSong {
   loopBeats: number;
   /* startBeat 昇順 */
   events: CompiledEvent[];
+  /* AU-06: bgm.ts が参照する質感設定。省略時は undefined (従来どおりの音) */
+  style?: SongStyle;
 }
 
 export interface ParsedVoice {
@@ -63,7 +103,8 @@ export const BEATS_PER_BAR = 4;
 export const MIN_TEMPO = 60;
 export const MAX_TEMPO = 220;
 export const MIN_BARS = 8;
-export const MAX_BARS = 16;
+/* AU-06: 16 → 32 (章の町・作り込みで長い曲を書けるように) */
+export const MAX_BARS = 32;
 
 /* ハイハット = 高いカットオフ / キック = 低いカットオフ (bgm.ts のローパスに渡す) */
 export const DRUM_SYMBOLS: Record<string, number> = { x: 7000, o: 320 };
@@ -131,6 +172,20 @@ export function parseVoice(text: string, opts: ParseOptions = {}): ParsedVoice {
   return { events, bars: bars.length };
 }
 
+/* AU-06: style の値域チェック。省略は常に OK (後方互換) */
+function validateStyle(style: SongStyle | undefined): void {
+  if (!style) return;
+  if (style.pulse !== undefined && ![0.125, 0.25, 0.5].includes(style.pulse)) {
+    throw new NotationError(`style.pulse ${style.pulse} must be 0.125, 0.25, or 0.5`);
+  }
+  if (style.vibrato !== undefined && (!Number.isFinite(style.vibrato) || style.vibrato < 0)) {
+    throw new NotationError(`style.vibrato ${style.vibrato} must be a non-negative number`);
+  }
+  if (style.echo !== undefined && (!Number.isFinite(style.echo) || style.echo < 0 || style.echo > 1)) {
+    throw new NotationError(`style.echo ${style.echo} must be between 0 and 1`);
+  }
+}
+
 /* 曲を声部ごとに解析して 1 本の時系列にまとめる。文法・整合エラーは NotationError */
 export function compileSong(song: SongDef): CompiledSong {
   if (!Number.isFinite(song.tempo) || song.tempo < MIN_TEMPO || song.tempo > MAX_TEMPO) {
@@ -140,12 +195,19 @@ export function compileSong(song: SongDef): CompiledSong {
   if (!Number.isInteger(stepsPerBar) || stepsPerBar < 1 || stepsPerBar > 32) {
     throw new NotationError(`stepsPerBar ${stepsPerBar} out of range 1-32`);
   }
+  /* AU-06: harmony は必須。TS の型でも必須だが、JS 側の呼び出しに備えて実行時にも守る */
+  if (typeof song.harmony !== "string" || song.harmony.trim() === "") {
+    throw new NotationError("harmony is required (AU-06: songs must always sound a 3-voice chord)");
+  }
+  validateStyle(song.style);
 
   const voices: [VoiceName, string, ParseOptions][] = [
     ["lead", song.lead, { stepsPerBar }],
+    ["harmony", song.harmony, { stepsPerBar }],
     ["bass", song.bass, { stepsPerBar }],
   ];
   if (song.drum !== undefined) voices.push(["drum", song.drum, { stepsPerBar, symbols: DRUM_SYMBOLS }]);
+  if (song.arp !== undefined) voices.push(["arp", song.arp, { stepsPerBar }]);
 
   let bars: number | null = null;
   const events: CompiledEvent[] = [];
@@ -172,6 +234,7 @@ export function compileSong(song: SongDef): CompiledSong {
     bars: barCount,
     loopBeats: barCount * BEATS_PER_BAR,
     events: [...events].sort((a, b) => a.startBeat - b.startBeat),
+    style: song.style,
   };
 }
 

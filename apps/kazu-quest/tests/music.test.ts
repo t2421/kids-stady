@@ -28,6 +28,8 @@ function songWith(overrides: Partial<SongDef>): SongDef {
     title: "test",
     tempo: 120,
     lead: eightBars("c4 - e4 - g4 ~ - -"),
+    /* AU-06: harmony が必須になったので既定値を用意 (lead の3度上) */
+    harmony: eightBars("e4 - g4 - c5 ~ - -"),
     bass: eightBars("c3 - - - g2 - - -"),
     ...overrides,
   };
@@ -93,7 +95,8 @@ describe("compileSong / validateSong", () => {
     for (let i = 1; i < song.events.length; i++) {
       expect(song.events[i].startBeat).toBeGreaterThanOrEqual(song.events[i - 1].startBeat);
     }
-    expect(new Set(song.events.map((e) => e.voice))).toEqual(new Set(["lead", "bass", "drum"]));
+    /* AU-06: harmony は常に必須の第3声として含まれる */
+    expect(new Set(song.events.map((e) => e.voice))).toEqual(new Set(["lead", "harmony", "bass", "drum"]));
   });
 
   it("rejects voices with different bar counts", () => {
@@ -103,9 +106,9 @@ describe("compileSong / validateSong", () => {
 
   it("rejects too few or too many bars", () => {
     const short = Array(MIN_BARS - 1).fill("c4 - - - - - - -").join(" | ");
-    expect(validateSong(songWith({ lead: short, bass: short }))).toMatch(/bars/);
+    expect(validateSong(songWith({ lead: short, harmony: short, bass: short }))).toMatch(/bars/);
     const long = Array(MAX_BARS + 1).fill("c4 - - - - - - -").join(" | ");
-    expect(validateSong(songWith({ lead: long, bass: long }))).toMatch(/bars/);
+    expect(validateSong(songWith({ lead: long, harmony: long, bass: long }))).toMatch(/bars/);
   });
 
   it("rejects tempos outside the playable range", () => {
@@ -127,14 +130,150 @@ describe("SONGS", () => {
     expect(Object.keys(SONGS).sort()).toEqual([...SONG_IDS].sort());
   });
 
-  it.each(SONG_IDS)("%s validates and is 8-16 bars", (id) => {
+  it.each(SONG_IDS)("%s validates and is 8-32 bars", (id) => {
     expect(validateSong(SONGS[id])).toBeNull();
     const song = compileSong(SONGS[id]);
     expect(song.bars).toBeGreaterThanOrEqual(MIN_BARS);
     expect(song.bars).toBeLessThanOrEqual(MAX_BARS);
     expect(song.events.filter((e) => e.voice === "lead").length).toBeGreaterThan(0);
+    /* AU-06: harmony は必須の第3声。lead と同じ小節数で必ず鳴る */
+    expect(song.events.filter((e) => e.voice === "harmony").length).toBeGreaterThan(0);
     expect(song.events.filter((e) => e.voice === "bass").length).toBeGreaterThan(0);
     expect(SONGS[id].title.length).toBeGreaterThan(0);
+  });
+
+  /* AU-06: harmony が lead/bass と同じ小節数であること (別々に確認しておく) */
+  it.each(SONG_IDS)("%s: harmony has the same bar count as lead", (id) => {
+    const { stepsPerBar, lead, harmony } = SONGS[id];
+    const leadBars = parseVoice(lead, { stepsPerBar }).bars;
+    const harmonyBars = parseVoice(harmony, { stepsPerBar }).bars;
+    expect(harmonyBars).toBe(leadBars);
+  });
+});
+
+/* AU-06: harmony が必須の第3声であること。3和音 (lead/harmony/bass) を常に強制する */
+describe("harmony is a required 3rd voice (AU-06)", () => {
+  it("compileSong/validateSong reject a SongDef missing harmony, even bypassing the TS type", () => {
+    const full = songWith({});
+    const { harmony: _harmony, ...withoutHarmony } = full;
+    const bad = withoutHarmony as unknown as SongDef;
+    expect(() => compileSong(bad)).toThrow(/harmony is required/);
+    expect(validateSong(bad)).toMatch(/harmony is required/);
+  });
+
+  it("rejects an empty-string harmony", () => {
+    expect(validateSong(songWith({ harmony: "" }))).toMatch(/harmony is required/);
+  });
+
+  it("validates harmony with the same grammar and cross-voice bar rule as lead", () => {
+    expect(validateSong(songWith({ harmony: eightBars("c4 zz - - - - - -") }))).toMatch(
+      /^harmony: bar 1/,
+    );
+    const sevenBars = Array(7).fill("c4 - - - - - - -").join(" | ");
+    expect(validateSong(songWith({ harmony: sevenBars }))).toMatch(/harmony has 7 bars but lead has 8/);
+  });
+});
+
+/* AU-06: MAX_BARS が 16 → 32 に広がったこと */
+describe("MAX_BARS extended to 32 (AU-06)", () => {
+  it("MAX_BARS is 32", () => {
+    expect(MAX_BARS).toBe(32);
+  });
+
+  it.each([24, 32])("accepts a %d-bar song", (bars) => {
+    const pattern = Array(bars).fill("c4 - - - - - - -").join(" | ");
+    expect(validateSong(songWith({ lead: pattern, harmony: pattern, bass: pattern }))).toBeNull();
+  });
+
+  it("rejects a 33-bar song", () => {
+    const tooLong = Array(33).fill("c4 - - - - - - -").join(" | ");
+    expect(validateSong(songWith({ lead: tooLong, harmony: tooLong, bass: tooLong }))).toMatch(/bars/);
+  });
+});
+
+/* AU-06: style (pulse/vibrato/echo) の値域。実際の合成は AudioContext が要るので
+   bgm.ts/pulseWave.ts の役割 — ここでは compileSong が値を検証し、CompiledSong に
+   そのまま通すことだけを確認する */
+describe("style: pulse/vibrato/echo (AU-06)", () => {
+  it("style is optional — omitting it is backward compatible", () => {
+    expect(validateSong(songWith({}))).toBeNull();
+    expect(compileSong(songWith({})).style).toBeUndefined();
+  });
+
+  it("accepts valid pulse/vibrato/echo values and threads them through to CompiledSong.style", () => {
+    const style = { pulse: 0.25 as const, vibrato: 20, echo: 0.4 };
+    const compiled = compileSong(songWith({ style }));
+    expect(compiled.style).toEqual(style);
+  });
+
+  it.each([0.125, 0.25, 0.5] as const)("accepts pulse duty cycle %s", (pulse) => {
+    expect(validateSong(songWith({ style: { pulse } }))).toBeNull();
+  });
+
+  it("rejects a pulse duty cycle outside the allowed 3 values", () => {
+    expect(validateSong(songWith({ style: { pulse: 0.3 as never } }))).toMatch(/pulse/);
+  });
+
+  it("rejects negative or non-finite vibrato", () => {
+    expect(validateSong(songWith({ style: { vibrato: -1 } }))).toMatch(/vibrato/);
+    expect(validateSong(songWith({ style: { vibrato: Number.NaN } }))).toMatch(/vibrato/);
+  });
+
+  it("rejects echo outside 0-1", () => {
+    expect(validateSong(songWith({ style: { echo: 1.5 } }))).toMatch(/echo/);
+    expect(validateSong(songWith({ style: { echo: -0.1 } }))).toMatch(/echo/);
+  });
+
+  it("accepts echo at the boundaries 0 and 1", () => {
+    expect(validateSong(songWith({ style: { echo: 0 } }))).toBeNull();
+    expect(validateSong(songWith({ style: { echo: 1 } }))).toBeNull();
+  });
+});
+
+/* AU-06: arp は任意の第4声。曲の stepsPerBar をそのまま使う設計 (notation.ts のコメント参照) */
+describe("arp: optional 4th voice (AU-06)", () => {
+  it("compiles fine without arp (backward compatible)", () => {
+    const song = compileSong(songWith({}));
+    expect(song.events.some((e) => e.voice === "arp")).toBe(false);
+  });
+
+  it("compiles an arp voice using the song's stepsPerBar and tags its events", () => {
+    const song = compileSong(songWith({ arp: eightBars("c5 - e5 - g5 - c6 -") }));
+    const arpEvents = song.events.filter((e) => e.voice === "arp");
+    expect(arpEvents.length).toBeGreaterThan(0);
+  });
+
+  it("rejects an arp voice with a mismatched bar count", () => {
+    const sevenBars = Array(7).fill("c4 - - - - - - -").join(" | ");
+    expect(validateSong(songWith({ arp: sevenBars }))).toMatch(/arp has 7 bars but lead has 8/);
+  });
+});
+
+/* AU-06: Node (AudioContext 無し) では pulse/vibrato/echo の実合成コード (bgm.ts の
+   scheduleTone/attachStyle) はそもそも tick() の `if (!ctx) return` で実行されない
+   (§2.7 のとおり Node に AudioContext は無い)。ここでは「style を持つ曲を要求しても
+   playBgm/pushBgm/stopBgm が Node で例外を出さない」ことを、実際に compileSong が
+   通る (＝ getCompiled が例外を握りつぶす必要がない) 曲データで確認する。
+   パルス波の生成自体 (pulseWave.ts) は tests/pulseWave.test.ts で AudioContext 無しに
+   直接テストする */
+describe("bgm never throws for a style-bearing song, even without AudioContext (AU-06)", () => {
+  beforeEach(() => {
+    installLocalStorageStub();
+    startSession(null);
+    stopBgm(0);
+  });
+
+  it("compileSong accepts a full style block without throwing (prerequisite for bgm.ts's getCompiled cache)", () => {
+    expect(() => compileSong(songWith({ style: { pulse: 0.5, vibrato: 15, echo: 0.5 } }))).not.toThrow();
+  });
+
+  it("playBgm/pushBgm/popBgm/stopBgm never throw regardless of style, since no real song id changes shape", () => {
+    expect(() => {
+      playBgm("title");
+      pushBgm("lesson");
+      popBgm();
+      stopBgm();
+    }).not.toThrow();
   });
 });
 

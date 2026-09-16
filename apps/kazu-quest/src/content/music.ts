@@ -2,7 +2,14 @@
  * BGM 曲データ (KQ-21)。すべてオリジナル曲 (既存ゲームの旋律は模倣しない)。
  * 記法は src/lib/music/notation.ts: `|` で小節、1 小節 8 ステップ (8分音符)、
  * `-` 休符、`~` タイ。ドラムは x = ハイハット / o = キック。
- * 各曲 8〜16 小節をループ。テスト (tests/music.test.ts) が文法と小節長を守る。
+ * 各曲 8〜32 小節をループ。テスト (tests/music.test.ts) が文法と小節長を守る。
+ *
+ * AU-06 (2026-09-16): `harmony` (第2声) が必須になったので全曲に追加した。
+ * ここでの harmony は「lead を 3 度下でハモらせる (同じリズム・同じ休符/タイの
+ * 位置)」という単純な書き方で、常に 3 声 (lead/harmony/bass) が同時に鳴って
+ * 三和音として聞こえることを目的にした最小限の実装。曲ごとの本格的な和声
+ * (属和音への交代・不協和での演出など) は AU-07 (町6曲) / AU-08 (この6曲の
+ * 作り込み) の仕事 — ここでは意図的に触っていない。
  */
 
 import type { SongDef } from "../lib/music/notation";
@@ -45,6 +52,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "e5 ~ g5 ~ f5 ~ d5 ~",
       "c5 ~ ~ ~ ~ ~ - -",
     ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム) */
+    harmony: [
+      "a4 ~ c5 ~ e5 ~ ~ c5",
+      "f5 ~ e5 ~ c5 ~ ~ ~",
+      "d5 ~ f5 ~ a5 ~ ~ f5",
+      "e5 ~ ~ ~ ~ ~ - -",
+      "c5 ~ e5 ~ a5 ~ ~ g5",
+      "f5 ~ d5 ~ b4 ~ ~ ~",
+      "c5 ~ e5 ~ d5 ~ b4 ~",
+      "a4 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
     bass: [
       "c3 - - - g3 - - -",
       "a3 - - - e3 - - -",
@@ -70,6 +88,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "bb4 - d5 - f5 ~ - -",
       "g5 - e5 - c5 - d5 -",
       "f5 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム) */
+    harmony: [
+      "d5 - f5 - a5 ~ f5 -",
+      "e5 - g5 - e5 ~ - -",
+      "c5 - e5 - a5 ~ e5 -",
+      "d5 ~ ~ ~ - - a4 -",
+      "b4 - d5 - f5 ~ d5 -",
+      "g4 - b4 - d5 ~ - -",
+      "e5 - c5 - a4 - b4 -",
+      "d5 ~ ~ ~ ~ ~ - -",
     ].join(" | "),
     bass: [
       "f3 - c3 - f3 - c3 -",
@@ -114,6 +143,25 @@ export const SONGS: Record<SongId, SongDef> = {
       "d5 ~ f5 ~ a5 ~ - -",
       "g5 - f5 - e5 - c#5 -",
       "d5 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム) */
+    harmony: [
+      "b4 - d5 - f5 ~ e5 d5",
+      "c5 ~ a4 ~ c5 ~ - -",
+      "b4 - d5 - f5 ~ a5 ~",
+      "f5 ~ ~ ~ - - f4 a4",
+      "b4 - d5 - f5 ~ e5 d5",
+      "e5 ~ c5 ~ a4 ~ - -",
+      "g4 - b4 - d5 - c5 -",
+      "b4 ~ ~ ~ ~ ~ - -",
+      "d5 - f5 - a5 ~ f5 -",
+      "g5 ~ f5 ~ e5 ~ d5 -",
+      "c5 - e5 - g5 ~ e5 -",
+      "f5 ~ ~ ~ - - d5 e5",
+      "f5 - e5 - d5 - c5 -",
+      "b4 ~ d5 ~ f5 ~ - -",
+      "e5 - d5 - c5 - a4 -",
+      "b4 ~ ~ ~ ~ ~ - -",
     ].join(" | "),
     bass: [
       "d3 - d3 - a3 - d3 -",
@@ -167,6 +215,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "c5 ~ b4 ~ g4 ~ f#4 ~",
       "e4 ~ ~ ~ ~ ~ - -",
     ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム)。暗い雰囲気を保つため低め */
+    harmony: [
+      "c4 ~ ~ e4 ~ ~ d4 ~",
+      "c4 ~ ~ ~ - - - -",
+      "g4 ~ ~ f#4 ~ ~ e4 ~",
+      "d4 ~ ~ ~ - - - -",
+      "c4 ~ ~ e4 ~ ~ g4 ~",
+      "g4 ~ ~ ~ - - - -",
+      "a4 ~ g4 ~ e4 ~ d4 ~",
+      "c4 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
     bass: [
       "e2 ~ ~ ~ b2 ~ ~ ~",
       "e2 ~ ~ ~ d3 ~ ~ ~",
@@ -203,6 +262,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "g5 f5 e5 d5 c5 b4 a4 g#4",
       "a4 ~ ~ - e5 - a4 -",
     ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム) */
+    harmony: [
+      "f4 f4 a4 f4 c5 - b4 a4",
+      "g4 g4 b4 g4 c5 - - -",
+      "f4 f4 a4 f4 c5 - e5 c5",
+      "d5 c5 b4 a4 g4 ~ - -",
+      "a4 a4 c5 a4 e5 - d5 c5",
+      "b4 b4 d5 b4 f5 - - -",
+      "e5 d5 c5 b4 a4 g4 f4 e4",
+      "f4 ~ ~ - c5 - f4 -",
+    ].join(" | "),
     bass: [
       "a2 a3 a2 a3 a2 a3 a2 a3",
       "g2 g3 g2 g3 g2 g3 g2 g3",
@@ -238,6 +308,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "f5 f5 - ab5 c6 - bb5 ab5",
       "g5 - f#5 - g5 - ab5 -",
       "g5 ~ ~ ~ - b4 - -",
+    ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム)。三全音の緊張感を保つ */
+    harmony: [
+      "a4 a4 - a4 c5 - d5 -",
+      "e5 ~ d5 d5 c5 - a4 -",
+      "a4 a4 - a4 c5 - d5 -",
+      "f5 ~ e5 ~ d5 c5 b4 -",
+      "c5 c5 - e5 g5 - f5 e5",
+      "d5 d5 - f5 a5 - g5 f5",
+      "e5 - d5 - e5 - f5 -",
+      "e5 ~ ~ ~ - g4 - -",
     ].join(" | "),
     bass: [
       "c2 c2 c3 c2 c2 c2 c3 c2",
@@ -283,6 +364,25 @@ export const SONGS: Record<SongId, SongDef> = {
       "c5 ~ b4 ~ a4 ~ f#4 ~",
       "g4 ~ ~ ~ ~ ~ ~ ~",
     ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム) */
+    harmony: [
+      "e4 - g4 - b4 ~ ~ g4",
+      "a4 ~ g4 ~ f4 ~ ~ ~",
+      "e4 - g4 - b4 ~ ~ c5",
+      "b4 ~ ~ ~ - - b4 c5",
+      "d5 ~ c5 ~ b4 ~ g4 ~",
+      "a4 ~ b4 ~ c5 ~ ~ ~",
+      "b4 ~ a4 ~ g4 ~ f4 ~",
+      "e4 ~ ~ ~ ~ ~ - -",
+      "g4 - b4 - e5 ~ ~ d5",
+      "c5 ~ b4 ~ g4 ~ ~ ~",
+      "a4 - c5 - f5 ~ ~ e5",
+      "d5 ~ ~ ~ - - b4 c5",
+      "d5 - e5 - f5 ~ e5 ~",
+      "d5 ~ c5 ~ b4 ~ ~ ~",
+      "a4 ~ g4 ~ f4 ~ d4 ~",
+      "e4 ~ ~ ~ ~ ~ ~ ~",
+    ].join(" | "),
     bass: [
       "g2 - - - d3 - - -",
       "a2 - - - e3 - - -",
@@ -318,6 +418,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "c5 - b4 - a4 - g4 -",
       "g4 ~ ~ ~ ~ ~ - -",
     ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム)。落ち着いた曲なので控えめに */
+    harmony: [
+      "e4 - g4 - b4 ~ - -",
+      "a4 - g4 - f4 ~ - -",
+      "e4 - g4 - b4 ~ c5 -",
+      "b4 ~ ~ ~ - - a4 -",
+      "g4 - b4 - e5 ~ - -",
+      "d5 ~ c5 ~ b4 ~ - -",
+      "a4 - g4 - f4 - e4 -",
+      "e4 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
     bass: [
       "g2 - - - d3 - - -",
       "c3 - - - g2 - - -",
@@ -345,6 +456,17 @@ export const SONGS: Record<SongId, SongDef> = {
       "a5 - g5 - f#5 - - -",
       "g5 - a5 - b5 - c6 -",
       "b5 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
+    /* AU-06: lead を 3 度下でハモる (同じリズム)。軽い緊張感を保つ */
+    harmony: [
+      "c5 - e5 - g5 - f5 -",
+      "e5 - d5 - c5 - - -",
+      "c5 - e5 - g5 - b5 -",
+      "g5 ~ ~ ~ - - f5 e5",
+      "f5 - g5 - a5 - g5 -",
+      "f5 - e5 - d5 - - -",
+      "e5 - f5 - g5 - a5 -",
+      "g5 ~ ~ ~ ~ ~ - -",
     ].join(" | "),
     bass: [
       "e3 e3 e3 e3 e3 e3 e3 e3",

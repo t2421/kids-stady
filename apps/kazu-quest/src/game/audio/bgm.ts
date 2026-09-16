@@ -30,11 +30,33 @@
  *   - stopBgm: 両方を null にする → effective() が null になり fadeOut して終了
  * base の layer を「オーバーレイ中も無音でスケジュールし続ける」ことはしない
  * (§2.3 の設計メモどおり、鳴らないものを裏で予約し続ける意味がないため)。
+ *
+ * AU-06: harmony 声部の再生・パルス波・ビブラート・エコーを追加。
+ *   - harmony: lead と同じ音色選択ロジック (既定は矩形波、style.pulse があれば
+ *     パルス波) で、lead/bass の中間の控えめな音量 (HARMONY_GAIN) で鳴らす —
+ *     「メロディが主」を保ったまま和音の厚みを足す
+ *   - pulse: style.pulse があるときだけ、square の代わりに
+ *     pulseWave.ts の PeriodicWave (デューティ比つき) を使う。無いときは
+ *     従来どおりの square/triangle (既存曲の音を変えない後方互換)
+ *   - vibrato: Layer ごとに 1 個の LFO (OscillatorNode + GainNode) を
+ *     style.vibrato があるときだけ生成し、lead/harmony の音符の detune に
+ *     つなぐ。bass/drum には掛けない。style.vibrato が無ければ LFO 自体を
+ *     一切作らない (CPU 効率)
+ *   - echo: Layer ごとに 1 系統の DelayNode + フィードバック GainNode + ウェット
+ *     GainNode を style.echo があるときだけ生成し、master → delay → wet →
+ *     マスターバス、delay → feedback → delay の帰還ループを作る。フィードバック
+ *     は発振しないよう ECHO_FEEDBACK_CAP で頭打ちにする
  */
 
 import { SONGS, type SongId } from "../../content/music";
-import { compileSong, type CompiledEvent, type CompiledSong } from "../../lib/music/notation";
+import {
+  compileSong,
+  type CompiledEvent,
+  type CompiledSong,
+  type VoiceName,
+} from "../../lib/music/notation";
 import { getAudioContext, getMasterBus, getNoiseBuffer, installSfxUnlock, isSoundEnabled } from "./sfx";
+import { getPulseWave } from "./pulseWave";
 
 export type { SongId } from "../../content/music";
 
@@ -43,10 +65,22 @@ const LOOKAHEAD_S = 0.3;
 const CROSSFADE_MS = 300;
 /* AU-01: マスターバス導入に合わせて既定の聞こえ方を引き上げ (iPad で環境音に負けない) */
 const LEAD_GAIN = 0.12;
+/* AU-06: 3和音の第2声。lead/bass より控えめにして「メロディが主」を保つ */
+const HARMONY_GAIN = 0.09;
 const BASS_GAIN = 0.14;
+/* AU-06: 将来のアルペジオ用 (AU-06 時点では曲データに arp を持つ曲は無い) */
+const ARP_GAIN = 0.08;
 const DRUM_GAIN = 0.06;
 /* ドラムはステップ長に関係なく短く切る */
 const DRUM_MAX_S = 0.07;
+/* AU-06: パルス波として合成する声部 (lead/harmony/arp。bass/drum は対象外) */
+const PULSE_VOICES = new Set<VoiceName>(["lead", "harmony", "arp"]);
+/* AU-06: ビブラート LFO の周波数 (5〜6Hz の遅い揺れ) */
+const VIBRATO_HZ = 5.5;
+/* AU-06: エコーのディレイ時間 (180〜220ms 目安) */
+const ECHO_DELAY_S = 0.2;
+/* AU-06: フィードバック上限 (これ以上にすると発振・音の飽和が起きる) */
+const ECHO_FEEDBACK_CAP = 0.35;
 
 interface Layer {
   songId: SongId;
@@ -56,6 +90,13 @@ interface Layer {
   startTime: number;
   loopIndex: number;
   eventIndex: number;
+  /* AU-06: style.vibrato があるときだけ生成する LFO。lead/harmony の detune に配線する */
+  lfo?: OscillatorNode;
+  lfoGain?: GainNode;
+  /* AU-06: style.echo があるときだけ生成するディレイ系 */
+  echoDelay?: DelayNode;
+  echoFeedback?: GainNode;
+  echoWet?: GainNode;
 }
 
 const compiled = new Map<SongId, CompiledSong>();
@@ -192,8 +233,48 @@ function startLayer(ctx: AudioContext, songId: SongId): Layer | null {
   master.gain.setValueAtTime(0.001, now);
   master.gain.linearRampToValueAtTime(1, now + CROSSFADE_MS / 1000);
   /* AU-01: destination 直結をやめ、sfx.ts のマスターバス (→コンプレッサ→destination) へ */
-  master.connect(getMasterBus() ?? ctx.destination);
-  return { songId, song, master, startTime: now + 0.05, loopIndex: 0, eventIndex: 0 };
+  const bus = getMasterBus() ?? ctx.destination;
+  master.connect(bus);
+
+  const layer: Layer = { songId, song, master, startTime: now + 0.05, loopIndex: 0, eventIndex: 0 };
+  attachStyle(ctx, layer, bus, song.style);
+  return layer;
+}
+
+/* AU-06: style.vibrato / style.echo があるときだけ、それぞれの WebAudio ノードを
+   1 系統だけ作って Layer にぶら下げる。無ければ何も作らない (CPU 効率・後方互換) */
+function attachStyle(
+  ctx: AudioContext,
+  layer: Layer,
+  bus: AudioNode,
+  style: CompiledSong["style"],
+): void {
+  const now = ctx.currentTime;
+  if (style?.vibrato) {
+    const lfo = ctx.createOscillator();
+    lfo.type = "sine";
+    lfo.frequency.setValueAtTime(VIBRATO_HZ, now);
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(style.vibrato, now);
+    lfo.connect(lfoGain);
+    lfo.start(now);
+    layer.lfo = lfo;
+    layer.lfoGain = lfoGain;
+  }
+  if (style?.echo) {
+    const delay = ctx.createDelay(1);
+    delay.delayTime.setValueAtTime(ECHO_DELAY_S, now);
+    const feedback = ctx.createGain();
+    feedback.gain.setValueAtTime(Math.min(ECHO_FEEDBACK_CAP, style.echo * ECHO_FEEDBACK_CAP), now);
+    const wet = ctx.createGain();
+    wet.gain.setValueAtTime(Math.min(1, Math.max(0, style.echo)), now);
+    layer.master.connect(delay);
+    delay.connect(feedback).connect(delay);
+    delay.connect(wet).connect(bus);
+    layer.echoDelay = delay;
+    layer.echoFeedback = feedback;
+    layer.echoWet = wet;
+  }
 }
 
 function fadeOutLayer(target: Layer, fadeMs: number): void {
@@ -207,6 +288,12 @@ function fadeOutLayer(target: Layer, fadeMs: number): void {
   setTimeout(() => {
     try {
       target.master.disconnect();
+      target.lfo?.stop();
+      target.lfo?.disconnect();
+      target.lfoGain?.disconnect();
+      target.echoDelay?.disconnect();
+      target.echoFeedback?.disconnect();
+      target.echoWet?.disconnect();
     } catch {
       /* noop */
     }
@@ -242,27 +329,51 @@ function scheduleEvent(ctx: AudioContext, active: Layer, ev: CompiledEvent, at: 
   const secPerBeat = 60 / active.song.tempo;
   const dur = ev.durBeats * secPerBeat;
   if (ev.voice === "drum") scheduleDrum(ctx, active.master, ev.freq, at, Math.min(dur, DRUM_MAX_S));
-  else scheduleTone(ctx, active.master, ev, at, dur);
+  else scheduleTone(ctx, active, ev, at, dur);
 }
 
-function scheduleTone(
-  ctx: AudioContext,
-  out: GainNode,
-  ev: CompiledEvent,
-  at: number,
-  dur: number,
-): void {
+/* AU-06: 声部ごとの既定音量 (lead が最も前に出て、harmony はその内側で和音の
+   厚みを足す。arp はまだ曲データに存在しないが将来のため用意しておく) */
+function voiceGain(voice: VoiceName): number {
+  switch (voice) {
+    case "lead":
+      return LEAD_GAIN;
+    case "harmony":
+      return HARMONY_GAIN;
+    case "bass":
+      return BASS_GAIN;
+    case "arp":
+      return ARP_GAIN;
+    default:
+      return LEAD_GAIN;
+  }
+}
+
+function scheduleTone(ctx: AudioContext, active: Layer, ev: CompiledEvent, at: number, dur: number): void {
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  const vol = ev.voice === "lead" ? LEAD_GAIN : BASS_GAIN;
-  osc.type = ev.voice === "lead" ? "square" : "triangle";
+  const vol = voiceGain(ev.voice);
+  const style = active.song.style;
+  const isPulseVoice = PULSE_VOICES.has(ev.voice);
+  if (isPulseVoice && style?.pulse) {
+    /* AU-06: style.pulse があるときだけパルス波 (bgm.ts と無関係に既存曲の音を変えない) */
+    osc.setPeriodicWave(getPulseWave(ctx, style.pulse));
+  } else {
+    /* 従来どおり: lead/harmony/arp は矩形波、bass は三角波 (バイト同一の後方互換) */
+    osc.type = isPulseVoice ? "square" : "triangle";
+  }
   osc.frequency.setValueAtTime(ev.freq, at);
+  /* AU-06: ビブラートは lead/harmony のみ (bass/drum には掛けない)。LFO が
+     無ければ (style.vibrato 未指定) 何も配線しない */
+  if ((ev.voice === "lead" || ev.voice === "harmony") && active.lfoGain) {
+    active.lfoGain.connect(osc.detune);
+  }
   /* 音符の後ろ 3 割で減衰させ、次の音とのつなぎ目に隙間を作る */
   const release = at + dur * 0.7;
   gain.gain.setValueAtTime(vol, at);
   gain.gain.setValueAtTime(vol, release);
   gain.gain.exponentialRampToValueAtTime(0.001, at + dur);
-  osc.connect(gain).connect(out);
+  osc.connect(gain).connect(active.master);
   osc.start(at);
   osc.stop(at + dur);
 }
