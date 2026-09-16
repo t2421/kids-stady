@@ -11,7 +11,7 @@ import { MistakeNoteList } from "@/components/MistakeNoteList";
 import { StatsBody } from "@/components/StatsScreen";
 import { FieldHealControls } from "@/components/FieldHealControls";
 /* Phaser 非依存の音モジュールなので React から直接 import してよい (sfx.ts 冒頭参照) */
-import { isSoundEnabled, playSfx, setSoundEnabled } from "@/game/audio/sfx";
+import { getVolume, isSoundEnabled, playSfx, setSoundEnabled, setVolume } from "@/game/audio/sfx";
 
 /*
  * ステータスパネル (メニュー)。タブ (つよさ・そうび・じゅもん・もちもの・ノート・せいせき) と
@@ -22,6 +22,14 @@ import { isSoundEnabled, playSfx, setSoundEnabled } from "@/game/audio/sfx";
  * 出題中 (pending) は とじる・キー操作・背景タップを封じ、パネルが消えて
  * math-result の受け手がいなくなる事故を防ぐ。
  */
+
+/* 音量 4 択 (AU-01 §2.2)。level 0 は setSoundEnabled(false) と同義、1〜3 は setVolume と対 */
+const VOLUME_STEPS: { level: 0 | 1 | 2 | 3; label: string }[] = [
+  { level: 0, label: "オフ" },
+  { level: 1, label: "ちいさい" },
+  { level: 2, label: "ふつう" },
+  { level: 3, label: "おおきい" },
+];
 
 const TABS = ["つよさ", "そうび", "じゅもん", "もちもの", "ノート", "せいせき"] as const;
 /* パーティ共有のタブ (なかま切替を出さない) */
@@ -63,6 +71,7 @@ export function StatusPanelOverlay() {
   const [tab, setTab] = useState(0);
   const [member, setMember] = useState(0);
   const [sound, setSound] = useState(true);
+  const [volume, setVolumeState] = useState<0 | 1 | 2 | 3>(2);
   /* 回復呪文の算数プロンプトが開いている間 true (とじる を封じる) */
   const [pending, setPending] = useState(false);
   const stateRef = useRef<typeof state>(null);
@@ -98,6 +107,7 @@ export function StatusPanelOverlay() {
       setMember(0);
       setPending(false);
       setSound(isSoundEnabled());
+      setVolumeState(getVolume());
     };
     EventBus.on("ui-status", onOpen);
     return () => {
@@ -263,22 +273,59 @@ export function StatusPanelOverlay() {
                   >
                     あそんだ じかん: {data.playtime}
                   </div>
-                  {/* 設定: 効果音のおん/オフ (セーブの settings.sound に保存) */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14 }}>
-                    <span style={{ ...lineFont, fontSize: 15, color: UI_COLORS.textSub }}>おと</span>
-                    <button
-                      data-testid="sound-toggle"
-                      aria-pressed={sound}
-                      style={{ ...pillButton(sound), minHeight: 56, minWidth: 120 }}
-                      onClick={() => {
-                        const next = !sound;
-                        setSoundEnabled(next);
-                        setSound(next);
-                        if (next) playSfx("confirm");
-                      }}
-                    >
-                      {sound ? "おと: オン" : "おと: オフ"}
-                    </button>
+                  {/* 設定: おと (音量 4 択 — AU-01 §2.2)。sound-toggle は E2E 互換のため
+                      挙動そのまま残す (押すたびにオン/オフを反転するだけの独立ボタン) */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                      <span style={{ ...lineFont, fontSize: 15, color: UI_COLORS.textSub }}>おと</span>
+                      <button
+                        data-testid="sound-toggle"
+                        aria-pressed={sound}
+                        style={{ ...pillButton(sound), minHeight: 56, minWidth: 120 }}
+                        onClick={() => {
+                          const next = !sound;
+                          setSoundEnabled(next);
+                          setSound(next);
+                          if (next) playSfx("confirm");
+                        }}
+                      >
+                        {sound ? "おと: オン" : "おと: オフ"}
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                      {VOLUME_STEPS.map((step) => {
+                        const active = step.level === 0 ? !sound : sound && volume === step.level;
+                        return (
+                          <button
+                            key={step.level}
+                            data-testid="volume-step"
+                            data-level={String(step.level)}
+                            aria-pressed={active}
+                            style={{
+                              ...pillButton(active),
+                              flex: "1 1 96px",
+                              minHeight: 56,
+                              minWidth: 96,
+                            }}
+                            onClick={() => {
+                              if (step.level === 0) {
+                                setSoundEnabled(false);
+                                setSound(false);
+                              } else {
+                                setSoundEnabled(true);
+                                setSound(true);
+                                setVolume(step.level);
+                                setVolumeState(step.level);
+                              }
+                              /* 押した瞬間に試聴 (§2.2)。オフでも recentSfx には記録される */
+                              playSfx("confirm");
+                            }}
+                          >
+                            {step.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               ) : (

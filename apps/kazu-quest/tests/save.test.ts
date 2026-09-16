@@ -59,10 +59,48 @@ describe("normalizeSave", () => {
   });
 
   it("normalizes settings (sound defaults to true, keeps false)", () => {
-    expect(normalizeSave({}).settings).toEqual({ sound: true });
-    expect(normalizeSave({ settings: { sound: false } }).settings).toEqual({ sound: false });
-    expect(normalizeSave({ settings: { sound: "no" } }).settings).toEqual({ sound: true });
-    expect(normalizeSave({ settings: null }).settings).toEqual({ sound: true });
+    expect(normalizeSave({}).settings).toEqual({ sound: true, volume: 2 });
+    expect(normalizeSave({ settings: { sound: false } }).settings).toEqual({
+      sound: false,
+      volume: 2,
+    });
+    expect(normalizeSave({ settings: { sound: "no" } }).settings).toEqual({
+      sound: true,
+      volume: 2,
+    });
+    expect(normalizeSave({ settings: null }).settings).toEqual({ sound: true, volume: 2 });
+  });
+
+  /* AU-01: settings.volume (0..3、既定2)。sound とは独立に正規化される */
+  it("normalizes settings.volume (missing/invalid → default 2, valid round-trips, sound stays independent)", () => {
+    expect(normalizeSave({}).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: {} }).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: null }).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: { volume: "loud" } }).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: { volume: 4 } }).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: { volume: -1 } }).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: { volume: 1.5 } }).settings.volume).toBe(2);
+    expect(normalizeSave({ settings: { volume: null } }).settings.volume).toBe(2);
+
+    for (const v of [0, 1, 2, 3] as const) {
+      expect(normalizeSave({ settings: { volume: v } }).settings.volume).toBe(v);
+    }
+
+    /* sound: false と volume は互いに独立 (どちらかを変えても他方は既定のまま保たれる) */
+    expect(normalizeSave({ settings: { sound: false, volume: 3 } }).settings).toEqual({
+      sound: false,
+      volume: 3,
+    });
+    expect(normalizeSave({ settings: { sound: true, volume: 0 } }).settings).toEqual({
+      sound: true,
+      volume: 0,
+    });
+
+    /* 後方互換: volume を持たない古いセーブ (旧 KQ-20 時点) は既定2で埋まる */
+    expect(normalizeSave({ settings: { sound: false } }).settings).toEqual({
+      sound: false,
+      volume: 2,
+    });
   });
 
   it("drops party members without memberId but keeps valid ones", () => {

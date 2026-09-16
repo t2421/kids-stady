@@ -129,3 +129,53 @@ test("bgm: map transfer raises no page errors and the song follows town/field �
   expect(await currentBgm(page)).toBe("field");
   expect(errors).toEqual([]);
 });
+
+/*
+ * AU-01: 音量 4 択 (StatusPanelOverlay の volume-step) が settings.volume / settings.sound に
+ * 正しく反映されること、押すたびに __KAZUQUEST_AUDIO__.recentSfx() の末尾が "confirm" になること、
+ * ゲーム操作 (startGame 自体のクリック) の後は contextState() が "running" であること。
+ */
+test("volume steps: 4 buttons update settings.volume/.sound and preview with confirm", async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await startGame(page);
+  await page.waitForTimeout(400);
+
+  /* startGame 自体のクリックで unlock 済みのはず (Chromium の自動再生ポリシー) */
+  await expect
+    .poll(() => page.evaluate(() => window.__KAZUQUEST_AUDIO__?.contextState() ?? null))
+    .toBe("running");
+
+  await openStatusPanel(page);
+
+  const pressAndCheck = async (
+    level: 0 | 1 | 2 | 3,
+    expectSound: boolean,
+    expectVolume: number,
+  ) => {
+    await page.locator(`[data-testid="volume-step"][data-level="${level}"]`).click();
+    const settings = await page.evaluate(
+      () => window.__KAZUQUEST_DEBUG__!.getSave().settings,
+    );
+    expect(settings.sound).toBe(expectSound);
+    expect(settings.volume).toBe(expectVolume);
+    const recent = await page.evaluate(() => window.__KAZUQUEST_AUDIO__?.recentSfx() ?? []);
+    expect(recent.length).toBeGreaterThan(0);
+    expect(recent[recent.length - 1].name).toBe("confirm");
+  };
+
+  await pressAndCheck(1, true, 1);
+  await pressAndCheck(2, true, 2);
+  await pressAndCheck(3, true, 3);
+  /* オフは sound だけを落とす。直前の volume (3) は変えない */
+  await pressAndCheck(0, false, 3);
+
+  expect(
+    await page.evaluate(() => window.__KAZUQUEST_AUDIO__?.contextState() ?? null),
+  ).toBe("running");
+
+  await page.locator('[data-testid="status-close"]').click();
+  await page.locator('[data-testid="status-panel"]').waitFor({ state: "hidden", timeout: 5_000 });
+  expect(errors).toEqual([]);
+});

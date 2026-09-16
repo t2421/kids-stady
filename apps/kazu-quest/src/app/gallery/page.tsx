@@ -8,6 +8,8 @@ import { ACTOR_ART } from "@/content/art/actors";
 import { MONSTER_ART } from "@/content/art/monsters";
 import { Figure } from "@/components/figures/Figure";
 import type { FigureSpec } from "@/content/lessons/types";
+import { SFX_NAMES } from "@/game/audio/sfxTable";
+import { playSfx } from "@/game/audio/sfx";
 
 /*
  * スプライトギャラリー — ビジュアル開発用のプレビューページ。
@@ -228,6 +230,60 @@ function FigureSection() {
   );
 }
 
+/*
+ * おと (効果音) ギャラリー — AU-02: SFX_TABLE の全 SfxName をボタン1つずつ並べ、
+ * タップで playSfx(name) を鳴らして試聴する (Playwright は無音なので実機での手動確認用)。
+ */
+function SfxSection() {
+  return (
+    <section style={{ marginBottom: 36 }}>
+      <h2
+        style={{
+          fontSize: 22,
+          margin: "0 0 12px",
+          color: "var(--kids-accent)",
+          borderBottom: "2px solid var(--kids-panel-border)",
+          paddingBottom: 6,
+        }}
+      >
+        おと (sfx)
+        <span style={{ fontSize: 14, marginLeft: 10, color: "var(--kids-text-soft)" }}>
+          {SFX_NAMES.length} 件
+        </span>
+      </h2>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {SFX_NAMES.map((name) => (
+          <button
+            key={name}
+            type="button"
+            data-testid={`gallery-sfx-${name}`}
+            onClick={() => playSfx(name)}
+            style={{
+              background: "var(--kids-panel-bg)",
+              border: "2px solid var(--kids-panel-border)",
+              borderRadius: 10,
+              padding: "14px 8px",
+              minHeight: 56,
+              color: "var(--kids-text-soft)",
+              fontFamily: "var(--kids-font)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function GalleryPage() {
   return (
     <main
@@ -253,6 +309,7 @@ export default function GalleryPage() {
       <Section title="キャラクター (actor-*)" arts={ACTOR_ART} />
       <Section title="モンスター (monster-*)" arts={MONSTER_ART} />
       <FigureSection />
+      <SfxSection />
     </main>
   );
 }

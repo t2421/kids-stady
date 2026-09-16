@@ -15,16 +15,17 @@
 
 import { SONGS, type SongId } from "../../content/music";
 import { compileSong, type CompiledEvent, type CompiledSong } from "../../lib/music/notation";
-import { getAudioContext, getNoiseBuffer, installSfxUnlock, isSoundEnabled } from "./sfx";
+import { getAudioContext, getMasterBus, getNoiseBuffer, installSfxUnlock, isSoundEnabled } from "./sfx";
 
 export type { SongId } from "../../content/music";
 
 const TICK_MS = 100;
 const LOOKAHEAD_S = 0.3;
 const CROSSFADE_MS = 300;
-const LEAD_GAIN = 0.05;
-const BASS_GAIN = 0.08;
-const DRUM_GAIN = 0.03;
+/* AU-01: マスターバス導入に合わせて既定の聞こえ方を引き上げ (iPad で環境音に負けない) */
+const LEAD_GAIN = 0.12;
+const BASS_GAIN = 0.14;
+const DRUM_GAIN = 0.06;
 /* ドラムはステップ長に関係なく短く切る */
 const DRUM_MAX_S = 0.07;
 
@@ -127,7 +128,8 @@ function startLayer(ctx: AudioContext, songId: SongId): Layer | null {
   const now = ctx.currentTime;
   master.gain.setValueAtTime(0.001, now);
   master.gain.linearRampToValueAtTime(1, now + CROSSFADE_MS / 1000);
-  master.connect(ctx.destination);
+  /* AU-01: destination 直結をやめ、sfx.ts のマスターバス (→コンプレッサ→destination) へ */
+  master.connect(getMasterBus() ?? ctx.destination);
   return { songId, song, master, startTime: now + 0.05, loopIndex: 0, eventIndex: 0 };
 }
 

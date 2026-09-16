@@ -64,8 +64,17 @@ declare global {
           string,
           { state: string; reviewDue: number | null; streak: number; passedAt: number | null }
         >;
-        settings: { sound: boolean };
+        settings: { sound: boolean; volume: 0 | 1 | 2 | 3 };
       };
+    };
+    /* AU-01: 音の診断フック (src/game/audio/sfx.ts が自己インストール)。
+       recentSfx() は古い順→新しい順 (末尾が最新) */
+    __KAZUQUEST_AUDIO__?: {
+      contextState(): "running" | "suspended" | "closed" | null;
+      enabled(): boolean;
+      volume(): number;
+      recentSfx(): { name: string; at: number }[];
+      clearSfx(): void;
     };
   }
 }

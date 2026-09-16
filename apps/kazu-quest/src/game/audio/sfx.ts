@@ -25,7 +25,35 @@ let ctx: AudioContext | null = null;
 let noiseBuffer: AudioBuffer | null = null;
 let unlockInstalled = false;
 
-/* ---------- おん/オフ (セーブ連動) ---------- */
+/* ---------- マスターバス (AU-01) ----------
+   GainNode (master) → DynamicsCompressorNode → destination。
+   効果音・BGM の全ノードは destination に直結せずここへ繋ぐ。volume はここに反映する */
+let masterGain: GainNode | null = null;
+
+const VOLUME_GAIN: Record<0 | 1 | 2 | 3, number> = { 0: 0, 1: 0.35, 2: 0.7, 3: 1.0 };
+
+function ensureMasterBus(c: AudioContext): GainNode {
+  if (masterGain) return masterGain;
+  const gain = c.createGain();
+  const compressor = c.createDynamicsCompressor();
+  /* 重なりのクリップを防ぐ (§2.2): threshold -18dB, ratio 4 */
+  compressor.threshold.value = -18;
+  compressor.ratio.value = 4;
+  gain.gain.value = VOLUME_GAIN[getVolume()];
+  gain.connect(compressor).connect(c.destination);
+  masterGain = gain;
+  return gain;
+}
+
+/* bgm.ts や効果音の各ボイスが最終接続先として使うマスターバス。
+   AudioContext が無い環境 (Node/SSR) では null (呼び出し側は destination にフォールバックしてよい) */
+export function getMasterBus(): GainNode | null {
+  const c = ensureContext();
+  if (!c) return null;
+  return ensureMasterBus(c);
+}
+
+/* ---------- おん/オフ・音量 (セーブ連動) ---------- */
 
 export function isSoundEnabled(): boolean {
   try {
@@ -39,6 +67,23 @@ export function setSoundEnabled(enabled: boolean): void {
   updateSave((s) => ({ ...s, settings: { ...s.settings, sound: enabled } }));
   autosave();
   if (enabled) resumeContext();
+}
+
+/* 0: オフ / 1: ちいさい / 2: ふつう / 3: おおきい (既定 2、sound とは独立) */
+export function getVolume(): 0 | 1 | 2 | 3 {
+  try {
+    return getSave().settings.volume;
+  } catch {
+    return 2;
+  }
+}
+
+export function setVolume(v: 0 | 1 | 2 | 3): void {
+  updateSave((s) => ({ ...s, settings: { ...s.settings, volume: v } }));
+  autosave();
+  if (masterGain && ctx) {
+    masterGain.gain.setValueAtTime(VOLUME_GAIN[v], ctx.currentTime);
+  }
 }
 
 /* ---------- AudioContext ---------- */
@@ -134,7 +179,7 @@ function playToneVoice(c: AudioContext, voice: SfxVoice, t0: number): void {
     osc.frequency.setValueAtTime(step.freq, t0 + step.at);
   }
   applyGainEnvelope(gain, voice, t0);
-  osc.connect(gain).connect(c.destination);
+  osc.connect(gain).connect(getMasterBus() ?? c.destination);
   osc.start(t0);
   osc.stop(t0 + voice.duration);
 }
@@ -151,7 +196,7 @@ function playNoiseVoice(c: AudioContext, voice: SfxVoice, t0: number): void {
   }
   const gain = c.createGain();
   applyGainEnvelope(gain, voice, t0);
-  source.connect(filter).connect(gain).connect(c.destination);
+  source.connect(filter).connect(gain).connect(getMasterBus() ?? c.destination);
   source.start(t0);
   source.stop(t0 + voice.duration);
 }
@@ -162,9 +207,20 @@ function playVoice(c: AudioContext, voice: SfxVoice): void {
   else playToneVoice(c, voice, t0);
 }
 
+/* ---------- E2E 診断: 直近に鳴らそうとした効果音 (§2.5) ----------
+   古い順→新しい順 (最後の要素が最新)。鳴らせたか (AudioContext の有無・おと オフ) に
+   関係なく「鳴らそうとした」ことそのものを記録する */
+const RECENT_SFX_CAP = 32;
+let recentSfxLog: { name: SfxName; at: number }[] = [];
+
+function recordSfxAttempt(name: SfxName): void {
+  recentSfxLog = [...recentSfxLog, { name, at: Date.now() }].slice(-RECENT_SFX_CAP);
+}
+
 /* 効果音を鳴らす。失敗しても呼び出し側 (シーン・React) を巻き込まない */
 export function playSfx(name: SfxName): void {
   try {
+    recordSfxAttempt(name);
     const spec = SFX_TABLE[name];
     if (!spec || !isSoundEnabled()) return;
     installSfxUnlock();
@@ -178,4 +234,19 @@ export function playSfx(name: SfxName): void {
   } catch {
     /* noop: 音は演出なので黙って捨てる */
   }
+}
+
+/* ---------- E2E フック (§2.5) ----------
+   sfx.ts は Phaser 非依存の独立モジュールなので、PhaserGame.tsx を経由せず
+   自分自身で window に生やす (bgm.ts 末尾の __KAZUQUEST_BGM__ 自己インストールと同じ考え方) */
+if (typeof window !== "undefined") {
+  (window as unknown as Record<string, unknown>).__KAZUQUEST_AUDIO__ = {
+    contextState: (): AudioContextState | null => (ctx ? ctx.state : null),
+    enabled: isSoundEnabled,
+    volume: getVolume,
+    recentSfx: (): { name: SfxName; at: number }[] => [...recentSfxLog],
+    clearSfx: (): void => {
+      recentSfxLog = [];
+    },
+  };
 }

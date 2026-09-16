@@ -51,3 +51,25 @@ test("gallery: every figure kind renders real content, not the placeholder", asy
   await expect(page.getByText("じゅんびちゅう")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "カズクエ スプライトギャラリー" })).toBeVisible();
 });
+
+/*
+ * AU-02: 「おと (sfx)」セクションのスモーク。SFX_NAMES (18 既存 + 14 新規 = 32) の
+ * 数だけボタンが並び、タップしても (Playwright は無音でも) page error が出ないこと。
+ */
+test("gallery: おと (sfx) section renders one button per SfxName and tapping does not throw", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+
+  await page.goto("/gallery/");
+
+  const buttons = page.locator('[data-testid^="gallery-sfx-"]');
+  await expect(buttons.first()).toBeVisible();
+  expect(await buttons.count()).toBe(32);
+
+  await buttons.first().click();
+  await buttons.last().click();
+
+  expect(errors).toEqual([]);
+});

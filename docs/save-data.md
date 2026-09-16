@@ -41,8 +41,12 @@
 |---|---|
 | `kidsStudy.keisanShooter.profileData.<id>` | けいさんシューター |
 | `kidsStudy.mathematics.profileData.<id>` | マスマティクス |
+| `kidsStudy.kazuQuest.profileData.<id>` | カズクエ |
 
 - スキーマは各アプリが自由に定義するが、**読み込み時に必ず normalize** (欠損・型不正はデフォルト値で埋める)。存在しないキーの読み込みはデフォルトデータ扱い
+- 例: カズクエの `settings` (音関連) は `{ sound: boolean, volume: 0 | 1 | 2 | 3 }`。`sound` は完全ミュート
+  (既定 `true`)、`volume` は音量段階 (既定 `2` = ふつう) で両者は独立に保存される (`src/lib/save.ts` の
+  `normalizeSettings` — AU-01)
 - プロフィール削除 (`deleteProfile`) は索引からの除去 + **削除を実行したアプリ自身の** profileData 削除のみ。
   他アプリの profileData は残る (孤児データは小さいため許容。各アプリは normalize で耐える)
 

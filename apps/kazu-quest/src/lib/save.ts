@@ -11,12 +11,15 @@ import { normalizeHistory, normalizeSkillStats, toCount } from "./telemetry";
 import type { MistakeEntry } from "./mistakes";
 import { normalizeMistakes } from "./mistakes";
 
-/* 設定 (音のおん/オフ)。既定はすべてオン */
+/* 設定 (音のおん/オフ + 音量)。既定はすべてオン・音量は「ふつう」。
+   sound: false は volume と独立した完全ミュート (AU-01) */
 export interface SaveSettings {
   sound: boolean;
+  /* 0: オフ / 1: ちいさい / 2: ふつう / 3: おおきい (既定 2) */
+  volume: 0 | 1 | 2 | 3;
 }
 
-export const DEFAULT_SETTINGS: SaveSettings = { sound: true };
+export const DEFAULT_SETTINGS: SaveSettings = { sound: true, volume: 2 };
 
 /* 集計の作法は全アプリ共通 (docs/save-data.md §2) — 再エクスポートして
    アプリ内からは save.ts 経由で使えるようにする */
@@ -189,8 +192,13 @@ function normalizeKazuHistory(raw: unknown): HistoryEntry[] {
 
 function normalizeSettings(raw: unknown): SaveSettings {
   const r = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : {};
+  const volume = r.volume;
   return {
     sound: typeof r.sound === "boolean" ? r.sound : DEFAULT_SETTINGS.sound,
+    volume:
+      volume === 0 || volume === 1 || volume === 2 || volume === 3
+        ? volume
+        : DEFAULT_SETTINGS.volume,
   };
 }
 
