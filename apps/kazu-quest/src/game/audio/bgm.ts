@@ -10,7 +10,26 @@
  *   オンに戻れば要求中の曲を再開する (StatusPanelOverlay 側は setSoundEnabled を呼ぶだけ)
  * - AudioContext が無い / suspended (iOS の最初のタップ前) でも決して throw しない。
  *   running になった tick から鳴り始める
- * - window.__KAZUQUEST_BGM__ = { current } を E2E 用に公開 (要求中の曲 ID。無害)
+ * - window.__KAZUQUEST_BGM__ = { current, base, overlay, push, pop } を E2E 用に公開
+ *   (push/pop はテスト専用エイリアス。無害 — §2.3)
+ *
+ * AU-03: base / overlay の 2 段 (§2.3)。
+ * 「実際に鳴っている音を作るパイプライン (GainNode 1 本・スケジューラ) は 1 系統だけ」
+ * という設計にした: base と overlay は「どの曲を要求しているか」という 2 つの
+ * *論理的な* 要求 (baseRequested / overlayRequested) でしかなく、実際に音を出す
+ * `layer` (Layer, 旧コードの唯一のレイヤーと同じ形) は常に 1 つ。
+ * `effective()` = overlayRequested ?? baseRequested が「今鳴らすべき曲」で、
+ * tick() は毎回 effective() を見て、layer.songId と食い違えば
+ * (旧コードが requested と layer.songId を比べていたのとまったく同じロジックで)
+ * クロスフェードする。
+ *   - pushBgm: overlayRequested を立てる → 次の tick で effective() が変わり
+ *     現在の layer (base の音) から overlay の曲へクロスフェード
+ *   - popBgm: overlayRequested を消す → effective() が baseRequested に戻り、
+ *     同じクロスフェード経路で base の曲へ戻る (baseRequested は overlay 中も
+ *     一度も書き換えていないので、鳴らしていなくても「戻り先」として保持され続ける)
+ *   - stopBgm: 両方を null にする → effective() が null になり fadeOut して終了
+ * base の layer を「オーバーレイ中も無音でスケジュールし続ける」ことはしない
+ * (§2.3 の設計メモどおり、鳴らないものを裏で予約し続ける意味がないため)。
  */
 
 import { SONGS, type SongId } from "../../content/music";
@@ -40,21 +59,41 @@ interface Layer {
 }
 
 const compiled = new Map<SongId, CompiledSong>();
-let requested: SongId | null = null;
+/* base: Field/Battle/Title/Ending が playBgm で設定する「地の曲」の要求 */
+let baseRequested: SongId | null = null;
+/* overlay: React のオーバーレイ画面 (レッスン・テストなど) が pushBgm で被せる要求。1 段だけ */
+let overlayRequested: SongId | null = null;
+/* 実際に音を出している唯一のレイヤー (常に effective() を追いかける) */
 let layer: Layer | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 
 /* ---------- 公開 API ---------- */
 
-export function currentBgm(): SongId | null {
-  return requested;
+/* 今 (要求として) 鳴っているべき曲。overlay があれば overlay、無ければ base */
+function effective(): SongId | null {
+  return overlayRequested ?? baseRequested;
 }
 
-/* 曲を要求する。同じ曲なら継続、違えば次の tick でクロスフェード */
+/* 実際に鳴っている曲 (E2E 互換: 既存の意味を保つ = overlay があれば overlay の値) */
+export function currentBgm(): SongId | null {
+  return effective();
+}
+
+/* base 単体の要求 (overlay 中でも書き換わらない「戻り先」)。E2E 診断用 */
+export function baseBgm(): SongId | null {
+  return baseRequested;
+}
+
+/* overlay 単体の要求。無ければ null。E2E 診断用 */
+export function overlayBgm(): SongId | null {
+  return overlayRequested;
+}
+
+/* base を設定する。既存呼び出し (Title/Field/Battle/Ending) は無変更で動く */
 export function playBgm(songId: SongId): void {
   try {
     if (!SONGS[songId]) return;
-    requested = songId;
+    baseRequested = songId;
     installSfxUnlock();
     ensureTimer();
   } catch {
@@ -62,9 +101,32 @@ export function playBgm(songId: SongId): void {
   }
 }
 
+/* overlay を設定する (レッスン・テストなど)。入れ子にはしない — push し直せば置き換わるだけ */
+export function pushBgm(songId: SongId): void {
+  try {
+    if (!SONGS[songId]) return;
+    overlayRequested = songId;
+    installSfxUnlock();
+    ensureTimer();
+  } catch {
+    /* noop */
+  }
+}
+
+/* overlay を外す → 次の tick で base にクロスフェードして戻る */
+export function popBgm(): void {
+  try {
+    overlayRequested = null;
+    if (effective() !== null) ensureTimer();
+  } catch {
+    /* noop */
+  }
+}
+
 export function stopBgm(fadeMs = CROSSFADE_MS): void {
   try {
-    requested = null;
+    baseRequested = null;
+    overlayRequested = null;
     if (layer) fadeOutLayer(layer, fadeMs);
     layer = null;
   } catch {
@@ -89,17 +151,18 @@ function tick(): void {
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
-    if (requested === null || !isSoundEnabled()) {
+    const want = effective();
+    if (want === null || !isSoundEnabled()) {
       if (layer) fadeOutLayer(layer, CROSSFADE_MS);
       layer = null;
-      if (requested === null) clearTimer();
+      if (want === null) clearTimer();
       return;
     }
     /* iOS: 最初のタップで unlock されるまで待つ (時計が進まないので予約しない) */
     if (ctx.state !== "running") return;
-    if (!layer || layer.songId !== requested) {
+    if (!layer || layer.songId !== want) {
       const previous = layer;
-      layer = startLayer(ctx, requested);
+      layer = startLayer(ctx, want);
       if (previous) fadeOutLayer(previous, CROSSFADE_MS);
       if (!layer) return;
     }
@@ -223,5 +286,12 @@ function scheduleDrum(ctx: AudioContext, out: GainNode, cutoff: number, at: numb
 /* ---------- E2E フック ---------- */
 
 if (typeof window !== "undefined") {
-  (window as unknown as Record<string, unknown>).__KAZUQUEST_BGM__ = { current: currentBgm };
+  (window as unknown as Record<string, unknown>).__KAZUQUEST_BGM__ = {
+    current: currentBgm,
+    base: baseBgm,
+    overlay: overlayBgm,
+    /* テスト専用エイリアス (§2.3: 「テスト専用で足してよい、無害」) */
+    push: pushBgm,
+    pop: popBgm,
+  };
 }

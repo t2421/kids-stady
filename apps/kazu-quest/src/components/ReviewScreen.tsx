@@ -2,10 +2,12 @@
 
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { SKILLS, generate, type Problem } from "@/lib/curriculum";
 import { isAnswerCorrect } from "@/lib/curriculum/answer";
-import { autosave, updateSave } from "@/game/session";
+import { autosave, getSave, updateSave } from "@/game/session";
 import { applyReviewResultExp } from "@/lib/learningExp";
+import { hasChapterCrystal } from "@/lib/review";
 import { inputModeFor } from "@/lib/inputMode";
 import { dqWindow, actionButton, UI_COLORS } from "@/components/uiTheme";
 import { MathChoices } from "@/components/MathChoices";
@@ -87,6 +89,12 @@ export function ReviewScreen() {
       total: QUESTIONS_PER_SKILL,
     }));
 
+    /* かけら付与前の状態 (章ごとの数晶完成を「付与前後で比較」するため、
+     * 更新前にスナップショットしておく — src/lib/review.ts は変更しない) */
+    const beforeSave = getSave();
+    const masteredSkillIds: string[] = [];
+    const shardGrades: number[] = [];
+
     updateSave((save) => {
       let next = save;
       /* applyReviewResultExp: mastery遷移 + can/mastered → mastered に
@@ -102,6 +110,8 @@ export function ReviewScreen() {
           if (grade) {
             const itemId = `kakera_${grade}`;
             shardGains[itemId] = (shardGains[itemId] ?? 0) + 1;
+            masteredSkillIds.push(skillId);
+            shardGrades.push(grade);
           }
         }
       }
@@ -115,6 +125,21 @@ export function ReviewScreen() {
       return next;
     });
     autosave();
+
+    /* mastered → shard は昇格ごとに1組 (1個のかけらに1音)。付与後に
+     * hasChapterCrystal が false→true に変わった学年があれば crystal を追加で鳴らす */
+    for (let i = 0; i < masteredSkillIds.length; i++) {
+      playSfx("mastered");
+      playSfx("shard");
+    }
+    const afterSave = getSave();
+    const gradesTouched = [...new Set(shardGrades)];
+    for (const grade of gradesTouched) {
+      if (!hasChapterCrystal(beforeSave, grade) && hasChapterCrystal(afterSave, grade)) {
+        playSfx("crystal");
+      }
+    }
+
     setState(null);
     setFeedback(null);
     EventBus.emit("review-finished", { results });
@@ -123,6 +148,7 @@ export function ReviewScreen() {
   const settle = (isCorrect: boolean) => {
     if (feedback !== null) return;
     setFeedback(isCorrect ? "correct" : "wrong");
+    playSfx(isCorrect ? "correct" : "wrong");
     setTimeout(() => {
       setState((s) => {
         if (!s || s.kind !== "quiz") return s;

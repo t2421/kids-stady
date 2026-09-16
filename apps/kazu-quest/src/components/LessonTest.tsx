@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { playSfx } from "@/game/audio/sfx";
 import type { LessonDef } from "@/content/lessons/types";
 import type { Problem } from "@/lib/curriculum";
 import { generate } from "@/lib/curriculum";
@@ -50,6 +51,7 @@ export function LessonTest({
   const settle = (isCorrect: boolean) => {
     if (feedback !== null) return;
     setFeedback(isCorrect ? "correct" : "wrong");
+    playSfx(isCorrect ? "correct" : "wrong");
     const nextCorrect = correct + (isCorrect ? 1 : 0);
     setTimeout(() => {
       const nextIndex = index + 1;

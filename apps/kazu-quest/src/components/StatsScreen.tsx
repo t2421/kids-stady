@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { getProfileId, getSave } from "@/game/session";
 import { loadLearning } from "@/lib/learning";
 import { buildStats, type StatsData } from "@/lib/stats";
@@ -166,7 +167,10 @@ export function StatsBody({ data }: { data: StatsData }) {
         <button
           data-testid="open-mastery-map"
           style={{ ...actionButton("#2f6b3a"), minWidth: 220 }}
-          onClick={() => EventBus.emit("show-mastery-map")}
+          onClick={() => {
+            playSfx("confirm");
+            EventBus.emit("show-mastery-map");
+          }}
         >
           たんげんマップを みる
         </button>

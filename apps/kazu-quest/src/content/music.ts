@@ -7,7 +7,16 @@
 
 import type { SongDef } from "../lib/music/notation";
 
-export type SongId = "title" | "town" | "field" | "dungeon" | "battle" | "boss" | "ending";
+export type SongId =
+  | "title"
+  | "town"
+  | "field"
+  | "dungeon"
+  | "battle"
+  | "boss"
+  | "ending"
+  | "lesson"
+  | "test";
 
 export const SONG_IDS: readonly SongId[] = [
   "title",
@@ -17,6 +26,8 @@ export const SONG_IDS: readonly SongId[] = [
   "battle",
   "boss",
   "ending",
+  "lesson",
+  "test",
 ];
 
 export const SONGS: Record<SongId, SongDef> = {
@@ -289,6 +300,71 @@ export const SONGS: Record<SongId, SongDef> = {
       "b2 - - - f#3 - - -",
       "c3 - - - d3 - - -",
       "g2 ~ ~ ~ ~ ~ ~ ~",
+    ].join(" | "),
+  },
+
+  /* まなびやの ひかり — AU-03: レッスン中の overlay 曲。ト長調、96-108 BPM の落ち着いた曲。
+     ドラムなし (title と同じく静かな場面向け)。8 小節ループ */
+  lesson: {
+    title: "まなびやの ひかり",
+    tempo: 100,
+    lead: [
+      "g4 - b4 - d5 ~ - -",
+      "c5 - b4 - a4 ~ - -",
+      "g4 - b4 - d5 ~ e5 -",
+      "d5 ~ ~ ~ - - c5 -",
+      "b4 - d5 - g5 ~ - -",
+      "f#5 ~ e5 ~ d5 ~ - -",
+      "c5 - b4 - a4 - g4 -",
+      "g4 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
+    bass: [
+      "g2 - - - d3 - - -",
+      "c3 - - - g2 - - -",
+      "g2 - - - d3 - - -",
+      "d3 - - - a2 - - -",
+      "e2 - - - b2 - - -",
+      "c3 - - - g2 - - -",
+      "d3 - - - a2 - - -",
+      "g2 ~ ~ ~ ~ ~ ~ ~",
+    ].join(" | "),
+  },
+
+  /* たしかめの とき — AU-03: テスト中の overlay 曲。ホ短調 (ト長調の平行調)、
+     132-144 BPM、ベースが 8 分刻みで走る「軽い緊張」。boss (168 BPM・ハ短調) の
+     怖さは出さない。8 小節ループ */
+  test: {
+    title: "たしかめの とき",
+    tempo: 138,
+    lead: [
+      "e5 - g5 - b5 - a5 -",
+      "g5 - f#5 - e5 - - -",
+      "e5 - g5 - b5 - d6 -",
+      "b5 ~ ~ ~ - - a5 g5",
+      "a5 - b5 - c6 - b5 -",
+      "a5 - g5 - f#5 - - -",
+      "g5 - a5 - b5 - c6 -",
+      "b5 ~ ~ ~ ~ ~ - -",
+    ].join(" | "),
+    bass: [
+      "e3 e3 e3 e3 e3 e3 e3 e3",
+      "d3 d3 d3 d3 d3 d3 d3 d3",
+      "e3 e3 e3 e3 e3 e3 e3 e3",
+      "b2 b2 b2 b2 b2 b2 b2 b2",
+      "c3 c3 c3 c3 c3 c3 c3 c3",
+      "b2 b2 b2 b2 b2 b2 b2 b2",
+      "e3 e3 e3 e3 e3 e3 e3 e3",
+      "b2 b2 b2 b2 b2 b2 b2 b2",
+    ].join(" | "),
+    drum: [
+      "o x x x o x x x",
+      "o x x x o x o x",
+      "o x x x o x x x",
+      "o x x x o x o o",
+      "o x x x o x x x",
+      "o x x x o x o x",
+      "o x x x o x x x",
+      "o x o x o x o x",
     ].join(" | "),
   },
 };

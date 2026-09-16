@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { playSfx } from "@/game/audio/sfx";
 import type { LessonDef } from "@/content/lessons/types";
 import { MathChoices } from "@/components/MathChoices";
 import { UI_COLORS } from "@/components/uiTheme";
@@ -33,6 +34,7 @@ export function LessonFaded({
   const choose = (_choice: string, isAnswer: boolean) => {
     if (feedback !== null) return;
     setFeedback(isAnswer ? "correct" : "wrong");
+    playSfx(isAnswer ? "correct" : "wrong");
     const nextCorrect = correct + (isAnswer ? 1 : 0);
     setTimeout(() => {
       if (index + 1 < questions.length) {

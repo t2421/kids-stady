@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { playSfx } from "@/game/audio/sfx";
 import type { LessonDef } from "@/content/lessons/types";
 import type { Problem } from "@/lib/curriculum";
 import { generate } from "@/lib/curriculum";
@@ -61,9 +62,18 @@ export function LessonPractice({
   const settle = (isCorrect: boolean) => {
     if (feedback !== null) return;
     setFeedback(isCorrect ? "correct" : "wrong");
+    playSfx(isCorrect ? "correct" : "wrong");
     const result = applyPracticeAnswer(attempt, isCorrect);
+    if (!result.levelComplete && result.attempt.hintLevel > attempt.hintLevel) {
+      /* ヒントが1段深くなった。「まちがえた」の音とかぶらないよう少し遅らせる。
+       * 責めない音なので wrong とは別に鳴らす */
+      setTimeout(() => playSfx("hintReveal"), 140);
+    }
     setTimeout(() => {
       if (result.levelComplete) {
+        /* Lv1→2 / Lv2→3 だけ短いファンファーレ。Lv3→テストは LessonScreen.tsx が
+         * testStart を鳴らすので、ここでは levelUp を重ねない */
+        if (level < 3) playSfx("practiceLevelUp");
         onLevelComplete();
         return;
       }

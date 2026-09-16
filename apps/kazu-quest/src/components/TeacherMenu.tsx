@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { getLesson } from "@/content/lessons/index";
 import { masteryOf } from "@/lib/mastery";
 import { learnSpell } from "@/lib/learnSpell";
@@ -67,6 +68,7 @@ export function TeacherMenu() {
     const onOpen = (payload: OpenTeacherMenuPayload) => {
       setEntries(payload.entries);
       setOpen(true);
+      playSfx("teacherGreet");
     };
     EventBus.on("open-teacher-menu", onOpen);
     return () => {
@@ -76,6 +78,7 @@ export function TeacherMenu() {
 
   const close = () => {
     setOpen(false);
+    playSfx("cancel");
     EventBus.emit("teacher-menu-closed");
   };
 
@@ -95,6 +98,7 @@ export function TeacherMenu() {
 
   const choose = (entry: TeacherMenuEntry) => {
     setOpen(false);
+    playSfx("confirm");
     if (entry.spellIds && entry.spellIds.length > 0) {
       grantSpellsOnPass(entry.skillId, entry.spellIds);
     }

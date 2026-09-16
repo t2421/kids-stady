@@ -7,15 +7,28 @@ import { advanceDialog, grindBattleUntilField, startGame, stepOnce, teleport, wa
  * 「音の呼び出しが例外を出さない」までを検証する)。
  */
 
-/* KQ-21 BGM: src/game/audio/bgm.ts が公開する E2E フック (要求中の曲 ID) */
+/*
+ * KQ-21 BGM: src/game/audio/bgm.ts が公開する E2E フック (要求中の曲 ID)。
+ * AU-03: base/overlay の 2 段を追加。push/pop はテスト専用エイリアス (§2.3、無害)
+ */
 declare global {
   interface Window {
-    __KAZUQUEST_BGM__?: { current(): string | null };
+    __KAZUQUEST_BGM__?: {
+      current(): string | null;
+      base(): string | null;
+      overlay(): string | null;
+      push(id: string): void;
+      pop(): void;
+    };
   }
 }
 
 const currentBgm = (page: Parameters<typeof startGame>[0]) =>
   page.evaluate(() => window.__KAZUQUEST_BGM__?.current() ?? null);
+const baseBgm = (page: Parameters<typeof startGame>[0]) =>
+  page.evaluate(() => window.__KAZUQUEST_BGM__?.base() ?? null);
+const overlayBgm = (page: Parameters<typeof startGame>[0]) =>
+  page.evaluate(() => window.__KAZUQUEST_BGM__?.overlay() ?? null);
 
 /* X キーでステータスパネルを開く (高負荷に備えリトライ) */
 async function openStatusPanel(page: Parameters<typeof startGame>[0]) {
@@ -177,5 +190,39 @@ test("volume steps: 4 buttons update settings.volume/.sound and preview with con
 
   await page.locator('[data-testid="status-close"]').click();
   await page.locator('[data-testid="status-panel"]').waitFor({ state: "hidden", timeout: 5_000 });
+  expect(errors).toEqual([]);
+});
+
+/*
+ * AU-03: base/overlay の 2 段。町 (base) を鳴らした状態で __KAZUQUEST_BGM__.push
+ * (pushBgm のテスト専用エイリアス) を呼ぶと current() が overlay に切り替わり、
+ * base() は元の曲を保持し続け、pop で current() が base に戻ることを確認する。
+ */
+test("bgm base/overlay: pushing an overlay switches current() while base() stays, pop reverts", async ({
+  page,
+}) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  await startGame(page);
+  await page.waitForTimeout(400);
+
+  /* はじまりの村 (町) or 野外 — どちらでもフィールド系の曲が要求されている */
+  const original = await currentBgm(page);
+  expect(["town", "field", "dungeon"]).toContain(original);
+  expect(await baseBgm(page)).toBe(original);
+  expect(await overlayBgm(page)).toBeNull();
+
+  await page.evaluate(() => window.__KAZUQUEST_BGM__!.push("lesson"));
+  expect(await currentBgm(page)).toBe("lesson");
+  expect(await overlayBgm(page)).toBe("lesson");
+  /* overlay 中も base は書き換わらず「戻り先」を覚えている */
+  expect(await baseBgm(page)).toBe(original);
+
+  await page.evaluate(() => window.__KAZUQUEST_BGM__!.pop());
+  expect(await currentBgm(page)).toBe(original);
+  expect(await overlayBgm(page)).toBeNull();
+  expect(await baseBgm(page)).toBe(original);
+
   expect(errors).toEqual([]);
 });

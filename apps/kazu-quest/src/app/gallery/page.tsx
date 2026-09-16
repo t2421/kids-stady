@@ -10,6 +10,8 @@ import { Figure } from "@/components/figures/Figure";
 import type { FigureSpec } from "@/content/lessons/types";
 import { SFX_NAMES } from "@/game/audio/sfxTable";
 import { playSfx } from "@/game/audio/sfx";
+import { SONG_IDS } from "@/content/music";
+import { playBgm, stopBgm } from "@/game/audio/bgm";
 
 /*
  * スプライトギャラリー — ビジュアル開発用のプレビューページ。
@@ -284,6 +286,80 @@ function SfxSection() {
   );
 }
 
+/*
+ * きょく (BGM) ギャラリー — AU-03: SONG_IDS 全曲をボタン1つずつ並べ、
+ * タップで playBgm(id) を鳴らして試聴する (Playwright は無音なので実機での手動確認用)。
+ * 曲は 1 つずつしか同時に鳴らさないので、押した曲へクロスフェードし、
+ * 「とめる」でフェードアウトする (stopBgm)。
+ */
+function SongSection() {
+  return (
+    <section style={{ marginBottom: 36 }}>
+      <h2
+        style={{
+          fontSize: 22,
+          margin: "0 0 12px",
+          color: "var(--kids-accent)",
+          borderBottom: "2px solid var(--kids-panel-border)",
+          paddingBottom: 6,
+        }}
+      >
+        きょく (songs)
+        <span style={{ fontSize: 14, marginLeft: 10, color: "var(--kids-text-soft)" }}>
+          {SONG_IDS.length} 件
+        </span>
+      </h2>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+          gap: 10,
+        }}
+      >
+        {SONG_IDS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            data-testid={`gallery-song-${id}`}
+            onClick={() => playBgm(id)}
+            style={{
+              background: "var(--kids-panel-bg)",
+              border: "2px solid var(--kids-panel-border)",
+              borderRadius: 10,
+              padding: "14px 8px",
+              minHeight: 56,
+              color: "var(--kids-text-soft)",
+              fontFamily: "var(--kids-font)",
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            {id}
+          </button>
+        ))}
+        <button
+          type="button"
+          data-testid="gallery-song-stop"
+          onClick={() => stopBgm()}
+          style={{
+            background: "var(--kids-panel-bg)",
+            border: "2px solid var(--kids-accent)",
+            borderRadius: 10,
+            padding: "14px 8px",
+            minHeight: 56,
+            color: "var(--kids-accent)",
+            fontFamily: "var(--kids-font)",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          とめる
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export default function GalleryPage() {
   return (
     <main
@@ -310,6 +386,7 @@ export default function GalleryPage() {
       <Section title="モンスター (monster-*)" arts={MONSTER_ART} />
       <FigureSection />
       <SfxSection />
+      <SongSection />
     </main>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { SKILLS } from "@/lib/curriculum";
 import { hasLesson } from "@/content/lessons/index";
 import { prerequisitesFor } from "@/content/lessons/prereqs";
@@ -49,6 +50,7 @@ export function PreviewMenu() {
     const onOpen = () => {
       setSkillIds(eligibleSkillIds());
       setOpen(true);
+      playSfx("confirm");
     };
     EventBus.on("open-preview", onOpen);
     return () => {
@@ -58,11 +60,13 @@ export function PreviewMenu() {
 
   const close = () => {
     setOpen(false);
+    playSfx("cancel");
     EventBus.emit("preview-closed");
   };
 
   const choose = (skillId: string) => {
     setOpen(false);
+    playSfx("confirm");
     EventBus.emit("open-lesson", { skillId, entry: "story" });
     EventBus.emit("preview-closed");
   };

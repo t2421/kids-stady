@@ -6,14 +6,15 @@
 
 import type { Scene } from "phaser";
 import type Phaser from "phaser";
-import type { MapDef, TileSpec } from "../../content/types";
+import type { FlagCond, MapDef, TileSpec } from "../../content/types";
 import type { SaveData } from "../../lib/save";
 import { TILE_SIZE, isNegariaStagedArt, negariaStageArtKey } from "../../content/art/tiles";
 import { TILE_ANIMATIONS } from "../../content/art/tileAnims";
-import { evalCond, evalHideIf } from "../../lib/events/runner";
+import { evalCond, evalHideIf, type MasteryLookup } from "../../lib/events/runner";
 import { masteredShardCount, negariaStageFor } from "../../lib/review";
 import { getSave } from "../session";
 import { actorTextureKey, tileTextureKey } from "../textures";
+import { playSfx } from "../audio/sfx";
 
 /* タイルアニメの切替間隔 (2コマをのんびり往復) */
 const TILE_ANIM_MS = 620;
@@ -39,6 +40,26 @@ export function pickTileArt(spec: TileSpec, x: number, y: number): string {
 /* ネガリアの色戻し (LP-22): 全学年ぶんの mastered 単元数から いまの段を決める */
 function currentNegariaStage(): 0 | 1 | 2 | 3 {
   return negariaStageFor(masteredShardCount(getSave()));
+}
+
+/* AU-04: refresh() で今回 hideIf を満たして消えるべき NPC の id 一覧 (純関数)。
+ * 「表示中のものだけ」判定するので、初回 build() 前 (何も表示されていない) や
+ * 既に消えた NPC を数え直さない — gateOpen は「今回の呼び出しで新しく消えた数」だけを見る */
+export function npcsToHide(
+  npcs: readonly { id: string; hideIf?: FlagCond | FlagCond[] }[],
+  visibleIds: ReadonlySet<string>,
+  flags: SaveData["flags"],
+  mastery: MasteryLookup,
+): string[] {
+  return npcs
+    .filter((npc) => npc.hideIf && visibleIds.has(npc.id) && evalHideIf(npc.hideIf, flags, mastery))
+    .map((npc) => npc.id);
+}
+
+/* AU-04: ネガリアの段が「上がった」かどうか (純関数)。段が変わらない/下がる場合は
+ * colorReturn を鳴らさない (下がる遷移は現行ロジックでは起きないが、念のため増加のみを見る) */
+export function didNegariaStageIncrease(previousStage: number, nextStage: number): boolean {
+  return nextStage > previousStage;
 }
 
 /* キャラの足元に落とす楕円の影 (接地感を出す)。プレイヤーとNPCで共用 */
@@ -158,10 +179,14 @@ export class MapView {
   private refreshNegariaStage(): void {
     const stage = currentNegariaStage();
     if (stage === this.negariaStage) return;
+    const increased = didNegariaStageIncrease(this.negariaStage, stage);
     this.negariaStage = stage;
     for (const { img, baseArt } of this.negariaTiles) {
       img.setTexture(tileTextureKey(negariaStageArtKey(baseArt, stage)));
     }
+    /* 初回 build() はここを通らない (build() は negariaStage を直接代入する) ので、
+     * ここに来る時点で「段が上がった」実際の遷移だけを対象にできる */
+    if (increased) playSfx("colorReturn");
   }
 
   /* フラグ変化を反映: 開いた宝箱・条件を満たした hideIf NPC を消す */
@@ -175,17 +200,24 @@ export class MapView {
         this.eventSprites.delete(ev.id);
       }
     }
-    for (const npc of this.map.npcs) {
-      if (!npc.hideIf) continue;
-      const sprite = this.npcSprites.get(npc.id);
-      if (sprite && evalHideIf(npc.hideIf, flags, getSave().mastery)) {
-        this.scene.tweens.killTweensOf(sprite);
-        sprite.destroy();
-        this.npcSprites.delete(npc.id);
-        this.npcShadows.get(npc.id)?.destroy();
-        this.npcShadows.delete(npc.id);
-      }
+    const hiddenIds = npcsToHide(
+      this.map.npcs,
+      new Set(this.npcSprites.keys()),
+      flags,
+      getSave().mastery,
+    );
+    for (const id of hiddenIds) {
+      const sprite = this.npcSprites.get(id);
+      if (!sprite) continue;
+      this.scene.tweens.killTweensOf(sprite);
+      sprite.destroy();
+      this.npcSprites.delete(id);
+      this.npcShadows.get(id)?.destroy();
+      this.npcShadows.delete(id);
     }
+    /* 章ゲートの番人などが消えた回 (≥1件) にだけ1回鳴らす。build() 直後の初回
+     * refresh() でもここは「実際に消えたか」だけを見るので安全 */
+    if (hiddenIds.length > 0) playSfx("gateOpen");
   }
 
   /* 置いた地形タイル Image の数 (window.__KAZUQUEST_PERF__.sprites が読む) */

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { getSave } from "@/game/session";
 import { hasLesson } from "@/content/lessons/index";
 import { buildMasteryMapRows, type MasteryMapRow } from "@/lib/masteryMapData";
@@ -125,6 +126,7 @@ export function MasteryMap() {
   const close = useCallback(() => {
     if (!openRef.current) return;
     setRows(null);
+    playSfx("cancel");
     EventBus.emit("mastery-map-closed");
   }, []);
 
@@ -132,6 +134,7 @@ export function MasteryMap() {
     const onShow = () => {
       openedAtRef.current = performance.now();
       setRows(buildMasteryMapRows(getSave()));
+      playSfx("confirm");
     };
     EventBus.on("show-mastery-map", onShow);
     return () => {
@@ -152,6 +155,7 @@ export function MasteryMap() {
 
   const onCellTap = useCallback((skillId: string) => {
     setRows(null);
+    playSfx("confirm");
     EventBus.emit("open-lesson", { skillId, entry: "story" });
     EventBus.emit("mastery-map-closed");
   }, []);

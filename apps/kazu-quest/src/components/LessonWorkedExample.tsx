@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { playSfx } from "@/game/audio/sfx";
 import type { LessonDef } from "@/content/lessons/types";
 import { UI_COLORS } from "@/components/uiTheme";
 import { LessonNextButton, LessonPageBody } from "@/components/lessonShared";
@@ -23,6 +24,7 @@ export function LessonWorkedExample({
   const step = steps[stepIndex];
 
   const advance = () => {
+    playSfx("pageTurn");
     if (stepIndex + 1 < steps.length) {
       setStepIndex((i) => i + 1);
       return;

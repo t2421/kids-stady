@@ -12,7 +12,7 @@ import {
 } from "../src/lib/music/notation";
 import { SONG_IDS, SONGS, songForTheme, THEME_SONGS } from "../src/content/music";
 import { listMaps } from "../src/content/maps";
-import { currentBgm, playBgm, stopBgm } from "../src/game/audio/bgm";
+import { baseBgm, currentBgm, overlayBgm, playBgm, popBgm, pushBgm, stopBgm } from "../src/game/audio/bgm";
 import { startSession } from "../src/game/session";
 
 /*
@@ -120,9 +120,9 @@ describe("compileSong / validateSong", () => {
 });
 
 describe("SONGS", () => {
-  it("has exactly the 7 songs of the roadmap", () => {
+  it("has exactly the 9 songs (7 roadmap + AU-03 lesson/test)", () => {
     expect([...SONG_IDS].sort()).toEqual(
-      ["battle", "boss", "dungeon", "ending", "field", "title", "town"].sort(),
+      ["battle", "boss", "dungeon", "ending", "field", "lesson", "test", "title", "town"].sort(),
     );
     expect(Object.keys(SONGS).sort()).toEqual([...SONG_IDS].sort());
   });
@@ -135,6 +135,27 @@ describe("SONGS", () => {
     expect(song.events.filter((e) => e.voice === "lead").length).toBeGreaterThan(0);
     expect(song.events.filter((e) => e.voice === "bass").length).toBeGreaterThan(0);
     expect(SONGS[id].title.length).toBeGreaterThan(0);
+  });
+});
+
+/* AU-03: 「まなびや」(lesson) と「テスト」(test) の 2 曲。§2.4 のテンポ帯を守る */
+describe("lesson / test songs (AU-03)", () => {
+  it("lesson is calm and in the 96-108 BPM range", () => {
+    expect(SONGS.lesson.tempo).toBeGreaterThanOrEqual(96);
+    expect(SONGS.lesson.tempo).toBeLessThanOrEqual(108);
+  });
+
+  it("test has a light-tension, driving tempo in the 132-144 BPM range", () => {
+    expect(SONGS.test.tempo).toBeGreaterThanOrEqual(132);
+    expect(SONGS.test.tempo).toBeLessThanOrEqual(144);
+  });
+
+  it("test's bass drives with 8th notes (more events than lesson's sparser bass)", () => {
+    const testSong = compileSong(SONGS.test);
+    const lessonSong = compileSong(SONGS.lesson);
+    const testBassEvents = testSong.events.filter((e) => e.voice === "bass").length;
+    const lessonBassEvents = lessonSong.events.filter((e) => e.voice === "bass").length;
+    expect(testBassEvents).toBeGreaterThan(lessonBassEvents);
   });
 });
 
@@ -188,6 +209,71 @@ describe("bgm (no AudioContext)", () => {
 
   it("ignores unknown song ids", () => {
     playBgm("nope" as never);
+    expect(currentBgm()).toBeNull();
+  });
+});
+
+/* AU-03: base / overlay の 2 段。Node (AudioContext 無し) でも push/pop/stop が throw しないこと */
+describe("bgm base/overlay (no AudioContext)", () => {
+  beforeEach(() => {
+    installLocalStorageStub();
+    startSession(null);
+    stopBgm(0);
+  });
+
+  it("pushBgm sets the overlay; current() reports it; popBgm reverts to base", () => {
+    playBgm("town");
+    expect(currentBgm()).toBe("town");
+    pushBgm("lesson");
+    expect(currentBgm()).toBe("lesson");
+    popBgm();
+    expect(currentBgm()).toBe("town");
+  });
+
+  it("base()/overlay() expose the raw per-layer ids independently of current()", () => {
+    playBgm("field");
+    expect(baseBgm()).toBe("field");
+    expect(overlayBgm()).toBeNull();
+    pushBgm("test");
+    expect(baseBgm()).toBe("field");
+    expect(overlayBgm()).toBe("test");
+    popBgm();
+    expect(baseBgm()).toBe("field");
+    expect(overlayBgm()).toBeNull();
+  });
+
+  it("pushing a second overlay replaces the first (never nests)", () => {
+    playBgm("town");
+    pushBgm("lesson");
+    pushBgm("test");
+    expect(currentBgm()).toBe("test");
+    expect(overlayBgm()).toBe("test");
+    popBgm();
+    expect(currentBgm()).toBe("town");
+    expect(overlayBgm()).toBeNull();
+  });
+
+  it("pushBgm works even without a base; popBgm returns to null", () => {
+    expect(currentBgm()).toBeNull();
+    pushBgm("lesson");
+    expect(currentBgm()).toBe("lesson");
+    popBgm();
+    expect(currentBgm()).toBeNull();
+  });
+
+  it("stopBgm clears both base and overlay", () => {
+    playBgm("field");
+    pushBgm("test");
+    stopBgm();
+    expect(currentBgm()).toBeNull();
+    expect(baseBgm()).toBeNull();
+    expect(overlayBgm()).toBeNull();
+  });
+
+  it("never throws for unknown ids, popping with nothing pushed, or repeated pop", () => {
+    expect(() => pushBgm("nope" as never)).not.toThrow();
+    expect(() => popBgm()).not.toThrow();
+    expect(() => popBgm()).not.toThrow();
     expect(currentBgm()).toBeNull();
   });
 });

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { getSave } from "@/game/session";
 import type { SaveData } from "@/lib/save";
 import type { Problem } from "@/lib/curriculum";
@@ -121,6 +122,7 @@ export function ReadinessScreen() {
         weakest: nextFirstWrong,
       };
       setState(null);
+      playSfx(result.ok ? "correct" : "wrong");
       EventBus.emit("readiness-finished", result);
     }, AUTO_ADVANCE_MS);
   };

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type SyntheticEvent } from "react";
 import { EventBus } from "@/game/EventBus";
+import { playSfx } from "@/game/audio/sfx";
 import { getLesson } from "@/content/lessons/index";
 import type { LessonDef } from "@/content/lessons/types";
 import { autosave, getSave, updateSave } from "@/game/session";
@@ -128,13 +129,17 @@ export function LessonScreen() {
        * のコメント参照) */
       updateSave((save) => applyLessonStartExp(save, payload.skillId));
       autosave();
+      const stage = stageForEntry(payload.entry);
       setState({
         skillId: payload.skillId,
         lesson,
-        stage: stageForEntry(payload.entry),
+        stage,
         pageIndex: 0,
         companionLine: null,
       });
+      playSfx("lessonOpen");
+      /* entry:"test" で直接テストへ入る場合も、通常経路と同じくテスト開始音を鳴らす */
+      if (stage === "test") playSfx("testStart");
     };
     EventBus.on("open-lesson", onOpen);
     return () => {
@@ -151,6 +156,7 @@ export function LessonScreen() {
     updateSave((save) => applyTestResultExp(save, current.skillId, true));
     autosave();
     setState(null);
+    playSfx("testPass");
     const result: LessonFinishedPayload = {
       skillId: current.skillId,
       outcome: "passed",
@@ -168,9 +174,11 @@ export function LessonScreen() {
     updateSave((save) => applyTestResultExp(save, current.skillId, false));
     autosave();
     setState((s) => (s ? { ...s, stage: "altExplain", pageIndex: 0 } : s));
+    playSfx("testFail");
   };
 
   const advanceWithinPages = (pageCount: number) => {
+    playSfx("pageTurn");
     setState((s) => {
       if (!s) return s;
       if (s.pageIndex + 1 < pageCount) {
@@ -202,6 +210,7 @@ export function LessonScreen() {
       const line = findCompanionLine(current.lesson);
       if (line) {
         setState((s) => (s ? { ...s, companionLine: line } : s));
+        playSfx("companion");
         return;
       }
     }
@@ -255,6 +264,7 @@ export function LessonScreen() {
         <LessonPageBody index={state.pageIndex} page={pages[state.pageIndex]} />
         <LessonNextButton
           onClick={() => {
+            playSfx("pageTurn");
             setState((s) => {
               if (!s) return s;
               if (s.pageIndex + 1 < pages.length) {
@@ -290,9 +300,14 @@ export function LessonScreen() {
         lesson={state.lesson}
         level={level}
         onLevelComplete={() =>
-          setState((s) =>
-            s ? { ...s, stage: stageAfterPractice(practiceStage), pageIndex: 0 } : s,
-          )
+          setState((s) => {
+            if (!s) return s;
+            const nextStage = stageAfterPractice(practiceStage);
+            /* Lv3 完了 → テストへ入る瞬間だけ testStart (Lv1→2/Lv2→3 の
+             * practiceLevelUp は LessonPractice.tsx 自身が鳴らす) */
+            if (nextStage === "test") playSfx("testStart");
+            return { ...s, stage: nextStage, pageIndex: 0 };
+          })
         }
       />
     );

@@ -73,3 +73,30 @@ test("gallery: おと (sfx) section renders one button per SfxName and tapping d
 
   expect(errors).toEqual([]);
 });
+
+/*
+ * AU-03: 「きょく (songs)」セクションのスモーク。SONG_IDS (7 既存 + lesson/test = 9) の
+ * 数だけ再生ボタンが並び、加えて「とめる」ボタンが1つ。タップしても
+ * (Playwright は無音でも) page error が出ないこと。
+ */
+test("gallery: きょく (songs) section renders one button per SongId plus a stop button, tapping does not throw", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+
+  await page.goto("/gallery/");
+
+  const songButtons = page.locator('[data-testid^="gallery-song-"]:not([data-testid="gallery-song-stop"])');
+  await expect(songButtons.first()).toBeVisible();
+  expect(await songButtons.count()).toBe(9);
+
+  const stopButton = page.locator('[data-testid="gallery-song-stop"]');
+  await expect(stopButton).toBeVisible();
+
+  await songButtons.first().click();
+  await songButtons.last().click();
+  await stopButton.click();
+
+  expect(errors).toEqual([]);
+});
