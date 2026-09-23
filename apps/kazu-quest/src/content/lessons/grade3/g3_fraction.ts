@@ -96,7 +96,7 @@ export const G3_FRACTION: LessonDef = {
     { problem: FADED_2, blanks: 1 },
   ],
   levels: [
-    { level: 1, label: "たんいぶんすうを よむ (1/2、1/3)" },
+    { level: 1, label: "ぶんすうを よむ (1/2 から 5/6 まで)" },
     { level: 2, label: "ぶんぼが おなじ ものを くらべる" },
     { level: 3, label: "ぶんぼが おなじ たしひき" },
   ],

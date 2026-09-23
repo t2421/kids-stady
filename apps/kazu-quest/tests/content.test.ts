@@ -690,21 +690,27 @@ describe("gate guards never trap the hero", () => {
 });
 
 /*
- * 章1 は 小1 の章。小1 で習う漢字 (80字) 以外は ルビ《》を付ける
- * (船・海・壱・塔・博士 が ルビなしで出ていた)
+ * 章1 は 小1、章2 は 小2 の章。その学年までに習う漢字 (学年別漢字配当表) 以外は
+ * ルビ《》を付ける (船・海・壱・塔・博士・魔女・弐 などが ルビなしで出ていた)
  */
-describe("chapter 1 text is readable for first graders", () => {
-  const G1_KANJI = new Set([
-    ..."一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
-  ]);
+const G1_KANJI =
+  "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六";
+const G2_KANJI =
+  "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話";
+
+describe.each([
+  { chapter: 1, allowed: G1_KANJI },
+  { chapter: 2, allowed: G1_KANJI + G2_KANJI },
+])("chapter $chapter text is readable for its grade", ({ chapter, allowed }) => {
+  const OK = new Set([...allowed]);
   const SKIP_KEYS = new Set(["id", "art", "mapId", "spawn", "flag", "skillId", "itemId", "spellId", "memberId", "legend", "grid", "encounterTableId", "theme", "onceFlag", "shopId", "kind", "type"]);
   const withoutRuby = (s: string) => s.replace(/｜?[^｜《》]*?《[^》]*》/g, "");
 
-  it("uses only grade-1 kanji unless ruby is given", () => {
+  it("uses only kanji learned by that grade unless ruby is given", () => {
     const offenders: string[] = [];
     const walk = (v: unknown): void => {
       if (typeof v === "string") {
-        const hard = [...withoutRuby(v)].filter((c) => /\p{Script=Han}/u.test(c) && !G1_KANJI.has(c));
+        const hard = [...withoutRuby(v)].filter((c) => /\p{Script=Han}/u.test(c) && !OK.has(c));
         if (hard.length > 0) offenders.push(`${hard.join("")}: ${v}`);
       } else if (Array.isArray(v)) {
         v.forEach(walk);
@@ -712,8 +718,7 @@ describe("chapter 1 text is readable for first graders", () => {
         for (const [key, x] of Object.entries(v)) if (!SKIP_KEYS.has(key)) walk(x);
       }
     };
-    const chapter1 = CHAPTERS.find((c) => c.id === 1)!;
-    walk(chapter1.maps);
+    walk(CHAPTERS.find((c) => c.id === chapter)!.maps);
     expect(offenders).toEqual([]);
   });
 });

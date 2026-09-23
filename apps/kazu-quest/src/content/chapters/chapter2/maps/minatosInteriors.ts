@@ -85,7 +85,7 @@ export const CH2_MINATOS_SHOP: MapDef = {
       movement: "static",
       dialog: [
         {
-          pages: ["いらっしゃい! 港いちばんの どうぐやだよ。てつの そうびが はいったんだ。"],
+          pages: ["いらっしゃい! 港《みなと》いちばんの どうぐやだよ。てつの そうびが はいったんだ。"],
           then: [{ type: "openShop", shopId: "ch2-minatos-shop" }],
         },
       ],

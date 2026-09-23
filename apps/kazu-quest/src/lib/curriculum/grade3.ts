@@ -80,11 +80,11 @@ function fractionCompareHints(n1: number, n2: number): [string, string, string] 
 }
 
 /* g3_fraction (単位分数の読み、Lv1) の手書き3段ヒント */
-function fractionReadingHints(d: number): [string, string, string] {
+function fractionReadingHints(d: number, k: number): [string, string, string] {
   return [
-    `1を おなじ 大きさに 分けた ときの 1つ分を かんがえよう`,
-    `1を ${d}つに 分けたよ。その うちの 1つ分だね`,
-    `1を ${d}つに 分けた 1つ分は 1/${d} だから…`,
+    `1を おなじ 大きさに 分けた ときの いくつ分かを かんがえよう`,
+    `1を ${d}つに 分けたよ。分母は ${d}`,
+    `その うちの ${k}つ分だから 分子は…`,
   ];
 }
 
@@ -409,24 +409,33 @@ function genFraction(rng: Rng, level?: Level): Problem {
 }
 
 /* Lv1: 単位分数 (1/2, 1/3) の読み */
+/*
+ * Lv1: 分数の よみとり。以前は「1を 2つ/3つに 分けた 1つ分」の 2問しか なく、
+ * 毎回 おなじ問題だった。いまは 2〜6つに 分けた うちの 1〜(分母-1)つ分
+ * (分数バーの図で 見ながら こたえる — lib/curriculum/figures.ts)
+ */
 function genFractionReading(rng: Rng): Problem {
-  const d = randInt(rng, 2, 3);
-  const answer = `1/${d}`;
-  const otherUnit = d === 2 ? 3 : 2;
+  const d = randInt(rng, 2, 6);
+  const k = randInt(rng, 1, d - 1);
+  const answer = `${k}/${d}`;
   return {
     skillId: "g3_fraction",
-    text: `1を ${d}つに 分けた うちの 1つ分は どれ?`,
-    a: 1,
+    text: `1を ${d}つに 分けた うちの ${k}つ分は どれ?`,
+    a: k,
     b: d,
     op: null,
     answer,
-    choices: makeChoicesOf(rng, answer, [`2/${d}`, `1/${otherUnit}`, `${d}/${d}`]),
+    choices: makeChoicesOf(rng, answer, [
+      `${d}/${k}`,
+      k + 1 < d ? `${k + 1}/${d}` : `${k - 1 || 1}/${d + 1}`,
+      `${k}/${d + 1}`,
+    ]),
     hint: null,
     explain: [
       `1を ${d}つに 同じ大きさに 分けたよ`,
-      `そのうちの 1つ分だから ${answer}`,
+      `そのうちの ${k}つ分だから ${answer}`,
     ],
-    hints: fractionReadingHints(d),
+    hints: fractionReadingHints(d, k),
   };
 }
 

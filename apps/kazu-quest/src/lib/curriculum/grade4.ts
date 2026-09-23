@@ -66,23 +66,32 @@ function genBigNumber(rng: Rng, level?: Level): Problem {
       hints: genericHints([`1億 = 1000万 × 10`, `${n}億 = 1000万 × ${n * 10}`]),
     };
   }
+  /*
+   * 以前は「n兆 は n億の なんばい?」で こたえが いつも 10000 (出題の3割) —
+   * 読まなくても あたった。n兆 を 1億の いくつ分かで きき、こたえを n で変える
+   */
   const n = randInt(rng, nLo, nHi);
+  const answer = n * 10000;
   return {
     skillId: "g4_big_number",
-    text: `${n}兆 は ${n}億の なんばい?`,
+    text: `${n}兆 は 1億の なんこ分?`,
     a: n,
     b: null,
     op: null,
-    answer: "10000",
-    choices: makeChoicesOf(rng, "10000", ["1000", "100000", "100"]),
+    answer: String(answer),
+    choices: makeChoicesOf(rng, String(answer), [
+      String(n * 1000),
+      String(n * 100000),
+      String(n * 10),
+    ]),
     hint: null,
     explain: [
-      `億 → 兆 は くらいが 4つ上がる`,
-      `10 × 10 × 10 × 10 = 10000ばい`,
+      `億 → 兆 は くらいが 4つ上がる (1兆 = 1億 が 10000こ分)`,
+      `${n}兆 = 1億 × ${answer}`,
     ],
     hints: genericHints([
-      `億 → 兆 は くらいが 4つ上がる`,
-      `10 × 10 × 10 × 10 = 10000ばい`,
+      `億 → 兆 は くらいが 4つ上がる (1兆 = 1億 が 10000こ分)`,
+      `${n}兆 = 1億 × ${answer}`,
     ]),
   };
 }
@@ -422,11 +431,18 @@ function genGraph(rng: Rng, level?: Level): Problem {
   const [lo, hi] = lv === 1 ? [2, 10] : lv === 3 ? [15, 60] : [3, 20];
   const values = [randInt(rng, lo, hi), randInt(rng, lo, hi), randInt(rng, lo, hi)];
   const table = GRAPH_LABELS.map((d, i) => `${d}よう日 ${values[i]}こ`).join(" / ");
+  /* グラフの単元なので ぼうグラフも出す (文の ひょうは まちがいノートで 読めるよう残す) */
+  const figure = {
+    kind: "barChart" as const,
+    bars: GRAPH_LABELS.map((d, i) => ({ label: d, value: values[i] })),
+    unit: "こ",
+  };
   if (rng() < 0.5) {
     const answer = values[0] + values[1] + values[2];
     return {
       skillId: "g4_graph",
       text: `ひろった どんぐりの ひょう\n${table}\nぜんぶで なんこ?`,
+      figure,
       a: null,
       b: null,
       op: null,
@@ -453,6 +469,7 @@ function genGraph(rng: Rng, level?: Level): Problem {
   return {
     skillId: "g4_graph",
     text: `ひろった どんぐりの ひょう\n${table}\nいちばん多い日と 少ない日の さは なんこ?`,
+    figure,
     a: max,
     b: min,
     op: "-",

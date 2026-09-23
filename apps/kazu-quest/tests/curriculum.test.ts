@@ -424,12 +424,17 @@ describe("LP-02: level 1〜3 (grade1〜3, 20単元)", () => {
     }
   });
 
-  it("g3_fraction: Lv1は単位分数の読み、Lv3は同分母のたしひきになる (値域ではなく出題の種類が変わる例)", () => {
+  it("g3_fraction: Lv1は分数の読み (2〜6つに分けたいくつ分)、Lv3は同分母のたしひきになる (値域ではなく出題の種類が変わる例)", () => {
     const rng1 = mulberry32(9);
+    const seen = new Set<string>();
     for (let i = 0; i < LEVEL_RUNS; i++) {
       const p = generate("g3_fraction", rng1, { level: 1 });
-      expect(p.answer).toMatch(/^1\/[23]$/);
+      expect(p.answer).toMatch(/^[1-5]\/[2-6]$/);
+      expect(p.text).toMatch(/^1を \dつに 分けた うちの \dつ分は どれ\?$/);
+      seen.add(p.answer);
     }
+    /* 以前は 1/2 と 1/3 の 2問しか なかった */
+    expect(seen.size).toBeGreaterThan(8);
     const rng3 = mulberry32(9);
     for (let i = 0; i < LEVEL_RUNS; i++) {
       const p = generate("g3_fraction", rng3, { level: 3 });

@@ -319,3 +319,27 @@ describe("Figure dispatcher", () => {
     expect(html.match(/data-testid="clock-minute-hand"/g)?.length).toBe(2);
   });
 });
+
+import { barChartStep } from "../src/components/figures/BarChart";
+describe("barChart", () => {
+  it("draws one bar per value with its number on top", () => {
+    const html = render({
+      kind: "barChart",
+      bars: [
+        { label: "月", value: 14 },
+        { label: "火", value: 3 },
+      ],
+      unit: "こ",
+    });
+    expect(html).toContain('data-kind="barChart"');
+    expect(html.match(/data-testid="barchart-bar"/g)?.length).toBe(2);
+    expect(html).toContain("14こ");
+  });
+
+  it("keeps the scale readable (10 gridlines or fewer)", () => {
+    for (const max of [3, 10, 20, 37, 60, 100]) {
+      const step = barChartStep(max);
+      expect(Math.ceil(max / step), `max ${max}`).toBeLessThanOrEqual(10);
+    }
+  });
+});

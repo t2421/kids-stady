@@ -160,6 +160,7 @@ describe("figureForProblem", () => {
       ["g3_fraction", "fractionBar"],
       ["g4_fraction_same", "fractionBar"],
       ["g5_fraction_diff", "fractionBar"],
+      ["g4_graph", "barChart"],
     ];
     for (const [skillId, kind] of expected) {
       expect([...kindsOf(skillId)], `${skillId} に ${kind} の図が出ない`).toContain(kind);

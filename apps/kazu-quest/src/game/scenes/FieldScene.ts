@@ -16,24 +16,10 @@ import { fadeIn, fadeOutThen } from "../transition";
 import { addFootShadow, MapView, tileCenter } from "../field/MapView";
 import { createCaveDarkness } from "../field/atmosphere";
 import { openEquipMenu } from "../field/equipMenu";
-import { requestFieldQuiz } from "../battle/mathRequest";
 import { consumeDebugBattle } from "../debugBoot";
 import { buildStatusData } from "../field/statusSections";
-import {
-  handleHealInn,
-  handleSavePoint,
-  handleDrillBoard,
-  handleReviewQuest,
-  handleShop,
-  handleSpellTest,
-} from "../field/effectHandlers";
-import {
-  handleOpenLesson,
-  handleOpenPreview,
-  handleOpenGoals,
-  handleOpenReview,
-  handleOpenTeacherMenu,
-} from "../field/lessonFlow";
+import { handleSavePoint } from "../field/effectHandlers";
+import { dispatchUiEffect } from "../field/effectDispatch";
 import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
 import { INTERACT_COOLDOWN_MS, STEP_MS } from "../field/timing";
@@ -672,15 +658,9 @@ export class FieldScene extends Scene {
         return;
       }
       const effect = result.effect!;
+      /* UI だけで完結する effect (メッセージ・レッスン・店・クイズ…) は effectDispatch へ */
+      if (dispatchUiEffect(this.ui, effect, advance)) return;
       switch (effect.kind) {
-        case "message":
-          this.ui.showMessage(effect.pages, () => advance());
-          break;
-        case "choice":
-          this.ui.showChoice(effect.prompt, (yes) =>
-            advance({ choice: yes ? "yes" : "no" }),
-          );
-          break;
         case "transfer":
           this.finishRun();
           this.transferTo(effect.mapId, effect.spawn);
@@ -695,9 +675,6 @@ export class FieldScene extends Scene {
             () => advance(),
           );
           break;
-        case "healInn":
-          handleHealInn(this.ui, effect.price, () => advance());
-          break;
         case "battle":
           /* 勝利したらランナー再開 (winFlag は onBattleResult が立てる)。
              敗北時は onBattleResult がラン中断+ほこら復帰を行う */
@@ -709,43 +686,6 @@ export class FieldScene extends Scene {
             boss: effect.boss,
             winFlag: effect.winFlag,
           });
-          break;
-        case "openSpellTest":
-          handleSpellTest(this.ui, effect.spellId, () => advance());
-          break;
-        case "openDrillBoard":
-          handleDrillBoard(this.ui, () => advance());
-          break;
-        case "openReviewQuest":
-          handleReviewQuest(this.ui, () => advance());
-          break;
-        case "openLesson":
-          /* entry/skipReadiness (LP-19): なかまが教える場面が使う (省略時は既定の story + readiness ゲート) */
-          handleOpenLesson(this.ui, effect.skillId, () => advance(), {
-            entry: effect.entry,
-            skipReadiness: effect.skipReadiness,
-          });
-          break;
-        case "openReview":
-          handleOpenReview(this.ui, () => advance());
-          break;
-        case "openPreview":
-          handleOpenPreview(this.ui, () => advance());
-          break;
-        case "openGoals":
-          handleOpenGoals(this.ui, () => advance());
-          break;
-        case "openTeacherMenu":
-          handleOpenTeacherMenu(this.ui, effect.entries, () => advance());
-          break;
-        case "openShop":
-          handleShop(this.ui, effect.shopId, () => advance());
-          break;
-        case "quiz":
-          /* クイズ扉: React の問題パネルに出題し、正誤で分岐 (時間無制限) */
-          requestFieldQuiz(effect.skillId, (correct) =>
-            advance({ quizCorrect: correct }),
-          );
           break;
         case "ending":
           this.finishRun();

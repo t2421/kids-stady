@@ -18,6 +18,7 @@ import { TreeDiagram } from "./TreeDiagram";
 import { LetterBox } from "./LetterBox";
 import { Balance } from "./Balance";
 import { MeasureCup } from "./MeasureCup";
+import { BarChart } from "./BarChart";
 import { figureWrapperStyle } from "./shared";
 
 /*
@@ -102,6 +103,8 @@ export function Figure({ spec }: { spec: FigureSpec }) {
       return <Balance left={spec.left} right={spec.right} />;
     case "measureCup":
       return <MeasureCup capacityDl={spec.capacityDl} filledDl={spec.filledDl} />;
+    case "barChart":
+      return <BarChart bars={spec.bars} unit={spec.unit} />;
     default: {
       /* すべての kind を実装ずみでも、将来 FigureSpec に kind が増えたときの安全網として残す */
       const unknownSpec = spec as { kind: string };

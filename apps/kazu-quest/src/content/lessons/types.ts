@@ -24,7 +24,8 @@ export type FigureSpec =
   | { kind: "treeDiagram"; levels: string[][] }
   | { kind: "letterBox"; expr: string; value?: number } // "□ + 3 = 8"
   | { kind: "balance"; left: { label: string; weight: number }[]; right: { label: string; weight: number }[] }
-  | { kind: "measureCup"; capacityDl: number; filledDl: number };
+  | { kind: "measureCup"; capacityDl: number; filledDl: number }
+  | { kind: "barChart"; bars: { label: string; value: number }[]; unit?: string };
 
 /* FigureSpec の kind をすべて集めた集合。バリデーションで使う */
 export const FIGURE_KINDS: readonly FigureSpec["kind"][] = [
@@ -45,6 +46,7 @@ export const FIGURE_KINDS: readonly FigureSpec["kind"][] = [
   "letterBox",
   "balance",
   "measureCup",
+  "barChart",
 ];
 
 /* 誤答の型。choices の各誤答に付け、選ばれた誤答から一言を出す */

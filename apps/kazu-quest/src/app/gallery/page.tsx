@@ -183,6 +183,18 @@ const FIGURE_EXAMPLES: { label: string; spec: FigureSpec }[] = [
     },
   },
   { label: "measureCup", spec: { kind: "measureCup", capacityDl: 10, filledDl: 6 } },
+  {
+    label: "barChart",
+    spec: {
+      kind: "barChart",
+      bars: [
+        { label: "月", value: 14 },
+        { label: "火", value: 3 },
+        { label: "水", value: 12 },
+      ],
+      unit: "こ",
+    },
+  },
 ];
 
 function FigureSection() {
