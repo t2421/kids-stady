@@ -73,7 +73,8 @@ test("lesson audio: g1_add_carry を開いて合格するまで、lessonOpen→p
   /* AU-05: レッスンを開く前に「地の曲」(フィールド系) を控えておき、
    * 閉じたあとにここへ戻ることを確認する */
   const originalBase = await baseBgm(page);
-  expect(["town", "field", "dungeon"]).toContain(originalBase);
+  /* 地の曲: 町は 章ごとの町の曲 (town1〜town6 — AU-07)、旅・洞くつは field/dungeon */
+  expect(originalBase).toMatch(/^(town[1-6]?|field|dungeon)$/);
   await clearSfx(page);
 
   await page.evaluate(() => window.__KAZUQUEST_DEBUG__!.openLesson("g1_add_carry"));

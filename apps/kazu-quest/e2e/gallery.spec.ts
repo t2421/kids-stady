@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { SONG_IDS } from "../src/content/music";
 
 /*
  * /gallery の「ず (視覚モデル)」セクションのスモーク (LP-05〜07)。
@@ -89,7 +90,8 @@ test("gallery: きょく (songs) section renders one button per SongId plus a st
 
   const songButtons = page.locator('[data-testid^="gallery-song-"]:not([data-testid="gallery-song-stop"])');
   await expect(songButtons.first()).toBeVisible();
-  expect(await songButtons.count()).toBe(9);
+  /* 曲の数は music.ts の SONG_IDS に合わせる (AU-07 で 章ごとの町の曲 6曲が 増えた) */
+  expect(await songButtons.count()).toBe(SONG_IDS.length);
 
   const stopButton = page.locator('[data-testid="gallery-song-stop"]');
   await expect(stopButton).toBeVisible();

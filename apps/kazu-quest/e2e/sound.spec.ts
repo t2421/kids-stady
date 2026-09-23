@@ -1,5 +1,13 @@
 import { expect, test } from "@playwright/test";
-import { advanceDialog, grindBattleUntilField, startGame, stepOnce, teleport, warp } from "./helpers";
+import {
+  advanceDialog,
+  grindBattleUntilField,
+  seedChapter,
+  startGame,
+  stepOnce,
+  teleport,
+  warp,
+} from "./helpers";
 
 /*
  * KQ-20 効果音: おと トグルがセーブ (settings.sound) に反映されること、
@@ -115,7 +123,7 @@ test("bgm: map transfer raises no page errors and the song follows town/field �
   await startGame(page);
   await page.waitForTimeout(400);
   /* はじまりの村 (町) or 野外 — どちらでもフィールド系の曲が要求されている */
-  expect(["town", "field", "dungeon"]).toContain(await currentBgm(page));
+  expect(["town", "field", "dungeon", "town1", "town2", "town3", "town4", "town5", "town6"]).toContain(await currentBgm(page));
 
   /* マップ遷移 (warp) → ワールドマップは旅の曲。遷移で例外が出ない */
   await warp(page, "ch1-world", "from-hajimari");
@@ -209,7 +217,7 @@ test("bgm base/overlay: pushing an overlay switches current() while base() stays
 
   /* はじまりの村 (町) or 野外 — どちらでもフィールド系の曲が要求されている */
   const original = await currentBgm(page);
-  expect(["town", "field", "dungeon"]).toContain(original);
+  expect(["town", "field", "dungeon", "town1", "town2", "town3", "town4", "town5", "town6"]).toContain(original);
   expect(await baseBgm(page)).toBe(original);
   expect(await overlayBgm(page)).toBeNull();
 
@@ -224,5 +232,22 @@ test("bgm base/overlay: pushing an overlay switches current() while base() stays
   expect(await overlayBgm(page)).toBeNull();
   expect(await baseBgm(page)).toBe(original);
 
+  expect(errors).toEqual([]);
+});
+
+/*
+ * AU-07: 章ごとの町の曲。章3の開始地点 (オアシスとしワケーラ、町/屋内マップ) に
+ * seedChapter で着地すると、songForMap 経由で "town3" が要求されること
+ */
+test("bgm: chapter 3's town plays town3 (AU-07 per-chapter town songs)", async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+
+  await seedChapter(page, 3);
+  await page.waitForTimeout(400);
+
+  expect(await currentBgm(page)).toBe("town3");
+  expect(await baseBgm(page)).toBe("town3");
   expect(errors).toEqual([]);
 });

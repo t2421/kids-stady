@@ -27,7 +27,7 @@ import { tapStepFor } from "../field/tapStep";
 import { findTapPath } from "../field/tapPath";
 import { playSfx } from "../audio/sfx";
 import { playBgm } from "../audio/bgm";
-import { songForTheme } from "../../content/music";
+import { songForMap } from "../../content/music";
 import { markGameCleared } from "../../lib/ending";
 
 const ZOOM = 3;
@@ -136,7 +136,7 @@ export class FieldScene extends Scene {
 
     EventBus.emit("current-scene-ready", this);
     EventBus.emit("map-entered", { mapId: this.map.id, name: this.map.name });
-    playBgm(songForTheme(this.map.theme, this.map.encounterTableId === null));
+    playBgm(songForMap(this.map));
 
     /* dev: ?battle= 指定があれば即戦闘 (ビジュアルデバッグ用) */
     const debugMonsters = consumeDebugBattle();
@@ -242,7 +242,7 @@ export class FieldScene extends Scene {
      */
     const onWake = (_sys: unknown, data?: BattleResult) => {
       this.battleStarting = false;
-      playBgm(songForTheme(this.map.theme, this.map.encounterTableId === null));
+      playBgm(songForMap(this.map));
       EventBus.emit("field-ready");
       if (data) this.onBattleResult(data);
     };

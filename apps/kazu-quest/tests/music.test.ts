@@ -10,8 +10,10 @@ import {
   validateSong,
   type SongDef,
 } from "../src/lib/music/notation";
-import { SONG_IDS, SONGS, songForTheme, THEME_SONGS } from "../src/content/music";
+import { SONG_IDS, SONGS, songForMap, songForTheme, THEME_SONGS, type SongId } from "../src/content/music";
+import { TOWN_SONG_IDS } from "../src/content/musicTowns";
 import { listMaps } from "../src/content/maps";
+import { chapterForMap } from "../src/content/chapters";
 import { baseBgm, currentBgm, overlayBgm, playBgm, popBgm, pushBgm, stopBgm } from "../src/game/audio/bgm";
 import { startSession } from "../src/game/session";
 
@@ -123,9 +125,28 @@ describe("compileSong / validateSong", () => {
 });
 
 describe("SONGS", () => {
-  it("has exactly the 9 songs (7 roadmap + AU-03 lesson/test)", () => {
+  /* AU-07: 9曲 (7 roadmap + AU-03 lesson/test) + 町6曲 (town1〜town6) = 15曲。
+     SONG_IDS を拡張するタスクの必然的な帰結としてこの一覧だけ更新する
+     (他のテストは無修正) */
+  it("has exactly the 15 songs (7 roadmap + AU-03 lesson/test + AU-07 town1-6)", () => {
     expect([...SONG_IDS].sort()).toEqual(
-      ["battle", "boss", "dungeon", "ending", "field", "lesson", "test", "title", "town"].sort(),
+      [
+        "battle",
+        "boss",
+        "dungeon",
+        "ending",
+        "field",
+        "lesson",
+        "test",
+        "title",
+        "town",
+        "town1",
+        "town2",
+        "town3",
+        "town4",
+        "town5",
+        "town6",
+      ].sort(),
     );
     expect(Object.keys(SONGS).sort()).toEqual([...SONG_IDS].sort());
   });
@@ -414,5 +435,179 @@ describe("bgm base/overlay (no AudioContext)", () => {
     expect(() => popBgm()).not.toThrow();
     expect(() => popBgm()).not.toThrow();
     expect(currentBgm()).toBeNull();
+  });
+});
+
+/*
+ * AU-07: 章ごとの町の曲 6 曲 (town1〜town6)。文法・小節数・harmony 必須第3声・
+ * 三和音として鳴ることを既存曲と同じ観点で検証する
+ */
+describe("town songs (AU-07)", () => {
+  it.each(TOWN_SONG_IDS)("%s validates and is 8-32 bars with a real 3-voice chord", (id) => {
+    expect(validateSong(SONGS[id])).toBeNull();
+    const song = compileSong(SONGS[id]);
+    expect(song.bars).toBeGreaterThanOrEqual(MIN_BARS);
+    expect(song.bars).toBeLessThanOrEqual(MAX_BARS);
+    expect(song.events.filter((e) => e.voice === "lead").length).toBeGreaterThan(0);
+    expect(song.events.filter((e) => e.voice === "harmony").length).toBeGreaterThan(0);
+    expect(song.events.filter((e) => e.voice === "bass").length).toBeGreaterThan(0);
+    expect(SONGS[id].title.length).toBeGreaterThan(0);
+  });
+
+  it.each(TOWN_SONG_IDS)("%s: harmony has the same bar count as lead", (id) => {
+    const { stepsPerBar, lead, harmony } = SONGS[id];
+    const leadBars = parseVoice(lead, { stepsPerBar }).bars;
+    const harmonyBars = parseVoice(harmony, { stepsPerBar }).bars;
+    expect(harmonyBars).toBe(leadBars);
+  });
+
+  it("each town song has a distinct hiragana title", () => {
+    const titles = TOWN_SONG_IDS.map((id) => SONGS[id].title);
+    expect(new Set(titles).size).toBe(TOWN_SONG_IDS.length);
+  });
+
+  it("town6 (ネガリア) uses a duller pulse and no echo, per the design brief", () => {
+    expect(SONGS.town6.style?.pulse).toBe(0.125);
+    expect(SONGS.town6.style?.echo ?? 0).toBe(0);
+  });
+});
+
+/*
+ * AU-07: songForMap — 章が取れる町/屋内マップは town<chapter.grade> を返し、
+ * 章の中でも旅・洞くつ (encounterTableId あり) は songForTheme(theme, false) に、
+ * 章が取れないマップ (dev/maps 等) は songForTheme(theme, isTown) のまま
+ * フォールバックすることを、実在する全マップを走査して確認する
+ */
+describe("songForMap (AU-07)", () => {
+  it("every map resolves to an existing song id", () => {
+    for (const map of listMaps()) {
+      const id = songForMap(map);
+      expect(SONGS, `${map.id} (${map.theme})`).toHaveProperty(id);
+    }
+  });
+
+  it("town/interior maps belonging to a chapter play town<chapter.grade>", () => {
+    let checked = 0;
+    for (const map of listMaps()) {
+      const chapter = chapterForMap(map.id);
+      /* 町 = 従来の割り当てで town になるマップ (エンカウント無し かつ 町のテーマ) */
+      if (!chapter || songForTheme(map.theme, map.encounterTableId === null) !== "town") continue;
+      if (!Object.prototype.hasOwnProperty.call(SONGS, `town${chapter.grade}`)) continue;
+      expect(songForMap(map), `${map.id}`).toBe(`town${chapter.grade}`);
+      checked++;
+    }
+    /* 章1〜6 (と章7) の町/屋内マップが実際に存在し、検証が空振りしていないこと */
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  /*
+   * ボス部屋・ダンジョンの奥 (洞くつテーマで エンカウント無し) は 町の曲に しない。
+   * 「エンカウント無し = 町」とすると ピラミッドの玄室などで 町の曲が 鳴っていた
+   */
+  it("boss rooms without encounters keep the dungeon music, never a town song", () => {
+    const bossRooms = listMaps().filter((m) => m.theme === "cave" && m.encounterTableId === null);
+    expect(bossRooms.length).toBeGreaterThan(5);
+    for (const map of bossRooms) {
+      expect(songForMap(map), map.id).toBe(songForTheme(map.theme, true));
+      expect(songForMap(map), map.id).not.toMatch(/^town/);
+    }
+  });
+
+  it("wild/encounter maps belonging to a chapter fall back to songForTheme(theme, false)", () => {
+    let checked = 0;
+    for (const map of listMaps()) {
+      const chapter = chapterForMap(map.id);
+      if (!chapter || map.encounterTableId === null) continue;
+      expect(songForMap(map), `${map.id}`).toBe(songForTheme(map.theme, false));
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it("maps with no chapter (dev/maps) fall back to songForTheme(theme, isTown) exactly as before", () => {
+    let checked = 0;
+    for (const map of listMaps()) {
+      const chapter = chapterForMap(map.id);
+      if (chapter) continue;
+      const isTown = map.encounterTableId === null;
+      expect(songForMap(map), `${map.id}`).toBe(songForTheme(map.theme, isTown));
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it("chapters 1-6 each resolve their town id to a distinct, matching town song", () => {
+    for (let grade = 1; grade <= 6; grade++) {
+      const map = listMaps().find((m) => {
+        const chapter = chapterForMap(m.id);
+        return chapter?.grade === grade && chapter.id === grade && m.encounterTableId === null;
+      });
+      expect(map, `no town/interior map found for chapter ${grade}`).toBeDefined();
+      expect(songForMap(map!)).toBe(`town${grade}`);
+    }
+  });
+
+  it("never throws across every map in the content", () => {
+    expect(() => {
+      for (const map of listMaps()) songForMap(map);
+    }).not.toThrow();
+  });
+});
+
+/*
+ * AU-08: 既存6曲 (title/field/dungeon/battle/boss/ending) の作り込み。
+ * 8→16小節への拡張と、曲ごとに付けた style (pulse/vibrato/echo) の値の確認。
+ * harmony の音楽的な質そのものは自動テストできないので、ここでは
+ * 「文法が通り、3和音として鳴り、意図した style が付いている」ことだけを守る
+ */
+describe("AU-08: title/field/dungeon/battle/boss/ending are fleshed out", () => {
+  it.each(["title", "field", "dungeon", "battle", "boss", "ending"] as const)(
+    "%s is 16 bars (8→16 extension, or already 16)",
+    (id) => {
+      const song = compileSong(SONGS[id]);
+      expect(song.bars).toBe(16);
+    },
+  );
+
+  it("boss uses pulse 0.25 and a touch of vibrato for tension", () => {
+    expect(SONGS.boss.style?.pulse).toBe(0.25);
+    expect(SONGS.boss.style?.vibrato ?? 0).toBeGreaterThan(0);
+  });
+
+  it("battle uses a narrower pulse (0.125) than boss, for a distinct urgent timbre", () => {
+    expect(SONGS.battle.style?.pulse).toBe(0.125);
+  });
+
+  it("ending uses a moderate echo for a warm, spacious close", () => {
+    expect(SONGS.ending.style?.echo).toBeGreaterThan(0);
+    expect(SONGS.ending.style?.echo ?? 0).toBeLessThanOrEqual(0.35);
+  });
+
+  it("dungeon uses a touch of echo for cave ambience", () => {
+    expect(SONGS.dungeon.style?.echo).toBeGreaterThan(0);
+  });
+
+  it("field uses a light vibrato (wind), title stays style-free (clean fanfare)", () => {
+    expect(SONGS.field.style?.vibrato ?? 0).toBeGreaterThan(0);
+    expect(SONGS.title.style).toBeUndefined();
+  });
+
+  it("the first 2 bars of each song's lead keep their original melodic core", () => {
+    const originalOpeners: Record<string, string> = {
+      title: "c5 ~ e5 ~ g5 ~ ~ e5 | a5 ~ g5 ~ e5 ~ ~ ~",
+      field: "d5 - f5 - a5 ~ g5 f5 | e5 ~ c5 ~ e5 ~ - -",
+      dungeon: "e4 ~ ~ g4 ~ ~ f#4 ~ | e4 ~ ~ ~ - - - -",
+      battle: "a4 a4 c5 a4 e5 - d5 c5 | b4 b4 d5 b4 e5 - - -",
+      boss: "c5 c5 - c5 eb5 - f#5 - | g5 ~ f#5 f5 eb5 - c5 -",
+      ending: "g4 - b4 - d5 ~ ~ b4 | c5 ~ b4 ~ a4 ~ ~ ~",
+    };
+    for (const [id, opener] of Object.entries(originalOpeners)) {
+      const firstTwoBars = SONGS[id as SongId].lead
+        .split("|")
+        .slice(0, 2)
+        .map((bar: string) => bar.trim())
+        .join(" | ");
+      expect(firstTwoBars, id).toBe(opener);
+    }
   });
 });

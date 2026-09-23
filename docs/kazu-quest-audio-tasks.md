@@ -239,7 +239,13 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
   `sound.spec.ts` 5 件緑 (harmony 追加後も曲が同じ長さ・同じテーマ対応表で鳴ること)
 - **スコープ外**: 曲の書き込み内容の作り込み (AU-07 / AU-08 が harmony を活かした本格的な和声にする)
 
-#### AU-07 [L] 章ごとの町の曲 6 曲・3和音で作曲 (`town1`〜`town6`) — 状態: 未 (依存: AU-06)
+#### AU-07 [L] 章ごとの町の曲 6 曲・3和音で作曲 (`town1`〜`town6`) — 状態: 済 (依存: AU-06)
+
+- **完了メモ (2026-09-24)**: 並行セッションの実装を引き継いで仕上げた。`songForMap` が「エンカウント無し = 町」と
+  判定していたため、ボス部屋・ダンジョンの奥 12 マップ (ピラミッドの玄室・九九の塔の上など) で町の曲が鳴るバグを
+  修正 (従来のテーマ割り当てが town を返すマップだけ town<章> に置き換える)。Vitest に「ボス部屋は町の曲に
+  ならない」を追加、既存テストの「エンカウント無し = 町」前提を修正。gallery.spec の曲数を SONG_IDS から数える形に、
+  learning-audio.spec の地の曲の期待値に town1〜town6 を追加
 
 - **目的**: 6 章の町を音で区別する。章の世界観 (章1 はじまりの村・王都 / 章2 港と九九 / 章3 砂漠の隊商 / 章4 氷と計測 /
   章5 割合の都 / 章6 ネガリア (色を失った町)) を短いモチーフで表す
@@ -255,7 +261,7 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
 - **受け入れ条件**: Vitest 緑、E2E 緑、章1〜7 golden path 無修正で緑。`town` (旧) は dev/maps のフォールバックとして残す
 - **スコープ外**: 旅・洞くつ・戦闘の曲 (AU-08)
 
-#### AU-08 [M] 既存 6 曲の作り込み・3和音で本格化 (title / field / dungeon / battle / boss / ending) — 状態: 未 (依存: AU-06)
+#### AU-08 [M] 既存 6 曲の作り込み・3和音で本格化 (title / field / dungeon / battle / boss / ending) — 状態: 済 (依存: AU-06)
 
 - **目的**: 2 声 → 3〜4 声、8〜16 小節 → 16〜32 小節、イントロ 1 小節、`pulse` / `vibrato` / `echo` を曲ごとに
 - **触るファイル**: `src/content/music.ts` の該当 6 曲 (**`lesson`/`test`/町は触らない**)、`tests/music.test.ts`
@@ -266,7 +272,7 @@ Node (AudioContext 無し) で `playSfx` / `playBgm` / `pushBgm` / `setVolume` �
 - **受け入れ条件**: Vitest 緑 (小節長 8〜32)、`e2e/sound.spec.ts` 緑、ギャラリーで 6 曲が試聴できる
 - **スコープ外**: 町 (AU-07)、効果音 (AU-09)
 
-#### AU-09 [S] 効果音 32 種の質感 (パルス幅・ピッチ包絡・重ね) — 状態: 未 (依存: AU-06)
+#### AU-09 [S] 効果音 32 種の質感 (パルス幅・ピッチ包絡・重ね) — 状態: 済 (依存: AU-06)
 
 - **目的**: `SfxVoice` に `pulse?` を足し (bgm と同じ `PeriodicWave` を共有)、既存 18 + 新 14 の音色を統一感のある
   ファミコン風に磨く。名前・場面・長さは変えない

@@ -73,6 +73,11 @@ describe("SFX_TABLE", () => {
         expect(voice.gain, name).toBeGreaterThan(0);
         expect(voice.gain, name).toBeLessThanOrEqual(1);
         expect(voice.delay ?? 0, name).toBeGreaterThanOrEqual(0);
+        /* AU-09: pulse は指定されていれば 3 つのデューティ比のいずれかで、square のみで使う */
+        if (voice.pulse !== undefined) {
+          expect([0.125, 0.25, 0.5], name).toContain(voice.pulse);
+          expect(voice.wave, name).toBe("square");
+        }
         let lastAt = -1;
         for (const step of voice.steps) {
           expect(step.freq, name).toBeGreaterThan(0);
@@ -166,5 +171,58 @@ describe("SFX_TABLE gain (AU-01)", () => {
     expect(SFX_TABLE.confirm.voices[0].gain).toBeCloseTo(0.11 * 1.6, 5);
     expect(SFX_TABLE.victory.voices[0].gain).toBeCloseTo(0.13 * 1.6, 5);
     expect(SFX_TABLE.victory.voices[1].gain).toBeCloseTo(0.12 * 1.6, 5);
+  });
+});
+
+/* AU-09: パルス幅による音色の作り込み。値域と、5つの「大きな報酬」が互いに聞き分けられることを守る */
+describe("SFX_TABLE pulse timbre (AU-09)", () => {
+  const REWARD_NAMES: SfxName[] = ["crystal", "victory", "testPass", "mastered", "levelUp"];
+
+  it("crystal remains the longest sound in the whole table (biggest reward, AU-02 design intent)", () => {
+    const durationOf = (name: SfxName): number =>
+      Math.max(...SFX_TABLE[name].voices.map((v) => v.duration));
+    const crystalDuration = durationOf("crystal");
+    for (const name of SFX_NAMES) {
+      if (name === "crystal") continue;
+      expect(crystalDuration, name).toBeGreaterThanOrEqual(durationOf(name));
+    }
+  });
+
+  it("crystal is still built from 3 simultaneous voices (a sustained chord)", () => {
+    expect(SFX_TABLE.crystal.voices.length).toBe(3);
+  });
+
+  it("the 5 big-reward sounds each have a distinct duration/pulse signature", () => {
+    const signatures = REWARD_NAMES.map((name) => {
+      const spec = SFX_TABLE[name];
+      const maxDuration = Math.max(...spec.voices.map((v) => v.duration));
+      const pulseSignature = spec.voices.map((v) => v.pulse ?? "default").join(",");
+      return `${name}:${maxDuration}:${pulseSignature}`;
+    });
+    expect(new Set(signatures).size).toBe(REWARD_NAMES.length);
+  });
+
+  it("mastered uses the narrowest pulse in the table for its shimmer, distinct from crystal/victory/levelUp", () => {
+    const masteredPulse = SFX_TABLE.mastered.voices.find((v) => v.wave === "square")?.pulse;
+    expect(masteredPulse).toBe(0.125);
+    for (const name of ["crystal", "victory", "levelUp"] as SfxName[]) {
+      for (const voice of SFX_TABLE[name].voices) {
+        if (voice.wave === "square") expect(voice.pulse, name).not.toBe(0.125);
+      }
+    }
+  });
+
+  it("sharp/urgent sounds (hit, critical, encounter, wrong) lean on the narrowest pulse", () => {
+    for (const name of ["hit", "critical", "encounter", "wrong"] as SfxName[]) {
+      const squareVoice = SFX_TABLE[name].voices.find((v) => v.wave === "square");
+      expect(squareVoice?.pulse, name).toBe(0.125);
+    }
+  });
+
+  it("soft/positive sounds (correct, hintReveal, companion) stay unset (default 50% duty, unchanged tone)", () => {
+    for (const name of ["correct", "hintReveal", "companion"] as SfxName[]) {
+      const squareVoice = SFX_TABLE[name].voices.find((v) => v.wave === "square");
+      expect(squareVoice?.pulse, name).toBeUndefined();
+    }
   });
 });

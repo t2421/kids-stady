@@ -15,6 +15,7 @@
  */
 
 import { autosave, getSave, updateSave } from "../session";
+import { getPulseWave } from "./pulseWave";
 import { SFX_TABLE, type SfxName, type SfxVoice } from "./sfxTable";
 
 export type { SfxName } from "./sfxTable";
@@ -174,7 +175,13 @@ function applyGainEnvelope(gain: GainNode, voice: SfxVoice, t0: number): void {
 function playToneVoice(c: AudioContext, voice: SfxVoice, t0: number): void {
   const osc = c.createOscillator();
   const gain = c.createGain();
-  osc.type = voice.wave === "triangle" ? "triangle" : "square";
+  if (voice.wave === "square" && voice.pulse) {
+    /* AU-09: pulse 指定時だけ pulseWave.ts の PeriodicWave (bgm.ts と同じデューティ比合成) を使う。
+       未指定のときは従来どおり "square" の組み込みオシレータ型 — バイト同一の後方互換 */
+    osc.setPeriodicWave(getPulseWave(c, voice.pulse));
+  } else {
+    osc.type = voice.wave === "triangle" ? "triangle" : "square";
+  }
   for (const step of voice.steps) {
     osc.frequency.setValueAtTime(step.freq, t0 + step.at);
   }
