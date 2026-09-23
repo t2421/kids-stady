@@ -142,26 +142,53 @@ function RotatingTabletIcon() {
   );
 }
 
+/*
+ * iPad を 横に もっているのに ウィンドウが 縦長 = Split View / Slide Over。
+ * このとき「よこむきに してね」と出しても 回しようが ないので、
+ * 「がめんを ひろげてね」と 言いかえる。iOS Safari の screen.width/height は
+ * 向きで 入れかわらないので screen.orientation (無ければ window.orientation) を見る
+ */
+export function isDeviceLandscape(): boolean {
+  if (typeof window === "undefined") return false;
+  const type = window.screen?.orientation?.type;
+  if (type) return type.startsWith("landscape");
+  const legacy = (window as unknown as { orientation?: number }).orientation;
+  return typeof legacy === "number" && Math.abs(legacy) === 90;
+}
+
+export function guardCopy(deviceLandscape: boolean): { title: string; sub: string[] } {
+  return deviceLandscape
+    ? {
+        title: "がめんを ひろげてね",
+        sub: ["カズクエは よこながの がめんで あそぶよ。", "となりの アプリを とじると つづきから あそべるよ。"],
+      }
+    : {
+        title: "iPad を よこむきに してね",
+        sub: ["カズクエは よこながの がめんで あそぶよ。", "よこに むけると そのまま つづきから あそべるよ。"],
+      };
+}
+
 export function OrientationGuard() {
   const portrait = useIsPortrait();
   if (!portrait) return null;
+  const copy = guardCopy(isDeviceLandscape());
 
   return (
     <div
       data-testid="orientation-guard"
       role="dialog"
       aria-live="polite"
-      aria-label="iPad を よこむきに してね"
+      aria-label={copy.title}
       style={backdropStyle}
     >
       <style>{ROTATE_CSS}</style>
       <div style={windowStyle}>
         <RotatingTabletIcon />
-        <p style={titleStyle}>iPad を よこむきに してね</p>
+        <p style={titleStyle}>{copy.title}</p>
         <p style={subStyle}>
-          カズクエは よこながの がめんで あそぶよ。
+          {copy.sub[0]}
           <br />
-          よこに むけると そのまま つづきから あそべるよ。
+          {copy.sub[1]}
         </p>
       </div>
     </div>

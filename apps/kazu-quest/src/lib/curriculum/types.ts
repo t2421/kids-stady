@@ -8,8 +8,8 @@
  * src/content/lessons/types.ts (LP-01)。ここでは type-only import で
  * 循環参照を避けつつ再 export し、curriculum 配下から `./types` だけで済むようにする
  */
-import type { MistakePattern } from "../../content/lessons/types";
-export type { MistakePattern };
+import type { FigureSpec, MistakePattern } from "../../content/lessons/types";
+export type { FigureSpec, MistakePattern };
 
 export type Op = "+" | "-" | "×" | "÷" | null;
 
@@ -53,6 +53,14 @@ export interface Problem {
   choiceTags?: [MistakePattern, MistakePattern, MistakePattern];
   /* かぞえ問題のみ: 描画するアイコンと個数 */
   visual?: CountVisual;
+  /*
+   * 問題を「図」で見せるときの図の仕様 (レッスンと同じ FigureSpec)。
+   * 省略した問題も lib/curriculum/figures.ts の figureForProblem() が
+   * skillId と a/b から作れるものは作る — ジェネレータ側は「図が
+   * a/b から導けない (三角形か平行四辺形か等)」ときだけ明示すればよい。
+   * 図は「問題の じょうけん」だけを表し、こたえは見せない。
+   */
+  figure?: FigureSpec;
 }
 
 /* 疑似乱数 (seed 注入でテスト再現可能) */

@@ -11,7 +11,7 @@
 import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
-import { dec, frac, gcd } from "./numbers";
+import { dec, frac, fractionResultLine, gcd, randCoprimeNumerator } from "./numbers";
 import { genericHints } from "./hints";
 
 const PI = 3.14;
@@ -25,7 +25,8 @@ function genFractionMulDiv(rng: Rng, level?: Level): Problem {
     lv === 1 ? [2, 5, 2, 4] : lv === 3 ? [6, 12, 4, 10] : [3, 9, 2, 6];
   const kind = randInt(rng, 0, 2);
   const d = randInt(rng, dLo, dHi);
-  const n = randInt(rng, 1, d - 1);
+  /* 問題の分数は 約分ずみ (4/10 ではなく 2/5) — 教科書どおり */
+  const n = randCoprimeNumerator(rng, d);
   if (kind === 0) {
     const m = randInt(rng, mLo, mHi);
     const answer = frac(n * m, d);
@@ -45,12 +46,12 @@ function genFractionMulDiv(rng: Rng, level?: Level): Problem {
       explain: [
         `整数を かけるときは 分子に かける`,
         `${n} × ${m} = ${n * m}`,
-        `こたえは ${answer}`,
+        fractionResultLine(n * m, d, answer),
       ],
       hints: genericHints([
         `整数を かけるときは 分子に かける`,
         `${n} × ${m} = ${n * m}`,
-        `こたえは ${answer}`,
+        fractionResultLine(n * m, d, answer),
       ]),
     };
   }
@@ -73,18 +74,18 @@ function genFractionMulDiv(rng: Rng, level?: Level): Problem {
       explain: [
         `整数で わるときは 分母に かける`,
         `${d} × ${m} = ${d * m}`,
-        `こたえは ${answer}`,
+        fractionResultLine(n, d * m, answer),
       ],
       hints: genericHints([
         `整数で わるときは 分母に かける`,
         `${d} × ${m} = ${d * m}`,
-        `こたえは ${answer}`,
+        fractionResultLine(n, d * m, answer),
       ]),
     };
   }
   const [d2Lo, d2Hi] = lv === 1 ? [2, 4] : lv === 3 ? [4, 10] : [2, 7];
   const d2 = randInt(rng, d2Lo, d2Hi);
-  const n2 = randInt(rng, 1, d2 - 1);
+  const n2 = randCoprimeNumerator(rng, d2);
   const answer = frac(n * n2, d * d2);
   return {
     skillId: "g6_fraction_muldiv",
@@ -102,12 +103,12 @@ function genFractionMulDiv(rng: Rng, level?: Level): Problem {
     explain: [
       `分数どうしは 分子は 分子、分母は 分母で かける`,
       `${n} × ${n2} = ${n * n2}、${d} × ${d2} = ${d * d2}`,
-      `やくぶんして ${answer}`,
+      fractionResultLine(n * n2, d * d2, answer),
     ],
     hints: genericHints([
       `分数どうしは 分子は 分子、分母は 分母で かける`,
       `${n} × ${n2} = ${n * n2}、${d} × ${d2} = ${d * d2}`,
-      `やくぶんして ${answer}`,
+      fractionResultLine(n * n2, d * d2, answer),
     ]),
   };
 }
@@ -126,6 +127,8 @@ function genLetterExpr(rng: Rng, level?: Level): Problem {
       a: x + b,
       b,
       op: "-",
+      /* 式の形は a/b から決まらないので ここで図を指定する (□ はまだ といていない) */
+      figure: { kind: "letterBox", expr: `□ + ${b} = ${x + b}` },
       answer: String(x),
       choices: makeChoicesOf(rng, String(x), [
         String(x + b),
@@ -148,6 +151,7 @@ function genLetterExpr(rng: Rng, level?: Level): Problem {
       a: a * x,
       b: a,
       op: "÷",
+      figure: { kind: "letterBox", expr: `${a} × □ = ${a * x}` },
       answer: String(x),
       choices: makeChoicesOf(rng, String(x), [
         String(a * x),
@@ -170,6 +174,8 @@ function genLetterExpr(rng: Rng, level?: Level): Problem {
     a: x,
     b,
     op: null,
+    /* x の値は じょうけんとして あたえられている (こたえは 式のほう) */
+    figure: { kind: "letterBox", expr: `${a} × x + ${b}`, value: x },
     answer: String(a * x + b),
     choices: makeChoicesOf(rng, String(a * x + b), [
       String(a * (x + b)),

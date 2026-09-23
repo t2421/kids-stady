@@ -30,6 +30,7 @@ import {
 import {
   handleOpenLesson,
   handleOpenPreview,
+  handleOpenGoals,
   handleOpenReview,
   handleOpenTeacherMenu,
 } from "../field/lessonFlow";
@@ -37,6 +38,7 @@ import type { UiScene } from "./UiScene";
 import type { BattleLaunchData, BattleResult } from "./BattleScene";
 import { INTERACT_COOLDOWN_MS, STEP_MS } from "../field/timing";
 import { tapStepFor } from "../field/tapStep";
+import { findTapPath } from "../field/tapPath";
 import { playSfx } from "../audio/sfx";
 import { playBgm } from "../audio/bgm";
 import { songForTheme } from "../../content/music";
@@ -81,6 +83,9 @@ export class FieldScene extends Scene {
   /* 一瞬のタップでも 1 歩動くよう pointerdown 時にキューする (KQ-09)。
      update() が 1 度だけ消費し、指が離れていても歩く */
   private pendingTapStep: Dir | null = null;
+  /* タップした場所までの のこりの道 (tapPath.ts)。着いたら faceAt の相手に話しかける */
+  private walkQueue: Dir[] = [];
+  private faceAt: { dir: Dir; x: number; y: number } | null = null;
   private ui!: UiScene;
   private rng = mulberry32((Math.random() * 2 ** 32) >>> 0);
   private stepsToEncounter = Infinity;
@@ -162,15 +167,25 @@ export class FieldScene extends Scene {
     this.playerShadow.setPosition(this.player.x, this.player.y + 6);
     this.darkness?.setPosition(this.player.x, this.player.y);
 
-    if (
-      this.moving ||
-      this.transferring ||
-      this.runActive ||
-      this.battleStarting ||
-      this.isUiBusy()
-    ) {
-      /* 動けないフレームで溜まったタップは捨てる (イベント明けに古い1歩が出ないように) */
+    if (this.moving) {
+      /* 1歩の途中。タップで決めた道 (walkQueue) は 次の歩で つづける */
       this.pendingTapStep = null;
+      return;
+    }
+    if (this.transferring || this.runActive || this.battleStarting || this.isUiBusy()) {
+      /* 動けないフレームで溜まったタップは捨てる (イベント明けに古い1歩が出ないように)。
+         イベント・戦闘・場所移動が はじまったら タップの道も そこで おわり */
+      this.pendingTapStep = null;
+      this.cancelWalk();
+      return;
+    }
+    if (this.walkQueue.length === 0 && this.faceAt) {
+      /* タップした村人・宝箱の となりに 着いた: そちらを向いて 話しかける */
+      const target = this.faceAt;
+      this.faceAt = null;
+      this.facing = target.dir;
+      this.applyHeroFacing();
+      if (this.canAct()) this.interactAt(target.x, target.y);
       return;
     }
     const dir = this.readDirection();
@@ -257,6 +272,12 @@ export class FieldScene extends Scene {
     /* ステータスパネルの「そうびを かえる」→ 装備メニュー */
     const onEquipMenu = () => this.openEquipFlow();
     EventBus.on("request-equip-menu", onEquipMenu);
+    /* 常設の「めあて」ボタン (React) → めあて パネル (lib/goals.ts) */
+    const onGoalsButton = () => {
+      if (!this.scene.isActive() || !this.canAct()) return;
+      this.runCommands([{ type: "openGoals" }]);
+    };
+    EventBus.on("goals-button-pressed", onGoalsButton);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(Phaser.Scenes.Events.WAKE, onWake);
@@ -264,6 +285,7 @@ export class FieldScene extends Scene {
       EventBus.emit("field-gone");
       EventBus.off("menu-button-pressed", onMenuButton);
       EventBus.off("request-equip-menu", onEquipMenu);
+      EventBus.off("goals-button-pressed", onGoalsButton);
     });
 
     /* Ui の create 完了を待ってからマップ名を出す */
@@ -291,15 +313,34 @@ export class FieldScene extends Scene {
   /* タップしたタイルの方向へ 1 歩をキューする。歩行中・イベント中のタップは
      押し続け (pointerHeld) に任せ、キューしない */
   private queueTapStep(pointer: Phaser.Input.Pointer) {
-    if (this.moving || this.transferring || this.runActive || this.battleStarting) {
-      return;
-    }
+    if (this.transferring || this.runActive || this.battleStarting) return;
     const world = pointer.positionToCamera(
       this.cameras.main,
     ) as Phaser.Math.Vector2;
     const tx = Math.floor(world.x / TILE_SIZE);
     const ty = Math.floor(world.y / TILE_SIZE);
+    /* タップした場所まで 歩く (歩いている途中でも 行き先を かえられる。gridX/Y は
+       いま歩いている 1歩の 行き先なので、そこから 道を さがす) */
+    const path = findTapPath(
+      { x: this.gridX, y: this.gridY },
+      { x: tx, y: ty },
+      (x, y) => this.isWalkable(x, y),
+    );
+    if (path) {
+      this.walkQueue = path.steps;
+      this.faceAt = path.faceAtEnd ? { dir: path.faceAtEnd, x: tx, y: ty } : null;
+      this.pendingTapStep = null;
+      return;
+    }
+    /* 道が無い (となりの壁 など): これまでどおり その方向を向いて 1歩 */
+    this.cancelWalk();
+    if (this.moving) return;
     this.pendingTapStep = tapStepFor(this.gridX, this.gridY, tx, ty);
+  }
+
+  private cancelWalk() {
+    this.walkQueue = [];
+    this.faceAt = null;
   }
 
   /* 1 フレームに返す方向は 1 つ (キーボード > キューした1歩 > 押し続け)。
@@ -307,11 +348,15 @@ export class FieldScene extends Scene {
   private readDirection(): Dir | null {
     const queued = this.pendingTapStep;
     this.pendingTapStep = null;
-    if (this.cursors.up.isDown || this.wasd.W.isDown) return "up";
-    if (this.cursors.down.isDown || this.wasd.S.isDown) return "down";
-    if (this.cursors.left.isDown || this.wasd.A.isDown) return "left";
-    if (this.cursors.right.isDown || this.wasd.D.isDown) return "right";
+    const key = this.keyboardDirection();
+    if (key) {
+      /* キーを おしたら タップの道は とりけし (キーが いちばん強い) */
+      this.cancelWalk();
+      return key;
+    }
     if (queued) return queued;
+    const next = this.walkQueue.shift();
+    if (next) return next;
     if (this.pointerHeld) {
       const world = this.input.activePointer.positionToCamera(
         this.cameras.main,
@@ -324,6 +369,14 @@ export class FieldScene extends Scene {
       if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? "right" : "left";
       return dy > 0 ? "down" : "up";
     }
+    return null;
+  }
+
+  private keyboardDirection(): Dir | null {
+    if (this.cursors.up.isDown || this.wasd.W.isDown) return "up";
+    if (this.cursors.down.isDown || this.wasd.S.isDown) return "down";
+    if (this.cursors.left.isDown || this.wasd.A.isDown) return "left";
+    if (this.cursors.right.isDown || this.wasd.D.isDown) return "right";
     return null;
   }
 
@@ -357,7 +410,10 @@ export class FieldScene extends Scene {
     const { dx, dy } = DELTA[dir];
     const nx = this.gridX + dx;
     const ny = this.gridY + dy;
-    if (!this.isWalkable(nx, ny)) return;
+    if (!this.isWalkable(nx, ny)) {
+      this.cancelWalk();
+      return;
+    }
 
     this.moving = true;
     this.gridX = nx;
@@ -675,6 +731,9 @@ export class FieldScene extends Scene {
           break;
         case "openPreview":
           handleOpenPreview(this.ui, () => advance());
+          break;
+        case "openGoals":
+          handleOpenGoals(this.ui, () => advance());
           break;
         case "openTeacherMenu":
           handleOpenTeacherMenu(this.ui, effect.entries, () => advance());

@@ -25,6 +25,7 @@ import type { UiScene } from "../scenes/UiScene";
 import { playSfx } from "../audio/sfx";
 import { requestCustomQuiz } from "../battle/mathRequest";
 import { cashback, changeChallenge, changeProblem } from "../../lib/shop/change";
+import { inventoryRows, sellOne } from "../../lib/inventory";
 
 /* めがみのほこら: checkpoint を更新して「きろくした!」 */
 export function handleSavePoint(
@@ -194,7 +195,8 @@ export function handleReviewQuest(ui: UiScene, advance: () => void): void {
 
 /* お店のおつりチャレンジ (KQ-33) の問いかけ文 (E2E の見分けにも使う) */
 export const CHANGE_CHALLENGE_PROMPT =
-  "おつりチャレンジに ちょうせんする? (せいかいで 10% もどってくる)";
+  /* % は 小5 で習うので 小さい子には「すこし もどってくる」と言う */
+  "おつりチャレンジに ちょうせんする? (せいかいで おかねが すこし もどってくる)";
 
 /*
  * 購入のあとに任意で「おつりは いくら?」を出す。正解で代金の 10% を返金、
@@ -252,7 +254,11 @@ function askEquip(
   });
 }
 
-/* 道具屋: 品物リストから選んで買う (一覧選択式 — 設計変更 2026-07-22) */
+/*
+ * 道具屋: かう / うる を選んでから 一覧で選ぶ (一覧選択式 — 設計変更 2026-07-22)。
+ * うるは もちものが たまる一方になる問題への出口 (もう一つの出口は
+ * もちものタブの すてる)。たいせつなものは 一覧に出ない (lib/inventory.ts)。
+ */
 export function handleShop(
   ui: UiScene,
   shopId: string,
@@ -262,46 +268,114 @@ export function handleShop(
   const items = (shop?.itemIds ?? [])
     .map((id) => getItem(id))
     .filter((it): it is NonNullable<typeof it> => !!it);
-  if (items.length === 0) {
-    ui.showMessage(["いまは しなぎれ みたい。"], advance);
-    return;
-  }
-  const openList = () => {
+
+  const openBuyList = () => {
+    if (items.length === 0) {
+      ui.showMessage(["いまは しなぎれ みたい。"], openTop);
+      return;
+    }
     const save = getSave();
-    const options = [...items.map((it) => `${it.name}  ${it.price}G`), "やめる"];
+    /* おかねが たりない品は えらぶ前に わかるように する */
+    const options = [
+      ...items.map((it) =>
+        it.price > save.inventory.gold
+          ? `${it.name}  ${it.price}G (おかねが たりない)`
+          : `${it.name}  ${it.price}G`,
+      ),
+      "やめる",
+    ];
     ui.showList(
       `なにを かう? (もちがね ${save.inventory.gold}G)`,
       options,
       (index) => {
         if (index === null || index >= items.length) {
-          ui.showMessage(["まいど ありがとう!"], advance);
+          openTop();
           return;
         }
         const item = items[index];
-        const goldBefore = getSave().inventory.gold;
-        if (goldBefore < item.price) {
-          ui.showMessage(["おかねが たりないよ…"], openList);
+        if (getSave().inventory.gold < item.price) {
+          ui.showMessage(["おかねが たりないよ…"], openBuyList);
           return;
         }
-        updateSave((s) => ({
-          ...s,
-          inventory: {
-            gold: s.inventory.gold - item.price,
-            items: {
-              ...s.inventory.items,
-              [item.id]: (s.inventory.items[item.id] ?? 0) + 1,
-            },
-          },
-        }));
-        autosave();
-        /* てにいれた! → おつりチャレンジ (任意) → 装備品なら そうびする? → リストへ */
-        const afterBuy =
-          item.kind === "equip" ? () => askEquip(ui, item, openList) : openList;
-        ui.showMessage([`${item.name}を てにいれた!`], () =>
-          offerChangeChallenge(ui, item.price, goldBefore, afterBuy),
+        /* 1タップで おかねが へらないよう、なにに つかう品か 見せてから きく */
+        ui.showMessage([`${item.name}: ${item.description}`], () =>
+          ui.showChoice(`${item.name}を ${item.price}Gで かう?`, (yes) =>
+            yes ? buy(item) : openBuyList(),
+          ),
         );
       },
     );
   };
-  openList();
+
+  const buy = (item: (typeof items)[number]) => {
+    const goldBefore = getSave().inventory.gold;
+    updateSave((s) => ({
+      ...s,
+      inventory: {
+        gold: s.inventory.gold - item.price,
+        items: {
+          ...s.inventory.items,
+          [item.id]: (s.inventory.items[item.id] ?? 0) + 1,
+        },
+      },
+    }));
+    autosave();
+    /* てにいれた! → おつりチャレンジ (任意) → 装備品なら そうびする? → リストへ */
+    const afterBuy =
+      item.kind === "equip" ? () => askEquip(ui, item, openBuyList) : openBuyList;
+    ui.showMessage([`${item.name}を てにいれた!`], () =>
+      offerChangeChallenge(ui, item.price, goldBefore, afterBuy),
+    );
+  };
+
+  const openSellList = () => {
+    const save = getSave();
+    const sellable = inventoryRows(save).filter((row) => !row.keepsake);
+    if (sellable.length === 0) {
+      ui.showMessage(["うれるものは もっていないね。"], openTop);
+      return;
+    }
+    const options = [
+      ...sellable.map((row) => `${row.name} ×${row.count}  ${row.sell}G`),
+      "やめる",
+    ];
+    ui.showList(
+      `なにを うる? (もちがね ${save.inventory.gold}G)`,
+      options,
+      (index) => {
+        if (index === null || index >= sellable.length) {
+          openTop();
+          return;
+        }
+        const row = sellable[index];
+        ui.showChoice(`${row.name}を ${row.sell}Gで うる?`, (yes) => {
+          if (!yes) {
+            openSellList();
+            return;
+          }
+          const sold = sellOne(getSave(), row.id);
+          if (!sold) {
+            ui.showMessage(["それは うれないよ。"], openSellList);
+            return;
+          }
+          updateSave(() => sold.save);
+          autosave();
+          playSfx("confirm");
+          ui.showMessage([`${row.name}を うって ${sold.gold}G もらった!`], openSellList);
+        });
+      },
+    );
+  };
+
+  /* かう / うる の入口。やめる で会話に戻る */
+  const openTop = () => {
+    const prompt = `ごようは? (もちがね ${getSave().inventory.gold}G)`;
+    ui.showList(prompt, ["かう", "うる", "やめる"], (index) => {
+      if (index === 0) openBuyList();
+      else if (index === 1) openSellList();
+      else ui.showMessage(["まいど ありがとう!"], advance);
+    });
+  };
+
+  openTop();
 }

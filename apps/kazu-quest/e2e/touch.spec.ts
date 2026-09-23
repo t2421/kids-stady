@@ -9,6 +9,7 @@ import {
   waitForScene,
   warp,
 } from "./helpers";
+import { battleMenuCell } from "../src/game/battle/battleMenuLayout";
 
 /*
  * タッチ操作だけの通し E2E (KQ-06)。playwright.config.ts の "ipad" project
@@ -25,24 +26,31 @@ import {
  *  押し続け歩行は今も pointerHeld で継続する)
  */
 
-/* 論理解像度 (src/game/main.ts GAME_WIDTH/HEIGHT)。Scale.FIT で canvas に収まる */
-const GAME_W = 960;
-const GAME_H = 540;
+/*
+ * 論理解像度 (src/game/main.ts)。幅は 960 固定、高さは 起動時の画面の縦横比で
+ * 540〜720 に変わる (iPad 4:3 では 720) ので、実際の値を ゲームから読む
+ */
+async function gameSize(page: Page): Promise<{ w: number; h: number }> {
+  return page.evaluate(() => {
+    const size = window.__KAZUQUEST_GAME__!.scale.gameSize;
+    return { w: size.width, h: size.height };
+  });
+}
 /* src/content/art/tiles.ts TILE_SIZE (ピクセルアート一式を node に読ませないため直書き) */
 const TILE = 16;
-/* 戦闘コマンド窓の配置 (BattleScene.create → new BattleMenu(GAME_W-420, GAME_H-148)、行間 26) */
-const BATTLE_MENU = { x: GAME_W - 420, y: GAME_H - 148, rowHeight: 26 };
+
 const TABS = ["つよさ", "そうび", "じゅもん", "もちもの"] as const;
 
 /* ---------- 指の基本操作 ---------- */
 
-/* 論理座標 (960x540) → ページ座標。canvas は Scale.FIT でアスペクト維持のまま拡縮される */
+/* 論理座標 → ページ座標。canvas は Scale.FIT でアスペクト維持のまま拡縮される */
 async function logicalToPage(page: Page, lx: number, ly: number) {
   const box = await page.locator("canvas").boundingBox();
   if (!box) throw new Error("canvas が見つからない");
+  const { w, h } = await gameSize(page);
   return {
-    x: box.x + (lx * box.width) / GAME_W,
-    y: box.y + (ly * box.height) / GAME_H,
+    x: box.x + (lx * box.width) / w,
+    y: box.y + (ly * box.height) / h,
   };
 }
 
@@ -72,14 +80,11 @@ async function tapTile(page: Page, tx: number, ty: number) {
   await page.touchscreen.tap(p.x, p.y);
 }
 
-/* 戦闘コマンド窓の index 行 (0=たたかう) をタップする。Phaser の Text は
-   pointerdown 即時なので瞬間タップで足りる */
+/* 戦闘コマンドの index マス (0=たたかう) をタップする。マス全体が判定なので
+   中心を押す。pointerdown 即時なので瞬間タップで足りる */
 async function tapBattleCommand(page: Page, index: number) {
-  const p = await logicalToPage(
-    page,
-    BATTLE_MENU.x + 40,
-    BATTLE_MENU.y + index * BATTLE_MENU.rowHeight + BATTLE_MENU.rowHeight / 2,
-  );
+  const cell = battleMenuCell(index, (await gameSize(page)).h);
+  const p = await logicalToPage(page, cell.cx, cell.cy);
   await page.touchscreen.tap(p.x, p.y);
 }
 

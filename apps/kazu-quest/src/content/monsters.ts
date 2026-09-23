@@ -681,7 +681,8 @@ export const MONSTERS: Record<string, MonsterDef> = {
   },
   eraser: {
     id: "eraser",
-    name: "幹部イレイサー",
+    /* 章1 (小1) のボス。戦闘の文字は canvas で ルビが付けられないので ひらがなで書く */
+    name: "かんぶイレイサー",
     art: "eraser",
     hp: 90,
     atk: 12,

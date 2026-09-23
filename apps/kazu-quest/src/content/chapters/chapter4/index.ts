@@ -71,6 +71,7 @@ export const CHAPTER4: ChapterDef = {
     "learned.bunsuuHeal": "ブンスウヒール習得 (テスト合格)",
     "learned.warikiriBlade": "ワリキリブレード習得 (テスト合格)",
     "learned.graphEye": "グラフアイ習得 (テスト合格)",
+    "c4.enteredAngleRuins": "角度の遺跡に 一度 入った (番人が 道をあける — 出口で閉じこめない)",
   },
   clearFlag: "c4.clear",
 };

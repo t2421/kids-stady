@@ -10,6 +10,7 @@ import type { Problem } from "@/lib/curriculum";
 import { generate } from "@/lib/curriculum";
 import { MathChoices } from "@/components/MathChoices";
 import { dqWindow, UI_COLORS } from "@/components/uiTheme";
+import { ProblemFigure } from "@/components/ProblemFigure";
 
 /*
  * 前提チェック (readiness, LP-10)。EventBus "open-readiness" {skillId, prerequisites}
@@ -200,6 +201,7 @@ export function ReadinessScreen() {
         >
           {state.problem.text}
         </p>
+        <ProblemFigure problem={state.problem} />
         <MathChoices problem={state.problem} feedback={state.feedback} onChoose={choose} />
       </div>
     </div>

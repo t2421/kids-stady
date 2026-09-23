@@ -52,9 +52,28 @@ import { G6_PROPORTION } from "./grade6/g6_proportion";
 import { G6_RATIO } from "./grade6/g6_ratio";
 import { G6_SCALE } from "./grade6/g6_scale";
 import { G6_SPEED } from "./grade6/g6_speed";
+import type { Problem } from "../../lib/curriculum/types";
+import { maskAnswerInHints } from "../../lib/curriculum/hints";
+
+/*
+ * 手書きの 例題・穴埋めの Problem は generate() を通らないので、ヒントに こたえが
+ * 残っていることがある (g4_angle の「360 - 60 = 300°」など)。穴埋め画面は hints[2] を
+ * 出しっぱなしにするので、登録の時点で generate() と同じ規則で かくす (hints.ts)
+ */
+function maskProblem(problem: Problem): Problem {
+  return { ...problem, hints: maskAnswerInHints(problem.hints, problem.answer, problem.text) };
+}
+
+function withMaskedHints(lesson: LessonDef): LessonDef {
+  return {
+    ...lesson,
+    workedExample: { ...lesson.workedExample, problem: maskProblem(lesson.workedExample.problem) },
+    faded: lesson.faded.map((f) => ({ ...f, problem: maskProblem(f.problem) })),
+  };
+}
 
 /* LP-12〜17 (波4) がここに単元ごとの LessonDef を足していく。LP-08 の先行分は1件だけ */
-export const LESSONS: Record<string, LessonDef> = {
+const RAW_LESSONS: Record<string, LessonDef> = {
   /* LP-12: 小1 全6単元 */
   g1_count: G1_COUNT,
   g1_compare: G1_COMPARE,
@@ -106,6 +125,10 @@ export const LESSONS: Record<string, LessonDef> = {
   g6_scale: G6_SCALE,
   g6_speed: G6_SPEED,
 };
+
+export const LESSONS: Record<string, LessonDef> = Object.fromEntries(
+  Object.entries(RAW_LESSONS).map(([id, lesson]) => [id, withMaskedHints(lesson)]),
+);
 
 export function getLesson(skillId: string): LessonDef | undefined {
   return LESSONS[skillId];

@@ -11,7 +11,12 @@
  * 適用され、UI が必要なコマンドだけが effect として外に出る。
  */
 
-import type { EventCommand, FlagCond, LessonEntryPoint } from "../../content/types";
+import type {
+  EventCommand,
+  FlagCond,
+  HideCond,
+  LessonEntryPoint,
+} from "../../content/types";
 import type { SaveData } from "../save";
 import { MEMBERS, memberStats } from "../battle/members";
 import { expForLevel } from "../battle/stats";
@@ -30,6 +35,7 @@ export type RunnerEffect =
   | { kind: "openLesson"; skillId: string; entry?: LessonEntryPoint; skipReadiness?: boolean }
   | { kind: "openReview" }
   | { kind: "openPreview" }
+  | { kind: "openGoals" }
   /* まなびやの先生メニュー (LP-18) */
   | {
       kind: "openTeacherMenu";
@@ -99,18 +105,24 @@ export function evalCond(
 
 /*
  * npc.hideIf 専用の評価ラッパー (LP-20)。単一条件はそのまま evalCond に委譲し、
- * 配列は AND (全条件が成立して初めて true = 番人が消える)。
+ * 配列は AND (全条件が成立して初めて true = 番人が消える)、
+ * { any: [...] } は OR (どれか1つ成立で true)。
  * hideIf 省略時は false (番人は常に表示) — evalCond(undefined,...) の
  * 「条件なし=true」という別の意味論 (dialog.if 等) と混同しないよう分ける。
  */
 export function evalHideIf(
-  hideIf: FlagCond | FlagCond[] | undefined,
+  hideIf: HideCond | undefined,
   flags: SaveData["flags"],
   mastery?: MasteryLookup,
 ): boolean {
   if (!hideIf) return false;
-  const conds = Array.isArray(hideIf) ? hideIf : [hideIf];
-  return conds.every((cond) => evalCond(cond, flags, mastery));
+  if (Array.isArray(hideIf)) {
+    return hideIf.every((cond) => evalHideIf(cond, flags, mastery));
+  }
+  if ("any" in hideIf) {
+    return hideIf.any.some((cond) => evalHideIf(cond, flags, mastery));
+  }
+  return evalCond(hideIf, flags, mastery);
 }
 
 export function startRun(
@@ -389,6 +401,12 @@ export function step(state: RunnerState, input?: RunnerInput): StepResult {
         return {
           state: { stack, save, pending: cmd },
           effect: { kind: "openPreview" },
+          done: false,
+        };
+      case "openGoals":
+        return {
+          state: { stack, save, pending: cmd },
+          effect: { kind: "openGoals" },
           done: false,
         };
       case "openTeacherMenu":

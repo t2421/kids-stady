@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { EventCommand, FlagCond, MapDef } from "../src/content/types";
+import type { EventCommand, FlagCond, HideCond, MapDef } from "../src/content/types";
 import { listMaps, hasMap, getMapDef } from "../src/content/maps";
 import { TILE_ART } from "../src/content/art/tiles";
 import { ACTOR_ART } from "../src/content/art/actors";
@@ -139,10 +139,18 @@ function isWalkableTile(map: MapDef, x: number, y: number): boolean {
   return !!spec?.walkable;
 }
 
-/* hideIf は単一条件 or 配列 (AND, LP-20) — どちらも同じ配列として扱えるように正規化する */
-function hideIfConds(npc: { hideIf?: FlagCond | FlagCond[] }): FlagCond[] {
-  if (!npc.hideIf) return [];
-  return Array.isArray(npc.hideIf) ? npc.hideIf : [npc.hideIf];
+/*
+ * hideIf は単一条件 / 配列 (AND, LP-20) / { any: [...] } (OR) の入れ子 —
+ * 参照チェック用に、構造を無視して葉の FlagCond だけ平坦に集める
+ */
+function flattenHideCond(cond: HideCond): FlagCond[] {
+  if (Array.isArray(cond)) return cond.flatMap(flattenHideCond);
+  if ("any" in cond) return cond.any.flatMap(flattenHideCond);
+  return [cond];
+}
+
+function hideIfConds(npc: { hideIf?: HideCond }): FlagCond[] {
+  return npc.hideIf ? flattenHideCond(npc.hideIf) : [];
 }
 
 /*
@@ -593,5 +601,119 @@ describe("ending command", () => {
   it("the ending checkpoint map and spawn exist", () => {
     expect(hasMap(ENDING_CHECKPOINT.mapId)).toBe(true);
     expect(getMapDef(ENDING_CHECKPOINT.mapId).spawns[ENDING_CHECKPOINT.spawn]).toBeDefined();
+  });
+});
+
+/*
+ * 番人に閉じこめられないこと。
+ *
+ * 番人NPC (hideIf) は「表示中はそのタイルを通れない」ので、ダンジョンの
+ * 入口が 行き止まりの奥にあると、番人が出ている状態でそのダンジョンから
+ * 出てきた勇者は 番人とダンジョンの間に閉じこめられる (ch3 ピラミッドで実際に発生)。
+ *
+ * 不変条件: 番人を全員「表示中」とみなして spawn から歩いたとき、
+ * 他の spawn に 1つも行けない袋小路になるなら、その袋小路の中に
+ * 「番人を消せるフラグ」を立てるイベントが必ずあること
+ * (= ダンジョンに入り直せば 必ず出られる)。
+ */
+describe("gate guards never trap the hero", () => {
+  /* 番人を消せる flag 条件をすべて集める (skill 条件は歩いて解除できないので対象外) */
+  function openFlagsOf(npc: { hideIf?: HideCond }): Set<string> {
+    return new Set(
+      hideIfConds(npc)
+        .filter((c): c is Extract<FlagCond, { flag: string }> => "flag" in c)
+        .filter((c) => c.op === "set")
+        .map((c) => c.flag),
+    );
+  }
+
+  for (const map of listMaps()) {
+    const spawnNames = Object.keys(map.spawns);
+    if (spawnNames.length < 2) continue;
+
+    for (const name of spawnNames) {
+      it(`${map.id} / spawn "${name}"`, () => {
+        const start = map.spawns[name];
+        const key = (x: number, y: number) => `${x},${y}`;
+        const region = new Set([key(start.x, start.y)]);
+        const guards = new Map<string, (typeof map.npcs)[number]>();
+        const queue: [number, number][] = [[start.x, start.y]];
+        while (queue.length > 0) {
+          const [x, y] = queue.shift()!;
+          for (const [dx, dy] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ]) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (region.has(key(nx, ny))) continue;
+            if (!inBounds(map, nx, ny) || !isWalkableTile(map, nx, ny)) continue;
+            region.add(key(nx, ny));
+            const npc = map.npcs.find((n) => n.x === nx && n.y === ny);
+            /* NPC・置き物のタイルは「立てない」が、その先へは進めない */
+            if (npc) {
+              if (npc.hideIf) guards.set(npc.id, npc);
+              continue;
+            }
+            if (map.events.some((e) => e.art && e.x === nx && e.y === ny)) continue;
+            queue.push([nx, ny]);
+          }
+        }
+
+        const reachesAnotherSpawn = spawnNames.some(
+          (other) =>
+            other !== name && region.has(key(map.spawns[other].x, map.spawns[other].y)),
+        );
+        if (reachesAnotherSpawn) return;
+
+        /* 袋小路 — 中に 番人を消せるフラグを立てるイベントがあるか */
+        const openable = new Set<string>();
+        for (const g of guards.values()) for (const f of openFlagsOf(g)) openable.add(f);
+        const settableHere = new Set<string>();
+        for (const ev of map.events) {
+          if (!region.has(key(ev.x, ev.y))) continue;
+          for (const cmd of flattenCommands(ev.commands)) {
+            if (cmd.type === "setFlag") settableHere.add(cmd.flag);
+          }
+        }
+        const escape = [...settableHere].filter((f) => openable.has(f));
+        expect(
+          escape.length,
+          `spawn "${name}" は番人 [${[...guards.keys()].join(",")}] の奥の袋小路で、` +
+            `中から番人を消す手段がない (閉じこめ)`,
+        ).toBeGreaterThan(0);
+      });
+    }
+  }
+});
+
+/*
+ * 章1 は 小1 の章。小1 で習う漢字 (80字) 以外は ルビ《》を付ける
+ * (船・海・壱・塔・博士 が ルビなしで出ていた)
+ */
+describe("chapter 1 text is readable for first graders", () => {
+  const G1_KANJI = new Set([
+    ..."一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
+  ]);
+  const SKIP_KEYS = new Set(["id", "art", "mapId", "spawn", "flag", "skillId", "itemId", "spellId", "memberId", "legend", "grid", "encounterTableId", "theme", "onceFlag", "shopId", "kind", "type"]);
+  const withoutRuby = (s: string) => s.replace(/｜?[^｜《》]*?《[^》]*》/g, "");
+
+  it("uses only grade-1 kanji unless ruby is given", () => {
+    const offenders: string[] = [];
+    const walk = (v: unknown): void => {
+      if (typeof v === "string") {
+        const hard = [...withoutRuby(v)].filter((c) => /\p{Script=Han}/u.test(c) && !G1_KANJI.has(c));
+        if (hard.length > 0) offenders.push(`${hard.join("")}: ${v}`);
+      } else if (Array.isArray(v)) {
+        v.forEach(walk);
+      } else if (v && typeof v === "object") {
+        for (const [key, x] of Object.entries(v)) if (!SKIP_KEYS.has(key)) walk(x);
+      }
+    };
+    const chapter1 = CHAPTERS.find((c) => c.id === 1)!;
+    walk(chapter1.maps);
+    expect(offenders).toEqual([]);
   });
 });

@@ -197,7 +197,7 @@ export const CH1_CAPITAL: MapDef = {
       commands: [
         {
           type: "message",
-          pages: ["とけい塔の 大きな とけいだ。いま なんじか よめるかな?"],
+          pages: ["とけい塔《とう》の 大きな とけいだ。いま なんじか よめるかな?"],
         },
         {
           type: "quiz",

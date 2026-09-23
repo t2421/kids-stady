@@ -13,13 +13,28 @@ import { normalizeMistakes } from "./mistakes";
 
 /* 設定 (音のおん/オフ + 音量)。既定はすべてオン・音量は「ふつう」。
    sound: false は volume と独立した完全ミュート (AU-01) */
+/* 戦闘で こたえる じかん: ふつう / ゆっくり (1.6倍) / なし (タイマーを出さない) */
+export type AnswerTimeMode = "normal" | "slow" | "off";
+
 export interface SaveSettings {
   sound: boolean;
   /* 0: オフ / 1: ちいさい / 2: ふつう / 3: おおきい (既定 2) */
   volume: 0 | 1 | 2 | 3;
+  /* 戦闘の制限時間 (lib/answerTime.ts)。小1・小2 を えらぶと ゆっくり になる */
+  answerTime: AnswerTimeMode;
+  /*
+   * がっこうの 学年 (1〜6)。null = きいていない/ひみつ。
+   * 「さきどり」(学年より上の単元) の判定と 既定値にだけ使い、進行は しばらない
+   */
+  schoolGrade: number | null;
 }
 
-export const DEFAULT_SETTINGS: SaveSettings = { sound: true, volume: 2 };
+export const DEFAULT_SETTINGS: SaveSettings = {
+  sound: true,
+  volume: 2,
+  answerTime: "normal",
+  schoolGrade: null,
+};
 
 /* 集計の作法は全アプリ共通 (docs/save-data.md §2) — 再エクスポートして
    アプリ内からは save.ts 経由で使えるようにする */
@@ -199,6 +214,17 @@ function normalizeSettings(raw: unknown): SaveSettings {
       volume === 0 || volume === 1 || volume === 2 || volume === 3
         ? volume
         : DEFAULT_SETTINGS.volume,
+    answerTime:
+      r.answerTime === "normal" || r.answerTime === "slow" || r.answerTime === "off"
+        ? r.answerTime
+        : DEFAULT_SETTINGS.answerTime,
+    schoolGrade:
+      typeof r.schoolGrade === "number" &&
+      Number.isInteger(r.schoolGrade) &&
+      r.schoolGrade >= 1 &&
+      r.schoolGrade <= 6
+        ? r.schoolGrade
+        : null,
   };
 }
 

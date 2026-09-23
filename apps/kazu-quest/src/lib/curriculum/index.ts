@@ -18,6 +18,7 @@ import { GRADE4_GENERATORS, GRADE4_LABELS } from "./grade4";
 import { GRADE5_GENERATORS, GRADE5_LABELS } from "./grade5";
 import { GRADE6_GENERATORS, GRADE6_LABELS } from "./grade6";
 import type { SkillStat } from "../save";
+import { maskAnswerInHints } from "./hints";
 
 export type SkillLevel = 1 | 2 | 3;
 
@@ -65,7 +66,9 @@ export function generate(skillId: string, rng?: Rng, opts?: GenerateOptions): Pr
   if (!gen) {
     throw new Error(`curriculum: unknown or unimplemented skill "${skillId}"`);
   }
-  return gen(rng ?? mulberry32((Math.random() * 2 ** 32) >>> 0), opts?.level);
+  const problem = gen(rng ?? mulberry32((Math.random() * 2 ** 32) >>> 0), opts?.level);
+  /* ヒントは「答えのすぐ手前まで」— 答えそのものは どの単元でも かくす (hints.ts) */
+  return { ...problem, hints: maskAnswerInHints(problem.hints, problem.answer, problem.text) };
 }
 
 /*

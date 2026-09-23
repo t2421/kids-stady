@@ -130,11 +130,44 @@ export function StatsBody({ data }: { data: StatsData }) {
         gap: 14,
       }}
     >
-      <Section title="あつめた 数晶" full>
+      <Section title="あつめた すうしょう" full>
         <div style={{ display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 8 }}>
           {data.orbs.map((lit, i) => (
             <Orb key={i} index={i} lit={lit} />
           ))}
+        </div>
+      </Section>
+
+      <Section title="さきどり" full>
+        <div data-testid="stats-sakidori" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ ...lineFont, fontSize: "clamp(17px, 2.4vw, 21px)", color: UI_COLORS.yellow }}>
+            ★ {data.sakidori.units.length}
+            {data.sakidori.reachedGrade > 0 && ` ・ ${data.sakidori.reachedGrade}ねんせいの ぼうけんまで とどいた`}
+          </div>
+          {data.sakidori.units.length === 0 ? (
+            <div style={{ ...font, fontSize: 15, color: UI_COLORS.textSub }}>
+              {data.sakidori.schoolGrade === null
+                ? "「★ めあて」から うえの がくねんの さんすうも まなべるよ"
+                : `${data.sakidori.schoolGrade}ねんせいより うえの さんすうを まなぶと ★が ふえるよ`}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {data.sakidori.units.map((u) => (
+                <span
+                  key={u.skillId}
+                  style={{
+                    ...font,
+                    fontSize: 15,
+                    padding: "4px 10px",
+                    borderRadius: 10,
+                    border: `2px solid ${UI_COLORS.yellow}`,
+                  }}
+                >
+                  {u.grade}ねん: {u.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </Section>
 

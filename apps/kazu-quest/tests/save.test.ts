@@ -59,16 +59,16 @@ describe("normalizeSave", () => {
   });
 
   it("normalizes settings (sound defaults to true, keeps false)", () => {
-    expect(normalizeSave({}).settings).toEqual({ sound: true, volume: 2 });
-    expect(normalizeSave({ settings: { sound: false } }).settings).toEqual({
+    expect(normalizeSave({}).settings).toMatchObject({ sound: true, volume: 2 });
+    expect(normalizeSave({ settings: { sound: false } }).settings).toMatchObject({
       sound: false,
       volume: 2,
     });
-    expect(normalizeSave({ settings: { sound: "no" } }).settings).toEqual({
+    expect(normalizeSave({ settings: { sound: "no" } }).settings).toMatchObject({
       sound: true,
       volume: 2,
     });
-    expect(normalizeSave({ settings: null }).settings).toEqual({ sound: true, volume: 2 });
+    expect(normalizeSave({ settings: null }).settings).toMatchObject({ sound: true, volume: 2 });
   });
 
   /* AU-01: settings.volume (0..3、既定2)。sound とは独立に正規化される */
@@ -87,17 +87,17 @@ describe("normalizeSave", () => {
     }
 
     /* sound: false と volume は互いに独立 (どちらかを変えても他方は既定のまま保たれる) */
-    expect(normalizeSave({ settings: { sound: false, volume: 3 } }).settings).toEqual({
+    expect(normalizeSave({ settings: { sound: false, volume: 3 } }).settings).toMatchObject({
       sound: false,
       volume: 3,
     });
-    expect(normalizeSave({ settings: { sound: true, volume: 0 } }).settings).toEqual({
+    expect(normalizeSave({ settings: { sound: true, volume: 0 } }).settings).toMatchObject({
       sound: true,
       volume: 0,
     });
 
     /* 後方互換: volume を持たない古いセーブ (旧 KQ-20 時点) は既定2で埋まる */
-    expect(normalizeSave({ settings: { sound: false } }).settings).toEqual({
+    expect(normalizeSave({ settings: { sound: false } }).settings).toMatchObject({
       sound: false,
       volume: 2,
     });

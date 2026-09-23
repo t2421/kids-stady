@@ -12,6 +12,7 @@ import {
   canCastFieldHeal,
   type Healed,
 } from "@/lib/field/recover";
+import { discardOne } from "@/lib/inventory";
 import { UI_COLORS } from "@/components/uiTheme";
 /* Phaser 非依存の音モジュールなので React から直接 import してよい (sfx.ts 冒頭参照) */
 import { playSfx } from "@/game/audio/sfx";
@@ -23,7 +24,9 @@ import { playSfx } from "@/game/audio/sfx";
  *   - アイテムは即時。呪文は算数 1 問 (EventBus "math-prompt" context "field"、時間無制限)
  *     正解で回復 + MP 消費、不正解は MP も HP も変わらない (戦闘の不発と同じ)
  *   - 出題中は onPendingChange(true) で親 (StatusPanelOverlay) が とじる を封じる
- * 純ロジックは lib/field/recover.ts。ここは表示と EventBus の往復だけ。
+ *   - もちものタブは すてる も持つ (アイテムが たまる一方にならないように)。
+ *     たいせつなもの (メダル・かけら) には出さず、1 回確認してから捨てる
+ * 純ロジックは lib/field/recover.ts と lib/inventory.ts。ここは表示と EventBus の往復だけ。
  */
 
 const TOAST_MS = 3000;
@@ -82,6 +85,8 @@ function HpBar({ value, max }: { value: number; max: number }) {
 
 export function FieldHealControls({ data, member, mode, onChanged, onPendingChange }: Props) {
   const [picker, setPicker] = useState<Picker | null>(null);
+  /* すてる の確認待ちアイテム (1 回タップしただけでは 消えない) */
+  const [discarding, setDiscarding] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const pendingRef = useRef(false);
@@ -89,6 +94,7 @@ export function FieldHealControls({ data, member, mode, onChanged, onPendingChan
   /* タブ・なかまが変わったら選択中の対象は捨てる */
   useEffect(() => {
     setPicker(null);
+    setDiscarding(null);
   }, [mode, member.memberId]);
 
   useEffect(() => {
@@ -114,6 +120,17 @@ export function FieldHealControls({ data, member, mode, onChanged, onPendingChan
     },
     [onChanged],
   );
+
+  const discardItem = (itemId: string, name: string) => {
+    setDiscarding(null);
+    const next = discardOne(getSave(), itemId);
+    if (!next) return;
+    updateSave(() => next);
+    autosave();
+    playSfx("cancel");
+    setToast(`${name}を すてた。`);
+    onChanged();
+  };
 
   const healWithItem = (itemId: string, targetId: string) => {
     setPicker(null);
@@ -254,19 +271,57 @@ export function FieldHealControls({ data, member, mode, onChanged, onPendingChan
                   </Row>
                 );
               })
-            : data.items.map((it) => (
-                <Row key={it.id} label={`${it.name} ×${it.count}`}>
-                  {it.kind === "heal" && (
-                    <UseButton
-                      testId="item-use"
-                      dataId={it.id}
-                      reason={nobodyHurt ? "みんな げんき" : ""}
-                      disabled={pending || nobodyHurt}
-                      onTap={() => pick({ kind: "item", itemId: it.id })}
-                    />
-                  )}
-                </Row>
-              ))}
+            : data.items.map((it) =>
+                discarding === it.id ? (
+                  <Row key={it.id} label={`${it.name}を すてる?`}>
+                    <button
+                      data-testid="item-discard-yes"
+                      data-id={it.id}
+                      style={{ ...actionStyle(true), background: UI_COLORS.accent, color: "#ffffff" }}
+                      onClick={() => discardItem(it.id, it.name)}
+                    >
+                      すてる
+                    </button>
+                    <button
+                      data-testid="item-discard-cancel"
+                      style={{ ...actionStyle(true), background: UI_COLORS.navy, color: "#ffffff" }}
+                      onClick={() => setDiscarding(null)}
+                    >
+                      やめる
+                    </button>
+                  </Row>
+                ) : (
+                  <Row key={it.id} label={`${it.name} ×${it.count}`}>
+                    {it.kind === "heal" && (
+                      <UseButton
+                        testId="item-use"
+                        dataId={it.id}
+                        reason={nobodyHurt ? "みんな げんき" : ""}
+                        disabled={pending || nobodyHurt}
+                        onTap={() => pick({ kind: "item", itemId: it.id })}
+                      />
+                    )}
+                    {/* たいせつなもの (メダル・かけら) は すてられない */}
+                    {!it.keepsake && (
+                      <button
+                        data-testid="item-discard"
+                        data-id={it.id}
+                        disabled={pending}
+                        aria-disabled={pending}
+                        style={{
+                          ...actionStyle(!pending),
+                          minWidth: 96,
+                          background: pending ? "rgba(255,255,255,0.08)" : UI_COLORS.navy,
+                          color: pending ? UI_COLORS.textSub : "#ffffff",
+                        }}
+                        onClick={() => setDiscarding(it.id)}
+                      >
+                        すてる
+                      </button>
+                    )}
+                  </Row>
+                ),
+              )}
         </div>
       )}
     </div>

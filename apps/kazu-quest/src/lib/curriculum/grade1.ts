@@ -13,7 +13,7 @@
  */
 
 import type { CountIcon, MistakePattern, Problem, Rng } from "./types";
-import { randInt } from "./types";
+import { randInt, shuffle } from "./types";
 import { makeChoicesTagged } from "./choices";
 
 type Level = 1 | 2 | 3;
@@ -56,29 +56,33 @@ function genCount(rng: Rng, level?: Level): Problem {
   };
 }
 
+/*
+ * かずの大小くらべ。3つの かずから いちばん おおきいのを えらぶ。
+ * 以前は「2つの かず、おおきいのは どっち?」に 問題に無い 3つめの かず
+ * (こたえ+1〜3) を まぜていた — 「どっち?」なのに 3択で、しかも その数は
+ * いつも いちばん大きいので「いちばん おおきい数を えらぶ」子が まちがいに
+ * なっていた。こたえの位置も 3ばんめには 一度も来なかった
+ */
 function genCompare(rng: Rng, level?: Level): Problem {
   const lv = level ?? 2;
   const [lo, hi] = lv === 1 ? [1, 10] : lv === 3 ? [1, 50] : [1, 20];
   const a = randInt(rng, lo, hi);
   let b = randInt(rng, lo, hi);
   while (b === a) b = randInt(rng, lo, hi);
-  const answer = Math.max(a, b);
-  const wrong = Math.min(a, b);
-  /* 2値比較なので3択目はダミーの近い数 */
-  let dummy = answer + randInt(rng, 1, 3);
-  if (dummy === wrong) dummy += 1;
-  const order = rng() < 0.5;
-  const choices: [string, string, string] = order
-    ? [String(answer), String(wrong), String(dummy)]
-    : [String(wrong), String(answer), String(dummy)];
-  /* wrong は「もう片方の数」を そのまま えらんでしまう誤り、dummy は
-   * 近い数の あてずっぽう。makeChoices を使わない手作り3択なので手でタグ付けする */
-  const choiceTags: [MistakePattern, MistakePattern, MistakePattern] = order
-    ? ["other", "echoOperand", "other"]
-    : ["echoOperand", "other", "other"];
+  let c = randInt(rng, lo, hi);
+  while (c === a || c === b) c = randInt(rng, lo, hi);
+  const answer = Math.max(a, b, c);
+  const order = shuffle(rng, [a, b, c]);
+  const choices = order.map(String) as [string, string, string];
+  /* こたえ以外は「問題の べつの かずを えらんだ」まちがい */
+  const choiceTags = order.map((n) => (n === answer ? "other" : "echoOperand")) as [
+    MistakePattern,
+    MistakePattern,
+    MistakePattern,
+  ];
   return {
     skillId: "g1_compare",
-    text: `${a} と ${b}\nおおきいのは どっち?`,
+    text: `${a} と ${b} と ${c}\nいちばん おおきいのは どれ?`,
     a,
     b,
     op: null,
@@ -88,13 +92,16 @@ function genCompare(rng: Rng, level?: Level): Problem {
     hint: null,
     explain: [
       `かずのせん で くらべてみよう`,
-      `${answer} のほうが ${wrong} より おおきいね`,
+      `いちばん うしろに あるのが いちばん おおきい`,
+      `${answer} が いちばん おおきいね`,
     ],
     hints: [
       `かずの せんを あたまに うかべて くらべてみよう`,
-      `${a} と ${b}、かずのせんで うしろに あるのは どっちかな`,
-      `${a} と ${b} を くらべると…`,
+      `${a} と ${b} と ${c}、かずのせんで いちばん うしろに あるのは どれかな`,
+      `${a} と ${b} と ${c} を ならべると…`,
     ],
+    /* 3つの かずを かずのせんに おく (a/b だけでは 3つめが 描けない) */
+    figure: { kind: "numberLine", from: 0, to: answer, marks: [a, b, c] },
   };
 }
 
@@ -171,20 +178,28 @@ function genAddCarry(rng: Rng, level?: Level): Problem {
     explain:
       tensPart > 0
         ? [
+            /* 47 + 5: 5 を 3 と 2 に わけて、47 を ちょうど 50 に する */
             `${b} を ${toTen} と ${b - toTen} に わけよう`,
-            `${a} + ${toTen} = 10`,
-            `${tensPart} + 10 + ${b - toTen} = ${answer}`,
+            `${displayA} + ${toTen} = ${tensPart + 10}`,
+            `${tensPart + 10} + ${b - toTen} = ${answer}`,
           ]
         : [
             `${b} を ${toTen} と ${b - toTen} に わけよう`,
             `${a} + ${toTen} = 10`,
             `10 + ${b - toTen} = ${answer}`,
           ],
-    hints: [
-      `${b} を 10の なかまと のこりに わけて かんがえよう`,
-      `${a} と ${toTen} を たすと 10に なるね`,
-      `10 と のこりの ${b - toTen} を たすと…`,
-    ],
+    hints:
+      tensPart > 0
+        ? [
+            `${b} を わけて ${displayA} を ちょうど ${tensPart + 10} に しよう`,
+            `${displayA} と ${toTen} を たすと ${tensPart + 10} に なるね`,
+            `${tensPart + 10} と のこりの ${b - toTen} を たすと…`,
+          ]
+        : [
+            `${b} を 10の なかまと のこりに わけて かんがえよう`,
+            `${a} と ${toTen} を たすと 10に なるね`,
+            `10 と のこりの ${b - toTen} を たすと…`,
+          ],
   };
 }
 
@@ -281,7 +296,7 @@ function genSubBorrow(rng: Rng, level?: Level): Problem {
       `${tens - b} + ${ones} = ${answer}`,
     ],
     hints: [
-      `${a} を 十の位と 一の位に わけて かんがえよう`,
+      `${a} を 十のくらいと 一のくらいに わけて かんがえよう`,
       `${tens} から ${b} を ひくと いくつかな`,
       `${tens} - ${b} = ${tens - b}。あとは ${ones} を たすと…`,
     ],
@@ -299,7 +314,7 @@ export const GRADE1_GENERATORS: Record<string, (rng: Rng, level?: Level) => Prob
 
 export const GRADE1_LABELS: Record<string, string> = {
   g1_count: "かぞえる",
-  g1_compare: "どっちが おおきい",
+  g1_compare: "いちばん おおきい かず",
   g1_add_nc: "たしざん (〜10)",
   g1_add_carry: "くりあがりの たしざん",
   g1_sub_nc: "ひきざん (〜10)",

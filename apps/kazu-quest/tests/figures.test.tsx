@@ -88,6 +88,25 @@ describe("Figure dispatcher", () => {
     expect(html.match(/data-testid="array-remainder-dot"/g)?.length).toBe(2);
   });
 
+  /* 点の間かくが直径より せまいと 点どうしが重なって 数えられない (実機で発覚) */
+  it("array: dots never overlap", () => {
+    const html = render({ kind: "array", rows: 5, cols: 8 });
+    const cx = [...html.matchAll(/data-testid="array-dot"[^>]*?cx="(\d+(?:\.\d+)?)"/g)].map((m) =>
+      Number(m[1]),
+    );
+    const cy = [...html.matchAll(/data-testid="array-dot"[^>]*?cy="(\d+(?:\.\d+)?)"/g)].map((m) =>
+      Number(m[1]),
+    );
+    const gaps = (vals: number[]) => {
+      const uniq = [...new Set(vals)].sort((a, b) => a - b);
+      return uniq.slice(1).map((v, i) => v - uniq[i]);
+    };
+    const radius = Number(/data-testid="array-dot"[^>]*?\sr="(\d+)"/.exec(html)![1]);
+    for (const gap of [...gaps(cx), ...gaps(cy)]) {
+      expect(gap, "点の間かくが 直径より せまい (重なる)").toBeGreaterThan(radius * 2);
+    }
+  });
+
   it("array: no remainder means no remainder dots", () => {
     const html = render({ kind: "array", rows: 2, cols: 5 });
     expect(html).not.toContain('data-testid="array-remainder-dot"');

@@ -68,7 +68,7 @@ describe("changeChallenge", () => {
         expect(c.answer).toBe(String(c.change));
         expect(c.choices).toContain(c.answer);
         expect(new Set(c.choices).size).toBe(3);
-        expect(c.text).toBe(`${c.paid}Gで はらった。おつりは いくら?`);
+        expect(c.text).toBe(`${c.paid - c.change}Gの しなものを ${c.paid}Gで はらった。おつりは いくら?`);
       }
     }
   });

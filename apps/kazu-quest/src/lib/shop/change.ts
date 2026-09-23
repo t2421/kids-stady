@@ -1,6 +1,6 @@
 /*
  * お店の おつりチャレンジ (KQ-33)。
- * 買い物のあと「<paid>Gで はらった。おつりは いくら?」を任意で出し、
+ * 買い物のあと「<price>Gの しなものを <paid>Gで はらった。おつりは いくら?」を任意で出し、
  * 正解なら代金の 10% を返金する。純関数 — React / Phaser に依存しない。
  */
 
@@ -76,7 +76,8 @@ export function changeChallenge(
   return {
     paid,
     change,
-    text: `${paid}Gで はらった。おつりは いくら?`,
+    /* ねだんも 問題文に書く (2つ前の画面の ねだんを おぼえていないと とけなかった) */
+    text: `${price}Gの しなものを ${paid}Gで はらった。おつりは いくら?`,
     answer: String(change),
     choices,
   };

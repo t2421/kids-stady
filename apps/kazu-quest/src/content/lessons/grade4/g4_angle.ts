@@ -12,18 +12,18 @@ import type { Problem } from "../../../lib/curriculum/types";
 
 const workedProblem: Problem = {
   skillId: "g4_angle",
-  text: "三角形の 角の和は 180°。30° と 90° の ほかの 角は なん度?",
-  a: 30,
-  b: 90,
+  text: "一ちょくせんの 角は 180°。130° の となりの 角は なん度?",
+  a: 130,
+  b: 180,
   op: null,
-  answer: "60",
-  choices: ["120", "240", "60"],
+  answer: "50",
+  choices: ["230", "50", "40"],
   hint: null,
-  explain: ["三角形の 角の和は 180°", "180 - 30 - 90 = 60°"],
+  explain: ["一ちょくせん = 180°", "180 - 130 = 50°"],
   hints: [
-    "じゅんばんに かんがえてみよう",
-    "三角形の 角の和は 180°",
-    "三角形の 角の和は 180° 180 - 30 - 90 = 60°",
+    "まっすぐな せんは なん度だったかな",
+    "一ちょくせん = 180°",
+    "180 - 130 = ?°",
   ],
 };
 
@@ -78,8 +78,8 @@ export const G4_ANGLE: LessonDef = {
       figure: { kind: "protractor", angle: 90, showReading: true },
     },
     {
-      text: "まっすぐな せんは 180°。さんかくの なかの かくどを たすと 180°に なるよ。",
-      figure: { kind: "protractor", angle: 60, showReading: true },
+      text: "まっすぐな せんは 180°。かどが 90° の ときは 「ちょっかく」と いうよ。",
+      figure: { kind: "protractor", angle: 180, showReading: true },
     },
     { text: "いちまわりは 360°。のこりの かくどは ひいて もとめるよ。" },
   ],
@@ -87,14 +87,14 @@ export const G4_ANGLE: LessonDef = {
     problem: workedProblem,
     steps: [
       {
-        text: "さんかくの かどは ぜんぶで 180°ぶん。ひとつは 90°だよ。",
-        figure: { kind: "protractor", angle: 90, showReading: true },
+        text: "まっすぐな せんは 180°。そのうち 130° が わかっているよ。",
+        figure: { kind: "protractor", angle: 130, showReading: true },
       },
       {
-        text: "180 - 30 - 90 = 60。のこりの かどは 60°。",
-        figure: { kind: "protractor", angle: 60, showReading: true },
+        text: "180 - 130 = 50。となりの かどは 50°。",
+        figure: { kind: "protractor", angle: 50, showReading: true },
       },
-      { text: "こたえは 60°だよ。" },
+      { text: "こたえは 50°だよ。" },
     ],
   },
   faded: [
@@ -102,7 +102,7 @@ export const G4_ANGLE: LessonDef = {
     { problem: fadedProblem2, blanks: 1 },
   ],
   levels: [
-    { level: 1, label: "ちょくせんと さんかくの かくど" },
+    { level: 1, label: "ちょくせんと ちょっかくの かくど" },
     { level: 2, label: "いちまわりも くわえて" },
     { level: 3, label: "5°きざみの こまかい かくど" },
   ],

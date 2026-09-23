@@ -14,8 +14,26 @@ const LANDSCAPE = { width: 1024, height: 768 };
 const guard = (page: import("@playwright/test").Page) =>
   page.locator('[data-testid="orientation-guard"]');
 
+/*
+ * デスクトップの Chromium は ビューポートを縦にしても screen.orientation は
+ * 横のまま (モニタの向き)。本物の iPad は 本体を回すと screen.orientation も
+ * 回るので、それに合わせて「ウィンドウの縦横 = 本体の向き」を再現する。
+ * splitView: true のときは 本体は横のまま (= Split View / Slide Over)
+ */
+async function emulateDevice(page: import("@playwright/test").Page, opts: { splitView?: boolean } = {}) {
+  await page.addInitScript((splitView: boolean) => {
+    const type = () =>
+      splitView || window.innerWidth >= window.innerHeight ? "landscape-primary" : "portrait-primary";
+    Object.defineProperty(window.screen, "orientation", {
+      configurable: true,
+      get: () => ({ type: type(), angle: 0, addEventListener() {}, removeEventListener() {} }),
+    });
+  }, opts.splitView ?? false);
+}
+
 test.describe("orientation guard", () => {
   test("portrait viewport (768x1024) shows the guard", async ({ page }) => {
+    await emulateDevice(page);
     await page.setViewportSize(PORTRAIT);
     await page.goto("/");
     await expect(guard(page)).toBeVisible({ timeout: 20_000 });
@@ -33,6 +51,7 @@ test.describe("orientation guard", () => {
   });
 
   test("guard follows viewport rotation without reload", async ({ page }) => {
+    await emulateDevice(page);
     await page.setViewportSize(PORTRAIT);
     await page.goto("/");
     await expect(guard(page)).toBeVisible({ timeout: 20_000 });
@@ -42,5 +61,14 @@ test.describe("orientation guard", () => {
 
     await page.setViewportSize(PORTRAIT);
     await expect(guard(page)).toBeVisible();
+  });
+
+  /* 本体は横なのに ウィンドウが縦長 (Split View) なら、回せとは言わず 広げてと言う */
+  test("split view on a landscape iPad asks to widen the window", async ({ page }) => {
+    await emulateDevice(page, { splitView: true });
+    await page.setViewportSize({ width: 540, height: 810 });
+    await page.goto("/");
+    await expect(guard(page)).toBeVisible({ timeout: 20_000 });
+    await expect(guard(page)).toContainText("がめんを ひろげてね");
   });
 });

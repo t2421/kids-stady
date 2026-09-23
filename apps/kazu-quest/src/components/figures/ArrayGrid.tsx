@@ -14,8 +14,13 @@ export interface ArrayGridProps {
 }
 
 const DOT_R = 9;
-const TIGHT_GAP = 10;
-const GROUP_GAP = 30;
+/*
+ * TIGHT_GAP / GROUP_GAP は「点の中心から中心まで」の間かくなので、
+ * 直径 (DOT_R * 2) より必ず大きくする — 小さいと点どうしが重なって
+ * 数えられない図になる。DOT_R から導いて 関係が崩れないようにする
+ */
+const TIGHT_GAP = DOT_R * 2 + 6;
+const GROUP_GAP = DOT_R * 2 + 20;
 const PAD = 16;
 
 export function ArrayGrid({ rows, cols, groupBy = "row", remainder }: ArrayGridProps) {

@@ -121,9 +121,21 @@ export function makeChoicesTagged(
   } else {
     push(answer + 1, "offByOne");
     push(answer - 1, "offByOne");
+    /*
+     * くり上がり・くり下がりの わすれは 向きが 逆になる:
+     *   たし算で くり上がりを わすれる → 十のくらいが 1 たりない (こたえ − 10)  例 38+25 → 53
+     *   ひき算で くり下がりを わすれる → 十のくらいを へらさない (こたえ + 10) 例 42−17 → 35
+     * 逆向きの ±10 も ありがちな まちがいなので 候補には残すが、名前は "other"
+     */
+    if (kind === "add") {
+      push(answer - 10, "forgotCarry");
+      push(answer + 10, "other");
+    }
+    if (kind === "sub") {
+      push(answer + 10, "forgotBorrow");
+      push(answer - 10, "other");
+    }
     if (kind === "add" || kind === "sub") {
-      push(answer + 10, "forgotCarry");
-      push(answer - 10, "forgotBorrow");
       for (const o of operands) push(o, "echoOperand"); /* 式の数をそのまま答えてしまう */
     }
     if (kind === "time") {
@@ -166,6 +178,9 @@ export function makeChoicesOf(
   const taken = new Set([choiceValue(answer)]);
   const push = (s: string) => {
     if (s.length === 0) return;
+    /* 「0/2」「5/1」のような 分数は 教科書に出てこない形なので 選択肢にしない */
+    const f = /^(\d+)\/(\d+)$/.exec(s);
+    if (f && (Number(f[1]) === 0 || Number(f[2]) === 1)) return;
     const v = choiceValue(s);
     if (!Number.isFinite(v) || v < 0 || taken.has(v)) return;
     taken.add(v);

@@ -105,6 +105,24 @@ const MenuButton = dynamic(
   { ssr: false },
 );
 
+/* めあて (lib/goals.ts): 左上の常設ボタン + パネル、さきどり せいこう の お祝い */
+const GoalsButton = dynamic(
+  () => import("@/components/GoalsButton").then((m) => m.GoalsButton),
+  { ssr: false },
+);
+const GoalsPanel = dynamic(
+  () => import("@/components/GoalsPanel").then((m) => m.GoalsPanel),
+  { ssr: false },
+);
+const FirstRunTips = dynamic(
+  () => import("@/components/FirstRunTips").then((m) => m.FirstRunTips),
+  { ssr: false },
+);
+const SakidoriCelebration = dynamic(
+  () => import("@/components/SakidoriCelebration").then((m) => m.SakidoriCelebration),
+  { ssr: false },
+);
+
 /* タイトルメニュー (KQ-22): つづきから / はじめから / せいせき。EventBus 共有のため client のみ */
 const TitleMenu = dynamic(
   () => import("@/components/TitleMenu").then((m) => m.TitleMenu),
@@ -143,6 +161,10 @@ export default function Home() {
       <MasteryMap />
       <MistakeNoteOverlay />
       <MenuButton />
+      <GoalsButton />
+      <FirstRunTips />
+      <GoalsPanel />
+      <SakidoriCelebration />
       <TitleMenu />
       <ProfileGate />
       <OrientationGuard />

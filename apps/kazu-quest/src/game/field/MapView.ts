@@ -6,7 +6,7 @@
 
 import type { Scene } from "phaser";
 import type Phaser from "phaser";
-import type { FlagCond, MapDef, TileSpec } from "../../content/types";
+import type { HideCond, MapDef, TileSpec } from "../../content/types";
 import type { SaveData } from "../../lib/save";
 import { TILE_SIZE, isNegariaStagedArt, negariaStageArtKey } from "../../content/art/tiles";
 import { TILE_ANIMATIONS } from "../../content/art/tileAnims";
@@ -46,7 +46,7 @@ function currentNegariaStage(): 0 | 1 | 2 | 3 {
  * 「表示中のものだけ」判定するので、初回 build() 前 (何も表示されていない) や
  * 既に消えた NPC を数え直さない — gateOpen は「今回の呼び出しで新しく消えた数」だけを見る */
 export function npcsToHide(
-  npcs: readonly { id: string; hideIf?: FlagCond | FlagCond[] }[],
+  npcs: readonly { id: string; hideIf?: HideCond }[],
   visibleIds: ReadonlySet<string>,
   flags: SaveData["flags"],
   mastery: MasteryLookup,

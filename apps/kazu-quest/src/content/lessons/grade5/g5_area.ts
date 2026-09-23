@@ -12,72 +12,72 @@ import { defaultPrerequisites } from "../prereqs";
 /* generate("g5_area", mulberry32(1000), { level: 2 }) */
 const WORKED_PROBLEM: Problem = {
   skillId: "g5_area",
-  text: "そこへん 12cm 高さ 11cm の 平行四辺形の 面せきは なんcm²?",
+  text: "ていへん 12cm 高さ 11cm の 平行四辺形の 面せきは なんcm²?",
   a: 12,
   b: 11,
   op: "×",
   answer: "132",
   choices: ["66", "132", "23"],
   hint: null,
-  explain: ["平行四辺形の 面せき = そこへん × 高さ", "12 × 11 = 132cm²"],
+  explain: ["平行四辺形の 面せき = ていへん × 高さ", "12 × 11 = 132cm²"],
   hints: [
     "じゅんばんに かんがえてみよう",
-    "平行四辺形の 面せき = そこへん × 高さ",
-    "平行四辺形の 面せき = そこへん × 高さ 12 × 11 = 132cm²",
+    "平行四辺形の 面せき = ていへん × 高さ",
+    "平行四辺形の 面せき = ていへん × 高さ 12 × 11 = 132cm²",
   ],
 };
 
 /* generate("g5_area", mulberry32(2000), { level: 1 }) */
 const FADED_1: Problem = {
   skillId: "g5_area",
-  text: "そこへん 4cm 高さ 6cm の 平行四辺形の 面せきは なんcm²?",
+  text: "ていへん 4cm 高さ 6cm の 平行四辺形の 面せきは なんcm²?",
   a: 4,
   b: 6,
   op: "×",
   answer: "24",
   choices: ["24", "20", "10"],
   hint: null,
-  explain: ["平行四辺形の 面せき = そこへん × 高さ", "4 × 6 = 24cm²"],
+  explain: ["平行四辺形の 面せき = ていへん × 高さ", "4 × 6 = 24cm²"],
   hints: [
     "じゅんばんに かんがえてみよう",
-    "平行四辺形の 面せき = そこへん × 高さ",
-    "平行四辺形の 面せき = そこへん × 高さ 4 × 6 = 24cm²",
+    "平行四辺形の 面せき = ていへん × 高さ",
+    "平行四辺形の 面せき = ていへん × 高さ 4 × 6 = 24cm²",
   ],
 };
 
 /* generate("g5_area", mulberry32(3000), { level: 1 }) */
 const FADED_2: Problem = {
   skillId: "g5_area",
-  text: "そこへん 5cm 高さ 4cm の 平行四辺形の 面せきは なんcm²?",
+  text: "ていへん 5cm 高さ 4cm の 平行四辺形の 面せきは なんcm²?",
   a: 5,
   b: 4,
   op: "×",
   answer: "20",
   choices: ["18", "20", "9"],
   hint: null,
-  explain: ["平行四辺形の 面せき = そこへん × 高さ", "5 × 4 = 20cm²"],
+  explain: ["平行四辺形の 面せき = ていへん × 高さ", "5 × 4 = 20cm²"],
   hints: [
     "じゅんばんに かんがえてみよう",
-    "平行四辺形の 面せき = そこへん × 高さ",
-    "平行四辺形の 面せき = そこへん × 高さ 5 × 4 = 20cm²",
+    "平行四辺形の 面せき = ていへん × 高さ",
+    "平行四辺形の 面せき = ていへん × 高さ 5 × 4 = 20cm²",
   ],
 };
 
 /* generate("g5_area", mulberry32(4000), { level: 1 }) */
 const FADED_3: Problem = {
   skillId: "g5_area",
-  text: "そこへん 12cm 高さ 8cm の 三角形の 面せきは なんcm²?",
+  text: "ていへん 12cm 高さ 8cm の 三角形の 面せきは なんcm²?",
   a: 12,
   b: 8,
   op: "×",
   answer: "48",
   choices: ["96", "60", "48"],
   hint: null,
-  explain: ["三角形の 面せき = そこへん × 高さ ÷ 2", "12 × 8 = 96", "96 ÷ 2 = 48cm²"],
+  explain: ["三角形の 面せき = ていへん × 高さ ÷ 2", "12 × 8 = 96", "96 ÷ 2 = 48cm²"],
   hints: [
     "じゅんばんに かんがえてみよう",
-    "三角形の 面せき = そこへん × 高さ ÷ 2",
-    "三角形の 面せき = そこへん × 高さ ÷ 2 12 × 8 = 96 96 ÷ 2 = 48cm²",
+    "三角形の 面せき = ていへん × 高さ ÷ 2",
+    "三角形の 面せき = ていへん × 高さ ÷ 2 12 × 8 = 96 96 ÷ 2 = 48cm²",
   ],
 };
 
@@ -109,10 +109,10 @@ export const G5_AREA: LessonDef = {
     problem: WORKED_PROBLEM,
     steps: [
       {
-        text: "そこへんと たかさを たしかめよう。",
+        text: "ていへんと たかさを たしかめよう。",
         figure: { kind: "areaGrid", w: 12, h: 11, unit: "cm", shape: "parallelogram" },
       },
-      { text: "そこへん12 × たかさ11を けいさんするよ。" },
+      { text: "ていへん12 × たかさ11を けいさんするよ。" },
       { text: "こたえは 132cm² だよ。" },
     ],
   },

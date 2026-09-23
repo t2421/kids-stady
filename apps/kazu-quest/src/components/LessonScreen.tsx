@@ -15,6 +15,9 @@ import { LessonWorkedExample } from "@/components/LessonWorkedExample";
 import { LessonFaded } from "@/components/LessonFaded";
 import { LessonPractice } from "@/components/LessonPractice";
 import { LessonTest } from "@/components/LessonTest";
+import { applySakidoriReward } from "@/lib/sakidori";
+import { learnSpellsForSkill } from "@/lib/learnSpell";
+import { getSpell } from "@/content/spells";
 
 /*
  * まなびや: レッスン画面 (LP-08 → LP-09)。EventBus "open-lesson" {skillId, entry}
@@ -160,9 +163,23 @@ export function LessonScreen() {
     /* applyTestResultExp: can に初めて到達したときだけ「テスト合格」ぶんの
      * EXPを渡す (LP-21)。すでに can (再受験など) なら渡さない */
     updateSave((save) => applyTestResultExp(save, current.skillId, true));
+    /* どこで まなんでも (まなびや / ★ めあて) 単元の呪文を おぼえる */
+    const spells = learnSpellsForSkill(getSave(), current.skillId);
+    if (spells.spellIds.length > 0) updateSave(() => spells.save);
+    /* がっこうの学年より上の単元なら「さきどり せいこう!」(1単元 1回。lib/sakidori.ts) */
+    const sakidori = applySakidoriReward(getSave(), current.skillId);
+    if (sakidori) updateSave(() => sakidori.save);
     autosave();
     setState(null);
     playSfx("testPass");
+    if (sakidori) {
+      /* testPass を聞かせてから お祝いを出す */
+      const reward = {
+        ...sakidori.reward,
+        spellNames: spells.spellIds.map((id) => getSpell(id)?.name ?? id),
+      };
+      setTimeout(() => EventBus.emit("sakidori-celebrate", reward), 900);
+    }
     /* AU-05: testPass (約1秒) を聞かせてから overlay を外し base の曲へ戻す */
     setTimeout(() => popBgm(), 1000);
     const result: LessonFinishedPayload = {

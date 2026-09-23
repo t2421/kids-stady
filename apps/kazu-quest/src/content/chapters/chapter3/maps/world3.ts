@@ -101,8 +101,8 @@ export const CH3_WORLD: MapDef = {
         {
           pages: [
             "ここは ワケーラ さばく。みずが ある ところにしか まちは ないんだ。",
-            "みなみの ピラミッドには 盗賊王アマリダの アジトが あるらしい…",
-            "ひがしの 宿場で ひとやすみして いくといいよ。",
+            "ひがしの ピラミッドには 盗賊王アマリダの アジトが あるらしい…",
+            "みなみの 宿場で ひとやすみして いくといいよ。",
           ],
         },
       ],
@@ -113,18 +113,37 @@ export const CH3_WORLD: MapDef = {
       y: 6,
       art: "villager",
       movement: "static",
-      /* LP-20: 章3の中核3単元 (わり算・あまりのあるわり算・分数) が すべて「できる」で開く */
-      hideIf: [
-        { skill: "g3_div", state: "can" },
-        { skill: "g3_div_remainder", state: "can" },
-        { skill: "g3_fraction", state: "can" },
-      ],
+      /*
+       * LP-20: 章3の中核3単元 (わり算・あまりのあるわり算・分数) が すべて「できる」で開く。
+       * ピラミッド前は 岩にかこまれた 行き止まりなので、一度 中に入った勇者も通す
+       * (通さないと "from-pyramid" で出てきた勇者が 番人と ピラミッドの間に 閉じこめられる)。
+       */
+      hideIf: {
+        any: [
+          [
+            { skill: "g3_div", state: "can" },
+            { skill: "g3_div_remainder", state: "can" },
+            { skill: "g3_fraction", state: "can" },
+          ],
+          { flag: "c3.enteredPyramid", op: "set" },
+        ],
+      },
       dialog: [
         {
           pages: [
             "この さきは わけまえの ピラミッド。",
             "とびらは 「わけまえ」= わり算・あまり・分数、3つとも「できる」に ならないと ひらかない。",
             "ワケーラの まなびやで おぼえてから いくんだな。",
+          ],
+          /* その場で まなべる (めあて パネル → 前提チェックつきの レッスン)。
+             「まなびやへ いけ」と言われても 子どもは 迷うので、物語の とびらから 直接 つなぐ */
+          then: [
+            {
+              type: "choice",
+              prompt: "とびらを ひらく さんすうを いま まなぶ?",
+              yes: [{ type: "openGoals" }],
+              no: [{ type: "message", pages: ["いつでも 「★ めあて」から まなべるぞ。"] }],
+            },
           ],
         },
       ],
@@ -157,7 +176,11 @@ export const CH3_WORLD: MapDef = {
       x: 20,
       y: 5,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch3-pyramid-1", spawn: "entrance" }],
+      /* setFlag は transfer より前に置く (transfer は残りのコマンドを打ち切る) */
+      commands: [
+        { type: "setFlag", flag: "c3.enteredPyramid" },
+        { type: "transfer", mapId: "ch3-pyramid-1", spawn: "entrance" },
+      ],
     },
   ],
   spawns: {

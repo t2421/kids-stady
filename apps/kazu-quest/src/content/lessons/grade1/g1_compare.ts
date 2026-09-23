@@ -1,5 +1,5 @@
 /*
- * g1_compare (どっちが おおきい) のレッスン (LP-12)。
+ * g1_compare (いちばん おおきい かず) のレッスン (LP-12)。
  * workedExample/faded の Problem は generate("g1_compare", mulberry32(seed), { level: 2 })
  * の出力をそのまま貼っている (手書きしない)。
  */
@@ -11,7 +11,7 @@ import { mulberry32 } from "../../../lib/curriculum/types";
 
 export const G1_COMPARE: LessonDef = {
   skillId: "g1_compare",
-  title: "どっちが おおきい",
+  title: "いちばん おおきい かず",
   prerequisites: defaultPrerequisites("g1_compare"),
   story: {
     pages: [
@@ -33,11 +33,12 @@ export const G1_COMPARE: LessonDef = {
     problem: generate("g1_compare", mulberry32(2), { level: 2 }),
     steps: [
       {
-        text: "15と7を かずのせんに おいてみよう",
-        figure: { kind: "numberLine", from: 0, to: 20, marks: [7, 15] },
+        text: "15と7と6を かずのせんに おいてみよう",
+        figure: { kind: "numberLine", from: 0, to: 20, marks: [6, 7, 15] },
       },
       {
-        text: "うしろに ある 15のほうが おおきい これが こたえだよ",
+        text: "いちばん うしろに ある 15が いちばん おおきい これが こたえだよ",
+        figure: { kind: "numberLine", from: 0, to: 20, marks: [6, 7, 15], highlight: [7, 15] },
       },
     ],
   },
@@ -57,7 +58,7 @@ export const G1_COMPARE: LessonDef = {
   mistakes: [
     {
       pattern: "echoOperand",
-      feedback: "ちいさい ほうを えらんでしまったかな。もういちど みてみよう",
+      feedback: "いちばん おおきい かずかな? かずのせんで いちばん うしろに あるのを さがそう",
     },
     {
       pattern: "offByOne",
@@ -65,7 +66,7 @@ export const G1_COMPARE: LessonDef = {
     },
     {
       pattern: "other",
-      feedback: "2つの かずを もういちど よく みくらべてみよう",
+      feedback: "3つの かずを もういちど よく みくらべてみよう",
     },
   ],
 };

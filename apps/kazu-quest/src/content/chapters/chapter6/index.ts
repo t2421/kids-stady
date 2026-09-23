@@ -80,6 +80,7 @@ export const CHAPTER6: ChapterDef = {
     "learned.kakudaiSlash": "カクダイスラッシュ習得 (テスト合格)",
     "learned.baainoKazu": "バアイノカズ習得 (テスト合格)",
     "learned.fukkatsuNoShiki": "フッカツノシキ習得 (テスト合格)",
+    "c6.enteredTrial": "ピタゴラの試練に 一度 入った (番人が 道をあける — 出口で閉じこめない)",
   },
   clearFlag: "c6.clear",
 };

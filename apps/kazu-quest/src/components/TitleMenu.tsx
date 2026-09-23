@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EventBus } from "@/game/EventBus";
-import { getProfileId, startSession } from "@/game/session";
+import { autosave, getProfileId, startSession, updateSave } from "@/game/session";
+import { defaultAnswerTimeFor } from "@/lib/answerTime";
 import { isTitleActive } from "@/game/titleState";
 import { defaultSave, hasSave, persistSave } from "@/lib/save";
 import { actionButton, dqWindow, UI_COLORS } from "@/components/uiTheme";
@@ -15,7 +16,12 @@ import { actionButton, dqWindow, UI_COLORS } from "@/components/uiTheme";
  * せいせき は StatsScreen ("show-stats") に任せる。キー操作は補助 (Enter = 既定の選択)。
  */
 
-type Step = "menu" | "confirm";
+/*
+ * grade: はじめから のとき「いま なんねんせい?」を1回だけ きく (ひみつ も えらべる)。
+ * 学年は さきどり (学年より上の単元 — lib/goals.ts) の判定と、こたえる じかん の
+ * おすすめにだけ使い、進めるところは しばらない
+ */
+type Step = "menu" | "confirm" | "grade";
 
 const menuButton = (primary: boolean): React.CSSProperties => ({
   ...actionButton(primary ? UI_COLORS.navy : "rgba(255,255,255,0.08)"),
@@ -74,8 +80,8 @@ export function TitleMenu() {
       setStep("confirm");
       return;
     }
-    start();
-  }, [start]);
+    setStep("grade");
+  }, []);
 
   const onConfirmYes = useCallback(() => {
     const id = stateRef.current.profileId;
@@ -84,8 +90,21 @@ export function TitleMenu() {
       /* セッションの save も書き出した既定値に差し替える */
       startSession(id);
     }
-    start();
-  }, [start]);
+    setStep("grade");
+  }, []);
+
+  /* 学年を きいてから 冒険へ。null = ひみつ */
+  const onPickGrade = useCallback(
+    (grade: number | null) => {
+      updateSave((s) => ({
+        ...s,
+        settings: { ...s.settings, schoolGrade: grade, answerTime: defaultAnswerTimeFor(grade) },
+      }));
+      autosave();
+      start();
+    },
+    [start],
+  );
 
   const onConfirmNo = useCallback(() => setStep("menu"), []);
 
@@ -101,6 +120,7 @@ export function TitleMenu() {
         if (key === "Escape") onConfirmNo();
         return;
       }
+      if (s.step === "grade") return;
       if (key === "Enter" || key === " ") {
         e.preventDefault();
         if (s.canContinue) start();
@@ -134,7 +154,13 @@ export function TitleMenu() {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={step === "confirm" ? "はじめから の かくにん" : "タイトルメニュー"}
+        aria-label={
+          step === "confirm"
+            ? "はじめから の かくにん"
+            : step === "grade"
+              ? "いま なんねんせい?"
+              : "タイトルメニュー"
+        }
         onClick={swallow}
         onPointerDown={swallow}
         style={dqWindow({
@@ -166,6 +192,44 @@ export function TitleMenu() {
               onClick={() => EventBus.emit("show-stats")}
             >
               せいせき
+            </button>
+          </>
+        ) : step === "grade" ? (
+          <>
+            <div
+              style={{
+                fontSize: "clamp(18px, 2.4vw, 22px)",
+                fontWeight: 700,
+                lineHeight: 1.5,
+                textAlign: "center",
+                color: "#ffffff",
+              }}
+            >
+              いま なんねんせい?
+              <br />
+              <span style={{ fontSize: 16, color: UI_COLORS.textSub }}>
+                うえの がくねんの さんすうも まなべるよ
+              </span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {[1, 2, 3, 4, 5, 6].map((g) => (
+                <button
+                  key={g}
+                  data-testid="title-grade"
+                  data-grade={String(g)}
+                  style={{ ...menuButton(false), minHeight: 64 }}
+                  onClick={() => onPickGrade(g)}
+                >
+                  {g}ねん
+                </button>
+              ))}
+            </div>
+            <button
+              data-testid="title-grade-skip"
+              style={menuButton(false)}
+              onClick={() => onPickGrade(null)}
+            >
+              ひみつ
             </button>
           </>
         ) : (

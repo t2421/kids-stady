@@ -12,6 +12,7 @@ import { MathChoices } from "@/components/MathChoices";
 import { Keypad } from "@/components/Keypad";
 import { UI_COLORS } from "@/components/uiTheme";
 import { setCurrentProblem } from "@/components/currentProblem";
+import { ProblemFigure } from "@/components/ProblemFigure";
 
 /*
  * テスト (LP-09): 10問・Lv2とLv3を半々 (testLevelForIndex)・ヒントなし。
@@ -90,6 +91,7 @@ export function LessonTest({
       >
         {problem.text}
       </p>
+      <ProblemFigure problem={problem} />
       {inputMode === "keypad" ? (
         <Keypad
           key={index}

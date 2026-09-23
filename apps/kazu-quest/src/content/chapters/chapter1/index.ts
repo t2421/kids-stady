@@ -73,6 +73,7 @@ export const CHAPTER1: ChapterDef = {
     "learned.hikidaman": "ヒキダマン習得 (テスト合格)",
     "learned.tashirian": "タシリアン習得 (テスト合格)",
     "learned.kurabeShield": "くらべシールド習得 (テスト合格)",
+    "c1.enteredCave": "かぞえの どうくつに 一度 入った (橋の番人が 道をあける — 出口で閉じこめない)",
   },
   clearFlag: "c1.clear",
 };

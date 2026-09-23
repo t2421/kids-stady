@@ -62,11 +62,11 @@ export const CH1_WORLD: MapDef = {
       dialog: [
         {
           if: { flag: "c1.clear", op: "set" },
-          pages: ["やあ ゆうしゃ! おうさまの めいれいで 船を よういしたぜ。"],
+          pages: ["やあ ゆうしゃ! おうさまの めいれいで 船《ふね》を よういしたぜ。"],
           then: [
             {
               type: "choice",
-              prompt: "うみかぜの しまへ 船を だす?",
+              prompt: "うみかぜの しまへ 船《ふね》を だす?",
               yes: [
                 { type: "message", pages: ["それじゃ しゅっぱーつ!"] },
                 { type: "transfer", mapId: "ch2-world", spawn: "from-ship" },
@@ -77,8 +77,8 @@ export const CH1_WORLD: MapDef = {
         },
         {
           pages: [
-            "おれは 船のりさ。この 海の むこうには べつの しまが あるんだ。",
-            "「すうしょう・壱」が もどったら 船を だせるんだけどなあ…",
+            "おれは 船《ふね》のりさ。この 海《うみ》の むこうには べつの しまが あるんだ。",
+            "「すうしょう・壱《いち》」が もどったら 船《ふね》を だせるんだけどなあ…",
           ],
         },
       ],
@@ -89,18 +89,37 @@ export const CH1_WORLD: MapDef = {
       y: 12,
       art: "villager",
       movement: "static",
-      /* LP-20: 章1の中核3単元 (かぞえる・くりあがり・くりさがり) が すべて「できる」で開く */
-      hideIf: [
-        { skill: "g1_count", state: "can" },
-        { skill: "g1_add_carry", state: "can" },
-        { skill: "g1_sub_borrow", state: "can" },
-      ],
+      /*
+       * LP-20: 章1の中核3単元 (かぞえる・くりあがり・くりさがり) が すべて「できる」で開く。
+       * 橋の東は どうくつしか 出口が ないので、一度 どうくつに 入った勇者も通す
+       * (通さないと 出てきた瞬間に 橋の手前で 閉じこめてしまう)。
+       */
+      hideIf: {
+        any: [
+          [
+            { skill: "g1_count", state: "can" },
+            { skill: "g1_add_carry", state: "can" },
+            { skill: "g1_sub_borrow", state: "can" },
+          ],
+          { flag: "c1.enteredCave", op: "set" },
+        ],
+      },
       dialog: [
         {
           pages: [
             "はしの さきは かぞえの どうくつ。",
             "かぞえる・くりあがり・くりさがり。3つとも「できる」に ならないと とおれないぞ!",
             "モリカゲむらの まなびやで テストに ごうかく してきな。",
+          ],
+          /* その場で まなべる (めあて パネル → 前提チェックつきの レッスン)。
+             「まなびやへ いけ」と言われても 子どもは 迷うので、物語の とびらから 直接 つなぐ */
+          then: [
+            {
+              type: "choice",
+              prompt: "とびらを ひらく さんすうを いま まなぶ?",
+              yes: [{ type: "openGoals" }],
+              no: [{ type: "message", pages: ["いつでも 「★ めあて」から まなべるぞ。"] }],
+            },
           ],
         },
       ],
@@ -147,7 +166,11 @@ export const CH1_WORLD: MapDef = {
       x: 24,
       y: 12,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch1-cave", spawn: "west" }],
+      /* setFlag は transfer より前に置く (transfer は残りのコマンドを打ち切る) */
+      commands: [
+        { type: "setFlag", flag: "c1.enteredCave" },
+        { type: "transfer", mapId: "ch1-cave", spawn: "west" },
+      ],
     },
   ],
   spawns: {

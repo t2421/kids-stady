@@ -11,18 +11,29 @@
 import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
-import { dec, frac, gcd, lcm } from "./numbers";
+import { dec, frac, gcd, lcm, randCoprimeNumerator } from "./numbers";
 import { genericHints } from "./hints";
 
 type Level = 1 | 2 | 3;
 
 /* 小数の かけ算わり算 (0.1きざみ × 整数) */
+/*
+ * 「0.1 が なんこ」で数える値 (tenths) を引く。10の倍数だと 3.0 → "3" と
+ * 整数になり、小数の単元なのに「3 × 2 = ?」のような 小数が1つも出ない問題に
+ * なってしまう (1割ほど出ていた) ので、10の倍数は引きなおす
+ */
+function randNotMultipleOf10(rng: Rng, lo: number, hi: number): number {
+  let n = randInt(rng, lo, hi);
+  while (n % 10 === 0) n = randInt(rng, lo, hi);
+  return n;
+}
+
 function genDecimalMulDiv(rng: Rng, level?: Level): Problem {
   const lv = level ?? 2;
   const [tLo, tHi, bLo, bHi] =
     lv === 1 ? [11, 30, 2, 4] : lv === 3 ? [100, 999, 2, 12] : [12, 95, 2, 9];
   if (rng() < 0.5) {
-    const tenths = randInt(rng, tLo, tHi);
+    const tenths = randNotMultipleOf10(rng, tLo, tHi);
     const b = randInt(rng, bLo, bHi);
     const answer = dec((tenths * b) / 10, 2);
     return {
@@ -50,8 +61,16 @@ function genDecimalMulDiv(rng: Rng, level?: Level): Problem {
       ]),
     };
   }
-  const quotientTenths = randInt(rng, tLo, tHi);
-  const divisor = randInt(rng, bLo, bHi);
+  /*
+   * わられる数も 小数にする (10の倍数だと「47 ÷ 5」になり、説明の
+   * 「小数点の いちを そろえて もどす」と 食いちがう)
+   */
+  let quotientTenths = randNotMultipleOf10(rng, tLo, tHi);
+  let divisor = randInt(rng, bLo, bHi);
+  while ((quotientTenths * divisor) % 10 === 0) {
+    quotientTenths = randNotMultipleOf10(rng, tLo, tHi);
+    divisor = randInt(rng, bLo, bHi);
+  }
   const dividendTenths = quotientTenths * divisor;
   const answer = dec(quotientTenths / 10, 1);
   return {
@@ -90,8 +109,10 @@ function genFractionDiff(rng: Rng, level?: Level): Problem {
   if (d1 === d2) {
     d2 = lv === 2 ? (d1 === 2 ? 3 : 2) : d1 === denominators[0] ? denominators[1] : denominators[0];
   }
-  const n1 = randInt(rng, 1, d1 - 1);
-  const n2 = randInt(rng, 1, d2 - 1);
+  /* 問題の分数は 約分ずみ (2/4 ではなく 1/2) — 教科書どおり。分母がちがう
+     約分ずみの分数は 等しくならないので、ひき算の こたえも 0 に ならない */
+  const n1 = randCoprimeNumerator(rng, d1);
+  const n2 = randCoprimeNumerator(rng, d2);
   const common = lcm(d1, d2);
   if (rng() < 0.5) {
     const total = (n1 * common) / d1 + (n2 * common) / d2;
@@ -126,31 +147,6 @@ function genFractionDiff(rng: Rng, level?: Level): Problem {
   const v2 = (n2 * common) / d2;
   const big = Math.max(v1, v2);
   const small = Math.min(v1, v2);
-  if (big === small) {
-    return {
-      skillId: "g5_fraction_diff",
-      text: `${n1}/${d1} - ${n2}/${d2} = ?`,
-      a: n1,
-      b: n2,
-      op: "-",
-      answer: "0",
-      choices: makeChoicesOf(rng, "0", [
-        `${n1}/${d1}`,
-        `1/${common}`,
-        `${n1 + n2}/${common}`,
-      ]),
-      hint: null,
-      explain: [
-        `分母を ${common} に そろえると どちらも ${big}/${common}`,
-        `おなじ大きさ だから こたえは 0`,
-      ],
-      hints: [
-        `分母が ちがう ぶんすうは まず 通分するよ`,
-        `分母を ${common} に そろえて くらべてみよう`,
-        `${big}/${common} と ${big}/${common}。おなじ 大きさだから…`,
-      ],
-    };
-  }
   const answer = frac(big - small, common);
   const bigText = v1 >= v2 ? `${n1}/${d1}` : `${n2}/${d2}`;
   const smallText = v1 >= v2 ? `${n2}/${d2}` : `${n1}/${d1}`;
@@ -405,7 +401,8 @@ function genMultiple(rng: Rng, level?: Level): Problem {
       answer: String(answer),
       choices: makeChoicesOf(rng, String(answer), [
         String(a * b),
-        String(gcd(a, b)),
+        /* 最大公約数と とりちがえる まちがい。ただし 1 は 公倍数に ならないので出さない */
+        String(gcd(a, b) > 1 ? gcd(a, b) : Math.max(a, b)),
         String(a + b),
       ]),
       hint: null,
@@ -421,7 +418,29 @@ function genMultiple(rng: Rng, level?: Level): Problem {
       ]),
     };
   }
-  const answer = gcd(a, b);
+  /*
+   * たがいに素 (こたえが 1) が 3割ほど出ていた (7 のような素数を引くと
+   * 範囲内に 公約数を もつ相手が いない)。教科書の問題は ほとんど 1 より大きい
+   * 公約数を もつので、8割は「公約数 g をもつ 2数 (g×m と g×n)」から作る
+   */
+  let [ga, gb] = [a, b];
+  if (rng() < 0.8) {
+    for (let i = 0; i < 20; i++) {
+      const g = randInt(rng, 2, Math.floor(hi / 2));
+      const maxMul = Math.floor(hi / g);
+      const m = randInt(rng, 1, maxMul);
+      const n = randInt(rng, 1, maxMul);
+      if (m !== n && g * m >= lo && g * n >= lo) {
+        [ga, gb] = [g * m, g * n];
+        break;
+      }
+    }
+  }
+  const answer = gcd(ga, gb);
+  return gcdProblem(rng, ga, gb, answer);
+}
+
+function gcdProblem(rng: Rng, a: number, b: number, answer: number): Problem {
   return {
     skillId: "g5_multiple",
     text: `${a} と ${b} の 最大公約数は?`,
@@ -457,10 +476,12 @@ function genArea(rng: Rng, level?: Level): Problem {
     const answer = (base * height) / 2;
     return {
       skillId: "g5_area",
-      text: `そこへん ${base}cm 高さ ${height}cm の 三角形の 面せきは なんcm²?`,
+      text: `ていへん ${base}cm 高さ ${height}cm の 三角形の 面せきは なんcm²?`,
       a: base,
       b: height,
       op: "×",
+      /* 三角形か平行四辺形かは a/b から決まらないので ここで図を指定する */
+      figure: { kind: "areaGrid", w: base, h: height, unit: "cm", shape: "triangle" },
       answer: String(answer),
       choices: makeChoicesOf(rng, String(answer), [
         String(base * height),
@@ -469,12 +490,12 @@ function genArea(rng: Rng, level?: Level): Problem {
       ]),
       hint: null,
       explain: [
-        `三角形の 面せき = そこへん × 高さ ÷ 2`,
+        `三角形の 面せき = ていへん × 高さ ÷ 2`,
         `${base} × ${height} = ${base * height}`,
         `${base * height} ÷ 2 = ${answer}cm²`,
       ],
       hints: genericHints([
-        `三角形の 面せき = そこへん × 高さ ÷ 2`,
+        `三角形の 面せき = ていへん × 高さ ÷ 2`,
         `${base} × ${height} = ${base * height}`,
         `${base * height} ÷ 2 = ${answer}cm²`,
       ]),
@@ -485,10 +506,11 @@ function genArea(rng: Rng, level?: Level): Problem {
   const answer = base * height;
   return {
     skillId: "g5_area",
-    text: `そこへん ${base}cm 高さ ${height}cm の 平行四辺形の 面せきは なんcm²?`,
+    text: `ていへん ${base}cm 高さ ${height}cm の 平行四辺形の 面せきは なんcm²?`,
     a: base,
     b: height,
     op: "×",
+    figure: { kind: "areaGrid", w: base, h: height, unit: "cm", shape: "parallelogram" },
     answer: String(answer),
     choices: makeChoicesOf(rng, String(answer), [
       dec(answer / 2, 1),
@@ -497,11 +519,11 @@ function genArea(rng: Rng, level?: Level): Problem {
     ]),
     hint: null,
     explain: [
-      `平行四辺形の 面せき = そこへん × 高さ`,
+      `平行四辺形の 面せき = ていへん × 高さ`,
       `${base} × ${height} = ${answer}cm²`,
     ],
     hints: genericHints([
-      `平行四辺形の 面せき = そこへん × 高さ`,
+      `平行四辺形の 面せき = ていへん × 高さ`,
       `${base} × ${height} = ${answer}cm²`,
     ]),
   };

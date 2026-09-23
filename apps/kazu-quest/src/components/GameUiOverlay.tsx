@@ -200,6 +200,8 @@ export function GameUiOverlay() {
     return () => window.removeEventListener("keydown", onKey);
   }, [advance, cancel]);
 
+  const isCancelLabel = (label: string) => label === "やめる" || label === "もどる";
+
   const renderOption = (
     label: string,
     isSelected: boolean,
@@ -257,7 +259,6 @@ export function GameUiOverlay() {
                 bottom: 180,
                 width: "min(88vw, 530px)",
                 maxHeight: "58vh",
-                overflowY: "auto",
                 display: "flex",
                 flexDirection: "column",
                 gap: 10,
@@ -265,17 +266,38 @@ export function GameUiOverlay() {
                 borderRadius: 12,
               })}
             >
-              {request.options.map((label, i) =>
-                renderOption(
-                  label,
-                  i === selected,
-                  () => {
-                    setRequest(null);
-                    EventBus.emit("ui-list-done", { id: request.id, index: i });
-                  },
-                  i,
-                ),
-              )}
+              {(() => {
+                /*
+                 * さいごの「やめる/もどる」は スクロールの外に 固定する。品物が多いと
+                 * やめるが 画面の下に かくれ、子どもが 店から 出られなくなっていた
+                 */
+                const last = request.options.length - 1;
+                const pinned = last > 0 && isCancelLabel(request.options[last]) ? last : -1;
+                const choose = (i: number) => () => {
+                  setRequest(null);
+                  EventBus.emit("ui-list-done", { id: request.id, index: i });
+                };
+                return (
+                  <>
+                    <div
+                      data-testid="ui-list-scroll"
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                        overflowY: "auto",
+                        minHeight: 0,
+                      }}
+                    >
+                      {request.options.map((label, i) =>
+                        i === pinned ? null : renderOption(label, i === selected, choose(i), i),
+                      )}
+                    </div>
+                    {pinned >= 0 &&
+                      renderOption(request.options[pinned], pinned === selected, choose(pinned), pinned)}
+                  </>
+                );
+              })()}
             </div>
           )}
 

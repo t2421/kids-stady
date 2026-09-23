@@ -508,3 +508,101 @@ describe("LP-02b: level 1〜3 (grade4〜6, 24単元)", () => {
     }
   });
 });
+
+/*
+ * 小数・分数の単元なのに 小数/分数が1つも出ない問題を出さない。
+ * 0.1 が なんこ (×10 表現) で数を作ると、10の倍数が "6" や "3" の整数になって
+ * 「6 + 6 = ?」「3 × 2 = ?」が混ざっていた (g5_decimal_muldiv で約1割)
+ */
+describe("decimal / fraction units always involve a decimal / fraction", () => {
+  const cases: [string, string][] = [
+    ["g3_decimal", "."],
+    ["g4_decimal", "."],
+    ["g5_decimal_muldiv", "."],
+    ["g3_fraction", "/"],
+    ["g4_fraction_same", "/"],
+    ["g5_fraction_diff", "/"],
+    ["g6_fraction_muldiv", "/"],
+  ];
+  for (const [skillId, mark] of cases) {
+    it(`${skillId}: text or answer contains "${mark}" at every level`, () => {
+      for (const level of [1, 2, 3] as const) {
+        for (let seed = 0; seed < 1000; seed++) {
+          const p = generate(skillId, mulberry32(seed), { level });
+          /* 小3 分数 Lv1 は「1を 2つに 分けた…」の読みとり (答えが分数) */
+          expect(
+            p.text.includes(mark) || p.answer.includes(mark),
+            `${skillId} Lv${level}: "${p.text}" → ${p.answer}`,
+          ).toBe(true);
+        }
+      }
+    });
+  }
+});
+
+/*
+ * 約分・通分は 小5 で習う。小3・小4 の「分母がおなじ」たし算・ひき算は
+ * こたえが 約分できない組だけにする (4/6 - 1/6 のこたえが 1/2 で、
+ * 子どもが出す 3/6 が選択肢に無い — という出題が 1〜2割 混ざっていた)
+ */
+describe("grade 3/4 same-denominator fractions never need reduction", () => {
+  const gcd = (a: number, b: number): number => (b ? gcd(b, a % b) : a);
+  for (const skillId of ["g3_fraction", "g4_fraction_same"]) {
+    it(`${skillId}: numerator result is coprime with the denominator`, () => {
+      for (const level of [1, 2, 3] as const) {
+        for (let seed = 0; seed < 1000; seed++) {
+          const p = generate(skillId, mulberry32(seed), { level });
+          const m = /^(\d+)\/(\d+) ([+-]) (\d+)\/(\d+) = \?$/.exec(p.text);
+          if (!m) continue;
+          const d = Number(m[2]);
+          const num = m[3] === "+" ? Number(m[1]) + Number(m[4]) : Number(m[1]) - Number(m[4]);
+          expect(gcd(num, d), `${skillId} Lv${level}: ${p.text} → ${p.answer}`).toBe(1);
+        }
+      }
+    });
+  }
+});
+
+/* こたえの位置に かたよりが無いこと (g1_compare は 3ばんめに一度も来なかった) */
+describe("answer position is not guessable", () => {
+  for (const skill of SKILLS) {
+    it(skill.id, () => {
+      const pos = [0, 0, 0];
+      for (let seed = 0; seed < 600; seed++) {
+        const p = generate(skill.id, mulberry32(seed));
+        pos[p.choices.indexOf(p.answer)]++;
+      }
+      for (const n of pos) expect(n, `${skill.id} のこたえの位置 ${pos}`).toBeGreaterThan(600 * 0.15);
+    });
+  }
+});
+
+/* 小2 は 24時間表記を習わない。「なんじ?」の こたえは 1〜12 (正午またぎは「ごご なんじ?」) */
+describe("g2_time answers o'clock questions on a 12-hour dial", () => {
+  it("never answers 13じ or later", () => {
+    for (const level of [1, 2, 3] as const) {
+      for (let seed = 0; seed < 1000; seed++) {
+        const p = generate("g2_time", mulberry32(seed), { level });
+        if (!p.text.includes("なんじ?")) continue;
+        expect(Number(p.answer), p.text).toBeGreaterThanOrEqual(1);
+        expect(Number(p.answer), p.text).toBeLessThanOrEqual(12);
+      }
+    }
+  });
+});
+
+/* わり算のヒントは こたえの形に合わせる (九九に無い 4×15 を「4の だんの 九九」と言わない) */
+describe("g3_div hints match the shape of the quotient", () => {
+  it("mentions 九九 only when the quotient is in the 九九", () => {
+    for (const level of [1, 2, 3] as const) {
+      for (let seed = 0; seed < 600; seed++) {
+        const p = generate("g3_div", mulberry32(seed), { level });
+        const q = Number(p.answer);
+        if (q === 0 || q >= 10) {
+          expect(p.hints.join(" "), p.text).not.toContain("だんの 九九");
+          expect(p.explain.join(" "), p.text).not.toContain("だんの 九九");
+        }
+      }
+    }
+  });
+});

@@ -10,6 +10,7 @@ import { getSave } from "@/game/session";
 import { CountRow } from "@/components/CountIcons";
 import { Keypad } from "@/components/Keypad";
 import { MathChoices } from "@/components/MathChoices";
+import { ProblemFigure } from "@/components/ProblemFigure";
 import { setCurrentProblem } from "@/components/currentProblem";
 import {
   MathExplain,
@@ -112,8 +113,9 @@ export function MathPromptPanel() {
         setPending(result);
         return;
       }
-      /* 正解/不正解の色フィードバックを見せてから閉じる */
-      setTimeout(() => emitResult(result), correct ? 500 : 1600);
+      /* 正解/不正解の色フィードバックを見せてから閉じる。まちがえたときは
+         「おした ✕」と「こたえ」を 見くらべる 時間を とる (1.6秒では 読めなかった) */
+      setTimeout(() => emitResult(result), correct ? 500 : 2600);
     },
     [emitResult],
   );
@@ -182,6 +184,9 @@ export function MathPromptPanel() {
         data-input-mode={inputMode}
         style={{
           width: "min(92vw, 560px)",
+          /* 何があっても こたえの ボタンが 画面の外に 出ないよう、はみ出す分は スクロール */
+          maxHeight: "96vh",
+          overflowY: "auto",
           borderRadius: 20,
           border: "3px solid var(--kids-panel-border)",
           background: "var(--kids-panel-bg)",
@@ -206,6 +211,12 @@ export function MathPromptPanel() {
         {problem.visual && (
           <CountRow icon={problem.visual.icon} count={problem.visual.count} />
         )}
+        {/* 図で表せる問題は 図でも見せる (戦闘は枠がせまいので小さめに) */}
+        <ProblemFigure
+          problem={problem}
+          maxWidth={request.context === "battle" ? 300 : 400}
+          maxHeight={request.context === "battle" ? 140 : 170}
+        />
         {isPractice && feedback === null && (
           <div style={{ display: "flex", justifyContent: "center" }}>
             <MathHintButton

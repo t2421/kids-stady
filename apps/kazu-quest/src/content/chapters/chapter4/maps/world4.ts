@@ -113,18 +113,37 @@ export const CH4_WORLD: MapDef = {
       y: 5,
       art: "measurer",
       movement: "static",
-      /* LP-20: 章4の中核3単元 (角度・小数・2桁でわるわり算) が すべて「できる」で開く */
-      hideIf: [
-        { skill: "g4_angle", state: "can" },
-        { skill: "g4_decimal", state: "can" },
-        { skill: "g4_div_2digit", state: "can" },
-      ],
+      /*
+       * LP-20: 章4の中核3単元 (角度・小数・2桁でわるわり算) が すべて「できる」で開く。
+       * 遺跡の前は 行き止まりなので、一度 中に入った勇者も通す
+       * (通さないと "from-angle-ruins" で出てきた勇者が 閉じこめられる)。
+       */
+      hideIf: {
+        any: [
+          [
+            { skill: "g4_angle", state: "can" },
+            { skill: "g4_decimal", state: "can" },
+            { skill: "g4_div_2digit", state: "can" },
+          ],
+          { flag: "c4.enteredAngleRuins", op: "set" },
+        ],
+      },
       dialog: [
         {
           pages: [
             "この さきは 角度の遺跡。とびらは 分度器の しかけだ。",
             "角度・小数・2桁でわる わり算。3つとも「できる」に ならないと ひらかぬ。",
             "メジャーリアの まなびやで おぼえられるぞ。",
+          ],
+          /* その場で まなべる (めあて パネル → 前提チェックつきの レッスン)。
+             「まなびやへ いけ」と言われても 子どもは 迷うので、物語の とびらから 直接 つなぐ */
+          then: [
+            {
+              type: "choice",
+              prompt: "とびらを ひらく さんすうを いま まなぶ?",
+              yes: [{ type: "openGoals" }],
+              no: [{ type: "message", pages: ["いつでも 「★ めあて」から まなべるぞ。"] }],
+            },
           ],
         },
       ],
@@ -157,7 +176,11 @@ export const CH4_WORLD: MapDef = {
       x: 20,
       y: 4,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch4-ruins-1", spawn: "entrance" }],
+      /* setFlag は transfer より前に置く (transfer は残りのコマンドを打ち切る) */
+      commands: [
+        { type: "setFlag", flag: "c4.enteredAngleRuins" },
+        { type: "transfer", mapId: "ch4-ruins-1", spawn: "entrance" },
+      ],
     },
   ],
   spawns: {

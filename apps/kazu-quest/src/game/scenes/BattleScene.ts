@@ -114,13 +114,14 @@ export class BattleScene extends Scene {
 
   create() {
     this.buildStage();
-    this.menu = new BattleMenu(this, GAME_WIDTH - 420, GAME_HEIGHT - 148, (i) =>
-      this.onMenuSelect(i),
-    );
+    this.menu = new BattleMenu(this, (i) => this.onMenuSelect(i));
 
     const keyboard = this.input.keyboard!;
     keyboard.on("keydown-UP", () => this.moveCursor(-1));
     keyboard.on("keydown-DOWN", () => this.moveCursor(1));
+    /* コマンドは 3列の マス なので 左右でも うごかせる (うえ・した と同じく 1つずつ) */
+    keyboard.on("keydown-LEFT", () => this.moveCursor(-1));
+    keyboard.on("keydown-RIGHT", () => this.moveCursor(1));
     keyboard.on("keydown-Z", () => this.confirm());
     keyboard.on("keydown-ENTER", () => this.confirm());
     keyboard.on("keydown-SPACE", () => this.confirm());
@@ -284,19 +285,28 @@ export class BattleScene extends Scene {
       this.learnedSpells(this.currentMember().id).map(
         (s) => `${s.name} (MP${s.mpCost})`,
       ),
+      () => this.cancelMenu(),
     );
   }
 
   private showItemMenu() {
     this.menuKind = "item";
     this.msgText.setText("どの どうぐを つかう?");
-    this.menu.show(this.itemLabels());
+    this.menu.show(this.itemLabels(), () => this.cancelMenu());
+  }
+
+  /*
+   * 戦闘で つかえる どうぐ (回復) だけ。以前は そうび・メダル・かけら も
+   * ならび、えらぶと「いまは つかえない!」— 一覧が のびるだけ だった
+   */
+  private battleItems(): [string, number][] {
+    return Object.entries(getSave().inventory.items).filter(
+      ([id, count]) => count > 0 && getItem(id)?.kind === "heal",
+    );
   }
 
   private itemLabels(): string[] {
-    return Object.entries(getSave().inventory.items)
-      .filter(([, count]) => count > 0)
-      .map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
+    return this.battleItems().map(([id, count]) => `${getItem(id)?.name ?? id} ×${count}`);
   }
 
   private moveCursor(delta: number) {
@@ -350,7 +360,7 @@ export class BattleScene extends Scene {
       this.showSpellMenu();
     } else if (command === "どうぐ") {
       if (this.itemLabels().length === 0) {
-        this.flashMessage("どうぐを もっていない!");
+        this.flashMessage("たたかいで つかえる どうぐを もっていない!");
         return;
       }
       this.showItemMenu();
@@ -422,10 +432,7 @@ export class BattleScene extends Scene {
 
   private useItem(index: number) {
     const memberId = this.currentMember().id;
-    const usable = Object.entries(getSave().inventory.items).filter(
-      ([, c]) => c > 0,
-    );
-    const [itemId] = usable[index] ?? [];
+    const [itemId] = this.battleItems()[index] ?? [];
     if (!itemId) return;
     const item = getItem(itemId);
     if (!item || item.kind !== "heal") {

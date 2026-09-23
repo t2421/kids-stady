@@ -34,15 +34,18 @@ test("shop change challenge: buy → challenge → correct answer refunds 10%", 
     .inventory.gold;
   expect(before).toBeGreaterThanOrEqual(100);
 
-  /* 「いらっしゃい…」を z で送り、品物リスト (list) が出たら止める */
+  /* 「いらっしゃい…」を z で送り、かう/うる の入口が出たら止める */
   const options = page.locator('[data-testid="ui-option"]');
   for (let i = 0; i < 12 && (await options.count()) === 0; i++) {
     await page.keyboard.press("z");
     await page.waitForTimeout(500);
   }
-  await expect(options.last()).toHaveText(/やめる/, { timeout: 10_000 });
-  await expect(options.first()).toHaveText(/やくそう/);
-  /* 先頭 = やくそう を買う */
+  await expect(options.first()).toHaveText(/かう/, { timeout: 10_000 });
+  await options.first().click();
+
+  /* 品物リスト: 先頭 = やくそう を買う */
+  await expect(options.first()).toHaveText(/やくそう/, { timeout: 10_000 });
+  await expect(options.last()).toHaveText(/やめる/);
   await options.first().click();
 
   /* 「やくそうを てにいれた!」を送ると おつりチャレンジの はい/いいえ が出る */
@@ -58,15 +61,17 @@ test("shop change challenge: buy → challenge → correct answer refunds 10%", 
   /* 出題パネル: 正解ボタン (data-answer="1") をタップ */
   const answer = correctChoice(page);
   await expect(answer).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText(/Gで はらった。おつりは いくら\?/)).toBeVisible();
+  await expect(page.getByText(/8Gの しなものを \d+Gで はらった。おつりは いくら\?/)).toBeVisible();
   await answer.click();
 
-  /* 「せいかい! nG もどってきた!」 → 品物リストに戻るので やめる → まいど */
+  /* 「せいかい! nG もどってきた!」 → 品物リスト → やめる で入口へ → やめる → まいど */
   await expect(page.getByText(/せいかい! \d+G もどってきた!/)).toBeVisible({
     timeout: 10_000,
   });
   await page.keyboard.press("z");
-  await expect(options.last()).toHaveText(/やめる/, { timeout: 10_000 });
+  await expect(options.first()).toHaveText(/やくそう/, { timeout: 10_000 });
+  await options.last().click();
+  await expect(options.first()).toHaveText(/かう/, { timeout: 10_000 });
   await options.last().click();
   await advanceDialog(page);
 

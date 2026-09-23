@@ -97,7 +97,7 @@ export const G2_TIME: LessonDef = {
   levels: [
     { level: 1, label: "5じまでの かんたんな とけい" },
     { level: 2, label: "9じまでの とけいと たんい" },
-    { level: 3, label: "24じかんまでの とけいと 5ふんたんい" },
+    { level: 3, label: "ごぜん・ごごを またぐ とけいと 5ふんたんい" },
   ],
   altExplain: [
     { text: "べつの みかた: とけいの はりを 1じかんずつ すすめて かぞえよう。" },

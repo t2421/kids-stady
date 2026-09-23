@@ -10,6 +10,7 @@ import { actionButton, dqWindow, pillButton, UI_COLORS } from "@/components/uiTh
 import { MistakeNoteList } from "@/components/MistakeNoteList";
 import { StatsBody } from "@/components/StatsScreen";
 import { FieldHealControls } from "@/components/FieldHealControls";
+import { PlaySettings } from "@/components/PlaySettings";
 /* Phaser 非依存の音モジュールなので React から直接 import してよい (sfx.ts 冒頭参照) */
 import { getVolume, isSoundEnabled, playSfx, setSoundEnabled, setVolume } from "@/game/audio/sfx";
 
@@ -40,6 +41,11 @@ const STATS_TAB = 5;
 const pill = (selected: boolean): React.CSSProperties => ({
   ...pillButton(selected),
   flex: "1 1 0",
+  /* 「じゅも/ん」と 途中で おれないよう、おさまらなければ 文字を すこし小さくする */
+  whiteSpace: "nowrap",
+  paddingLeft: 6,
+  paddingRight: 6,
+  fontSize: "clamp(14px, 1.9vw, 20px)",
 });
 
 function Bar({ value, max, color }: { value: number; max: number; color: string }) {
@@ -168,8 +174,9 @@ export function StatusPanelOverlay() {
         onClick={(e) => e.stopPropagation()}
         style={dqWindow({
           width: "min(94vw, 920px)",
-          maxHeight: "92vh",
-          overflowY: "auto",
+          /* 高さを固定する: 中身の量で パネルの高さが変わると、中央寄せのせいで
+             タブの行が 上下に動き、タブを つづけて押すと 押しそこねていた */
+          height: "min(92vh, 760px)",
           borderRadius: 14,
           padding: "18px 22px 20px",
           display: "flex",
@@ -178,7 +185,7 @@ export function StatusPanelOverlay() {
         })}
       >
         {/* タブ + ゴールド */}
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
           {TABS.map((label, i) => (
             <button
               key={label}
@@ -205,7 +212,7 @@ export function StatusPanelOverlay() {
 
         {/* なかま切替 (もちもの・ノート はパーティ共有なので出さない) */}
         {!SHARED_TABS.includes(tab) && data.members.length > 1 && (
-          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexShrink: 0 }}>
             {data.members.map((mm, i) => (
               <button
                 key={mm.name}
@@ -219,8 +226,11 @@ export function StatusPanelOverlay() {
           </div>
         )}
 
-        {/* 本文 */}
-        <div style={{ minHeight: 230 }}>
+        {/* 本文 (ここだけ スクロール。下段のボタンが 中身に かぶらない) */}
+        <div
+          data-testid="status-body"
+          style={{ flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}
+        >
           {(tab === 0 || tab === 1) && (
             <div
               style={{
@@ -327,6 +337,7 @@ export function StatusPanelOverlay() {
                       })}
                     </div>
                   </div>
+                  <PlaySettings />
                 </>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -357,7 +368,7 @@ export function StatusPanelOverlay() {
 
         {/* 下段の操作 (回復呪文の出題中は隠す — どれも閉じる操作なので) */}
         {!pending && (
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", flexShrink: 0 }}>
             <button
               style={actionButton("#1a4a72")}
               onClick={() => {

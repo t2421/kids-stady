@@ -15,8 +15,9 @@
 
 import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
-import { makeChoicesTagged } from "./choices";
+import { makeChoicesOf, makeChoicesTagged } from "./choices";
 import { genericHints } from "./hints";
+import { columnAddSteps, columnSubSteps } from "./columnSteps";
 
 type Level = 1 | 2 | 3;
 
@@ -66,21 +67,15 @@ function genAddColumn(rng: Rng, level?: Level): Problem {
   const lv = level ?? 2;
   const [lo, hi] = lv === 1 ? [10, 49] : lv === 3 ? [100, 899] : [10, 89];
   const a = randInt(rng, lo, hi);
-  const b = randInt(rng, lo, hi);
+  let b = randInt(rng, lo, hi);
+  /* この単元は「くり上がりのある ひっ算」。そのまま引くと 6割が くり上がり
+     なしに なっていたので、多くは くり上がりが おきるまで 引きなおす */
+  if (rng() < 0.6) {
+    for (let i = 0; i < 10 && (a % 10) + (b % 10) < 10; i++) b = randInt(rng, lo, hi);
+  }
   const answer = a + b;
-  const onesSum = (a % 10) + (b % 10);
-  const carry = onesSum >= 10;
-  const explain = carry
-    ? [
-        `一のくらい: ${a % 10} + ${b % 10} = ${onesSum} → ${onesSum % 10} をかいて 1くり上げる`,
-        `十のくらい: ${Math.floor(a / 10)} + ${Math.floor(b / 10)} + 1 = ${Math.floor(answer / 10)}`,
-        `こたえは ${answer}`,
-      ]
-    : [
-        `一のくらい: ${a % 10} + ${b % 10} = ${onesSum}`,
-        `十のくらい: ${Math.floor(a / 10)} + ${Math.floor(b / 10)} = ${Math.floor(answer / 10)}`,
-        `こたえは ${answer}`,
-      ];
+  /* くらいごとの説明 (3けたの Lv3 でも 百のくらいまで 正しく書く) */
+  const explain = columnAddSteps(a, b);
   const { choices, tags } = makeChoicesTagged(rng, answer, "add", [a, b]);
   return {
     skillId: "g2_add_column",
@@ -94,9 +89,9 @@ function genAddColumn(rng: Rng, level?: Level): Problem {
     hint: null,
     explain,
     hints: [
-      `位を そろえて、一のくらいから じゅんに たしざんしよう`,
+      `くらいを そろえて、一のくらいから じゅんに たしざんしよう`,
       `一のくらい: ${a % 10} + ${b % 10} を けいさんしてみよう`,
-      `くり上がりに 気をつけて 十のくらいまで けいさんすると…`,
+      `くり上がりに 気をつけて 上のくらいまで じゅんに けいさんすると…`,
     ],
   };
 }
@@ -107,21 +102,13 @@ function genSubColumn(rng: Rng, level?: Level): Problem {
   const [aLo, aHi, bLo] =
     lv === 1 ? [20, 49, 10] : lv === 3 ? [200, 999, 100] : [20, 99, 10];
   const a = randInt(rng, aLo, aHi);
-  const b = randInt(rng, bLo, a - 1);
+  let b = randInt(rng, bLo, a - 1);
+  /* 「くり下がりのある ひっ算」なので 多くは くり下がりが おきるまで 引きなおす */
+  if (rng() < 0.6) {
+    for (let i = 0; i < 10 && a % 10 >= b % 10; i++) b = randInt(rng, bLo, a - 1);
+  }
   const answer = a - b;
-  const borrow = a % 10 < b % 10;
-  const explain = borrow
-    ? [
-        `一のくらい: ${a % 10} から ${b % 10} は ひけない → 十のくらいから 1かりる`,
-        `${10 + (a % 10)} - ${b % 10} = ${10 + (a % 10) - (b % 10)}`,
-        `十のくらい: ${Math.floor(a / 10) - 1} - ${Math.floor(b / 10)} = ${Math.floor(answer / 10)}`,
-        `こたえは ${answer}`,
-      ]
-    : [
-        `一のくらい: ${a % 10} - ${b % 10} = ${a % 10 - (b % 10)}`,
-        `十のくらい: ${Math.floor(a / 10)} - ${Math.floor(b / 10)} = ${Math.floor(answer / 10)}`,
-        `こたえは ${answer}`,
-      ];
+  const explain = columnSubSteps(a, b);
   const { choices, tags } = makeChoicesTagged(rng, answer, "sub", [a, b]);
   return {
     skillId: "g2_sub_column",
@@ -135,9 +122,9 @@ function genSubColumn(rng: Rng, level?: Level): Problem {
     hint: null,
     explain,
     hints: [
-      `位を そろえて、一のくらいから じゅんに ひきざんしよう`,
+      `くらいを そろえて、一のくらいから じゅんに ひきざんしよう`,
       `一のくらい: ${a % 10} から ${b % 10} を ひけるかな`,
-      `くり下がりに 気をつけて 十のくらいまで けいさんすると…`,
+      `くり下がりに 気をつけて 上のくらいまで じゅんに けいさんすると…`,
     ],
   };
 }
@@ -241,18 +228,43 @@ function genTime(rng: Rng, level?: Level): Problem {
   if (kind === 0) {
     /* なんじ? (じ + じかん) */
     const startHi = lv === 1 ? 5 : lv === 3 ? 9 : 9;
-    const addCap = lv === 3 ? 24 : 12;
+    /* Lv3 は 正午を またぐ。小2 は「ごぜん・ごご」で言うので 13じ〜 とは書かない
+       (こたえは ごごの なんじ = 1〜11。ごご12じ は まぎらわしいので 出さない) */
+    const addCap = lv === 3 ? 23 : 12;
     const start = randInt(rng, 1, startHi);
     const add = randInt(rng, 1, addCap - start);
-    const answer = start + add;
-    const explain = [`${start}じ + ${add}じかん = ${answer}じ`];
-    const { choices, tags } = makeChoicesTagged(rng, answer, "add", [start, add]);
+    const total = start + add;
+    const crossesNoon = total > 12;
+    const answer = crossesNoon ? total - 12 : total;
+    const explain = crossesNoon
+      ? [
+          `ごぜん ${start}じ から ひるの 12じ まで ${12 - start}じかん`,
+          `のこりの ${add - (12 - start)}じかん で ごご ${answer}じ`,
+        ]
+      : [`${start}じ + ${add}じかん = ${answer}じ`];
+    /* 正午またぎは「24じかんの まま答える (13じ〜)」が いちばん ありがちな まちがい。
+       0じ や 13じ以上の となりの数は 時こくに ならないので 候補にしない */
+    const { choices, tags } = crossesNoon
+      ? {
+          choices: makeChoicesOf(rng, String(answer), [
+            String(total),
+            String(answer === 11 ? 10 : answer + 1),
+            String(answer === 1 ? 2 : answer - 1),
+          ]),
+          tags: undefined,
+        }
+      : makeChoicesTagged(rng, answer, "add", [start, add]);
     return {
       skillId: "g2_time",
-      text: `${start}じから ${add}じかん たつと なんじ?`,
+      text: crossesNoon
+        ? `ごぜん ${start}じから ${add}じかん たつと ごご なんじ?`
+        : `${start}じから ${add}じかん たつと なんじ?`,
       a: start,
       b: add,
       op: null,
+      /* 出発の時こくを とけいで見せる。他の2種 (じかん→ぷん / つぎのちょうどまで)
+         は とけいにすると かえって まぎらわしいので 図なし */
+      figure: { kind: "clock", hour: start, minute: 0 },
       answer: String(answer),
       choices,
       choiceTags: tags,

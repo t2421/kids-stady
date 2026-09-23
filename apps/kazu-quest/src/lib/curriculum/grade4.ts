@@ -11,7 +11,7 @@
 import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
-import { dec, frac, gcd } from "./numbers";
+import { coprimeDiffSubtrahend, dec, frac, gcd } from "./numbers";
 import { genericHints } from "./hints";
 
 type Level = 1 | 2 | 3;
@@ -263,7 +263,8 @@ function genFractionSame(rng: Rng, level?: Level): Problem {
     };
   }
   const n1 = randInt(rng, 3, d);
-  const n2 = randInt(rng, 1, n1 - 1);
+  /* 約分は 小5。こたえが 約分できない組だけにする (grade3 と同じ規則) */
+  const n2 = coprimeDiffSubtrahend(rng, n1, d);
   const answer = frac(n1 - n2, d);
   return {
     skillId: "g4_fraction_same",
@@ -291,7 +292,7 @@ function genFractionSame(rng: Rng, level?: Level): Problem {
   };
 }
 
-/* 角度 (直線・三角形・一しゅう)。Lv1 は「一しゅう」を除いた やさしい2種、
+/* 角度 (直線・直角・一しゅう)。Lv1 は「一しゅう」を除いた やさしい2種、
  * Lv3 は 同じ3種だが 10°きざみでなく 5°きざみで こまかく出す */
 function genAngle(rng: Rng, level?: Level): Problem {
   const lv = level ?? 2;
@@ -307,6 +308,9 @@ function genAngle(rng: Rng, level?: Level): Problem {
       a,
       b: 180,
       op: null,
+      /* あたえられた角を 分度器で見せる (よみは出さない)。一まわり 360° の形は
+         180° をこえて 半円の分度器に のらないので 図なし */
+      figure: { kind: "protractor", angle: a },
       answer: String(answer),
       choices: makeChoicesOf(rng, String(answer), [
         String(360 - a),
@@ -319,47 +323,29 @@ function genAngle(rng: Rng, level?: Level): Problem {
     };
   }
   if (kind === 1) {
-    const [aLo, aHi, bLo, bHi] =
-      lv === 1 ? [3, 8, 3, 8] : lv === 3 ? [6, 24, 6, 28] : [3, 12, 3, 14];
-    const a = randInt(rng, aLo, aHi) * step;
-    const b = randInt(rng, bLo, bHi) * step;
-    const answer = 180 - a - b;
-    if (answer <= 0) {
-      /* 角の和が こえたら 直角三角形の のこりの角に きりかえる */
-      const [cLo, cHi] = lv === 1 ? [2, 6] : lv === 3 ? [2, 16] : [2, 8];
-      const c = randInt(rng, cLo, cHi) * step;
-      return {
-        skillId: "g4_angle",
-        text: `直角三角形の のこりの 角。90° と ${c}° の ほかの 角は なん度?`,
-        a: c,
-        b: 90,
-        op: null,
-        answer: String(90 - c),
-        choices: makeChoicesOf(rng, String(90 - c), [
-          String(180 - c),
-          String(c),
-          String(90 + c),
-        ]),
-        hint: null,
-        explain: [`三角形の 角の和は 180°`, `180 - 90 - ${c} = ${90 - c}°`],
-        hints: genericHints([`三角形の 角の和は 180°`, `180 - 90 - ${c} = ${90 - c}°`]),
-      };
-    }
+    /*
+     * 直角 (90°) の のこり。以前は ここで「三角形の 角の和は 180°」を出していたが、
+     * 三角形の内角の和は 小5 で習う (小4 の単元には入れない)
+     */
+    const [lo, hi] = lv === 1 ? [1, 8] : lv === 3 ? [2, 17] : [1, 8];
+    const a = randInt(rng, lo, hi) * step;
+    const answer = 90 - a;
     return {
       skillId: "g4_angle",
-      text: `三角形の 角の和は 180°。${a}° と ${b}° の ほかの 角は なん度?`,
+      text: `直角は 90°。${a}° の のこりは なん度?`,
       a,
-      b,
+      b: 90,
       op: null,
+      figure: { kind: "protractor", angle: a },
       answer: String(answer),
       choices: makeChoicesOf(rng, String(answer), [
-        String(360 - a - b),
-        String(a + b),
+        String(180 - a),
+        String(a),
         String(answer + 10),
       ]),
       hint: null,
-      explain: [`三角形の 角の和は 180°`, `180 - ${a} - ${b} = ${answer}°`],
-      hints: genericHints([`三角形の 角の和は 180°`, `180 - ${a} - ${b} = ${answer}°`]),
+      explain: [`直角 = 90°`, `90 - ${a} = ${answer}°`],
+      hints: genericHints([`直角 = 90°`, `90 - ${a} = ${answer}°`]),
     };
   }
   const [lo, hi] = lv === 3 ? [10, 70] : [5, 33];

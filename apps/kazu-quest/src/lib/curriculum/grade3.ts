@@ -15,13 +15,36 @@
 import type { Problem, Rng } from "./types";
 import { randInt } from "./types";
 import { makeChoicesOf } from "./choices";
-import { dec, frac, gcd } from "./numbers";
+import { coprimeDiffSubtrahend, dec, frac, gcd } from "./numbers";
 import { genericHints } from "./hints";
+import { columnMulSteps } from "./columnSteps";
 
 type Level = 1 | 2 | 3;
 
 /* g3_div の手書き3段ヒント */
 function divHints(divisor: number, dividend: number, answer: number): [string, string, string] {
+  if (answer === 0) {
+    return [
+      `0 こを ${divisor}人で わけると どうなるかな`,
+      `${divisor} × なにかで 0 に なるかな`,
+      `0 は いくつに わけても…`,
+    ];
+  }
+  if (answer >= 10) {
+    const tens = Math.floor(answer / 10) * 10;
+    const ones = answer % 10;
+    return ones === 0
+      ? [
+          `${dividend} を 「10 が なんこ」と かんがえよう`,
+          `10 が ${dividend / 10}こ を ${divisor}つに わけると…`,
+          `10 の たばで かんがえると ${dividend / 10} ÷ ${divisor} = ${tens / 10}…`,
+        ]
+      : [
+          `${dividend} を 九九で わりやすい 2つの 数に わけよう`,
+          `${dividend} = ${divisor * tens} + ${divisor * ones}`,
+          `${divisor * tens} ÷ ${divisor} と ${divisor * ones} ÷ ${divisor} を あわせると…`,
+        ];
+  }
   return [
     `${divisor}の だんの 九九を つかうよ`,
     `${divisor} × なにかで ${dividend} に なるかな`,
@@ -88,13 +111,41 @@ function genDiv(rng: Rng, level?: Level): Problem {
       String(dividend - divisor),
     ]),
     hint: null,
-    explain: [
-      `${divisor}のだんの 九九で ${dividend}に なるのは?`,
-      `${divisor} × ${answer} = ${dividend}`,
-      `だから ${dividend} ÷ ${divisor} = ${answer}`,
-    ],
+    explain: divExplain(divisor, dividend, answer),
     hints: divHints(divisor, dividend, answer),
   };
+}
+
+/*
+ * Lv3 は 0 や 2けたの こたえ (60 ÷ 4 = 15) も出す (docs/kazu-quest-levels.md)。
+ * そこに「4の だんの 九九を つかうよ」と出すと、九九に 4×15 は無いので
+ * ヒントと問題が 食いちがう。こたえの形ごとに 説明を分ける。
+ */
+function divExplain(divisor: number, dividend: number, answer: number): string[] {
+  if (answer === 0) {
+    return [`0 は いくつに わけても 0`, `だから ${dividend} ÷ ${divisor} = 0`];
+  }
+  if (answer >= 10) {
+    const tens = Math.floor(answer / 10) * 10;
+    const ones = answer % 10;
+    if (ones === 0) {
+      return [
+        `${dividend} は 10 が ${dividend / 10}こ`,
+        `${dividend / 10} ÷ ${divisor} = ${tens / 10} だから 10 が ${tens / 10}こ`,
+        `だから ${dividend} ÷ ${divisor} = ${answer}`,
+      ];
+    }
+    return [
+      `${dividend} を ${divisor * tens} と ${divisor * ones} に わける`,
+      `${divisor * tens} ÷ ${divisor} = ${tens}、${divisor * ones} ÷ ${divisor} = ${ones}`,
+      `あわせて ${dividend} ÷ ${divisor} = ${answer}`,
+    ];
+  }
+  return [
+    `${divisor}のだんの 九九で ${dividend}に なるのは?`,
+    `${divisor} × ${answer} = ${dividend}`,
+    `だから ${dividend} ÷ ${divisor} = ${answer}`,
+  ];
 }
 
 /* あまりのある わり算 (あまりを答える)。
@@ -164,16 +215,9 @@ function genMulColumn(rng: Rng, level?: Level): Problem {
       String(answer + 1),
     ]),
     hint: null,
-    explain: [
-      `一のくらい: ${ones} × ${b} = ${ones * b}`,
-      `十のくらい: ${tens} × ${b} = ${tens * b} (${tens * b}0)`,
-      `${tens * b * 10} + ${ones * b} = ${answer}`,
-    ],
-    hints: genericHints([
-      `一のくらい: ${ones} × ${b} = ${ones * b}`,
-      `十のくらい: ${tens} × ${b} = ${tens * b} (${tens * b}0)`,
-      `${tens * b * 10} + ${ones * b} = ${answer}`,
-    ]),
+    /* くらいごとの かけ算 (3けたの Lv3 でも 百のくらいまで 正しく書く) */
+    explain: columnMulSteps(a, b),
+    hints: genericHints(columnMulSteps(a, b)),
   };
 }
 
@@ -234,7 +278,9 @@ function genDecimal(rng: Rng, level?: Level): Problem {
   if (rng() < 0.5) {
     const [lo, hi] = lv === 1 ? [1, 5] : lv === 3 ? [20, 120] : [2, 12];
     const a = randInt(rng, lo, hi);
-    const b = randInt(rng, lo, hi);
+    let b = randInt(rng, lo, hi);
+    /* 両方 10の倍数だと "6 + 6" のように 小数が1つも出ないので引きなおす */
+    while (a % 10 === 0 && b % 10 === 0) b = randInt(rng, lo, hi);
     const answer = dec((a + b) / 10, 1);
     return {
       skillId: "g3_decimal",
@@ -263,7 +309,8 @@ function genDecimal(rng: Rng, level?: Level): Problem {
   }
   const [lo, hi] = lv === 1 ? [3, 8] : lv === 3 ? [20, 120] : [6, 20];
   const a = randInt(rng, lo, hi);
-  const b = randInt(rng, 1, a - 1);
+  let b = randInt(rng, 1, a - 1);
+  while (a % 10 === 0 && b % 10 === 0) b = randInt(rng, 1, a - 1);
   const answer = dec((a - b) / 10, 1);
   return {
     skillId: "g3_decimal",
@@ -307,8 +354,9 @@ function genFraction(rng: Rng, level?: Level): Problem {
       n1 = randInt(rng, 1, d - 1);
       n2 = randInt(rng, 1, d - 1);
       if (i > 20) {
+        /* 1 + (d-2) = d-1 は 分母と たがいに素 (1/6 + 1/6 → 1/3 のような約分を出さない) */
         n1 = 1;
-        n2 = 1;
+        n2 = d - 2;
         break;
       }
     }
@@ -392,8 +440,9 @@ function genFractionAddSub(rng: Rng): Problem {
       n1 = randInt(rng, 1, d - 1);
       n2 = randInt(rng, 1, d - 1);
       if (i > 20) {
+        /* 1 + (d-2) = d-1 は 分母と たがいに素 (1/6 + 1/6 → 1/3 のような約分を出さない) */
         n1 = 1;
-        n2 = 1;
+        n2 = d - 2;
         break;
       }
     }
@@ -421,7 +470,7 @@ function genFractionAddSub(rng: Rng): Problem {
     };
   }
   const n1 = randInt(rng, 2, d - 1);
-  const n2 = randInt(rng, 1, n1 - 1);
+  const n2 = coprimeDiffSubtrahend(rng, n1, d);
   const diff = n1 - n2;
   const answer = frac(diff, d);
   return {

@@ -73,6 +73,7 @@ export const CHAPTER3: ChapterDef = {
     "learned.hafun": "ハーフン習得 (テスト合格)",
     "learned.omosaPress": "オモサプレス習得 (テスト合格)",
     "learned.enCircle": "エンサークル習得 (テスト合格)",
+    "c3.enteredPyramid": "ピラミッドに 一度 入った (番人が 道をあける — 出口で閉じこめない)",
   },
   clearFlag: "c3.clear",
 };

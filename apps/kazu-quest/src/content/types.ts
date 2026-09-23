@@ -32,6 +32,14 @@ export type FlagCond =
   /* 単元の習熟状態が指定状態「以上」で成立 (LP-01/LP-04。順序 none < practicing < can < mastered) */
   | { skill: string; state: MasteryState };
 
+/*
+ * 番人NPC (npc.hideIf) の条件。単一条件 or 配列 (AND) に加えて、
+ * { any: [...] } で OR グループを書ける。
+ * OR が要るのは「門を一度くぐった人を閉じこめない」ため —
+ * 中核単元が can でなくても、奥へ入った実績フラグが立っていれば番人は道をあける。
+ */
+export type HideCond = FlagCond | FlagCond[] | { any: HideCond[] };
+
 export type EventCommand =
   | { type: "message"; pages: string[] }
   | { type: "setFlag"; flag: string; value?: FlagValue }
@@ -64,6 +72,8 @@ export type EventCommand =
   | { type: "openReview" }
   /* ほこらの「さきどり」: 前提を満たす未受講単元の一覧 (LP-11) */
   | { type: "openPreview" }
+  /* めあて (lib/goals.ts): とびらに要る単元と さきどりの一覧。えらんだ単元の レッスンへ */
+  | { type: "openGoals" }
   /*
    * まなびやの先生メニュー (LP-18): 呪文名でなく単元名で 並べる一覧。
    * spellIds は任意 — 単元が旧来の呪文の学習テスト対象 (learnTest.skillIds[0])
@@ -119,9 +129,11 @@ export interface NpcDef {
   movement: "static" | "wander";
   /*
    * 条件が成立したら消える (橋の番人など)。省略 = 常に表示。
-   * 配列は AND (LP-20: 章の中核3単元が「できる」全部そろって初めて道が開く番人)。
+   * 配列は AND (LP-20: 章の中核3単元が「できる」全部そろって初めて道が開く番人)、
+   * { any: [...] } は OR。ダンジョン側に spawn がある番人は、必ず
+   * 「奥へ入った実績フラグ」を OR に入れる (入れないと出てきた勇者を閉じこめる)。
    */
-  hideIf?: FlagCond | FlagCond[];
+  hideIf?: HideCond;
   dialog: DialogEntry[];
 }
 

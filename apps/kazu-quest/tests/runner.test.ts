@@ -73,7 +73,7 @@ describe("evalCond", () => {
   });
 });
 
-/* npc.hideIf 専用ラッパー (LP-20): 単一条件はそのまま、配列は AND */
+/* npc.hideIf 専用ラッパー (LP-20): 単一条件はそのまま、配列は AND、{ any } は OR */
 describe("evalHideIf", () => {
   const flags = { done: true };
   const mastery = {
@@ -116,6 +116,34 @@ describe("evalHideIf", () => {
 
   it("empty array never hides (vacuous AND) — content shouldn't rely on this, but it's well-defined", () => {
     expect(evalHideIf([], flags, mastery)).toBe(true);
+  });
+
+  /*
+   * 閉じこめ回避: 「中核3単元が can」か「一度ダンジョンに入った」の
+   * どちらかで番人は道をあける (ピラミッド前の袋小路の実バグ)
+   */
+  it("{ any } form is OR: either the mastery gate or the entered flag opens the way", () => {
+    const gate = {
+      any: [
+        [
+          { skill: "g1_count", state: "can" as const },
+          { skill: "g1_add_carry", state: "can" as const },
+          { skill: "g1_sub_borrow", state: "can" as const },
+        ],
+        { flag: "c1.enteredCave", op: "set" as const },
+      ],
+    };
+    /* どちらも未成立 = 番人は立ちふさがる */
+    expect(evalHideIf(gate, {}, mastery)).toBe(false);
+    /* 単元が足りなくても、一度中に入っていれば通す */
+    expect(evalHideIf(gate, { "c1.enteredCave": true }, mastery)).toBe(true);
+    /* 入ったことがなくても、3単元そろえば通す */
+    const allCan = { ...mastery, g1_sub_borrow: { state: "can" } };
+    expect(evalHideIf(gate, {}, allCan)).toBe(true);
+  });
+
+  it("empty any never hides (vacuous OR)", () => {
+    expect(evalHideIf({ any: [] }, flags, mastery)).toBe(false);
   });
 });
 

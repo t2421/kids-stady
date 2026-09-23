@@ -47,7 +47,9 @@ describe("buildStatusData", () => {
       ["ヒキダマ", 2, "attack"],
       ["タシリア", 2, "heal"],
     ]);
-    expect(data.items).toEqual([{ id: "yakusou", name: "やくそう", count: 2, kind: "heal" }]);
+    expect(data.items).toEqual([
+      { id: "yakusou", name: "やくそう", count: 2, kind: "heal", sell: 4, keepsake: false },
+    ]);
   });
 
   it("keeps spells per member in a multi-member party", () => {

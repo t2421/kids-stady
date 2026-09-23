@@ -79,9 +79,10 @@ export function GradeBar({ stat }: { stat: GradeStat }) {
     <div
       data-testid="stats-grade-bar"
       data-grade={stat.grade}
-      style={{ display: "grid", gridTemplateColumns: "88px 1fr 150px", alignItems: "center", gap: 10, minHeight: 34 }}
+      style={{ display: "grid", gridTemplateColumns: "max-content 1fr 150px", alignItems: "center", gap: 10, minHeight: 34 }}
     >
-      <span style={{ ...font, fontSize: "clamp(15px, 2vw, 19px)" }}>{stat.label}</span>
+      {/* 「1ねんせ/い」と 行の途中で おれないよう 折り返さない */}
+      <span style={{ ...font, fontSize: "clamp(15px, 2vw, 19px)", whiteSpace: "nowrap" }}>{stat.label}</span>
       <svg
         viewBox="0 0 100 14"
         preserveAspectRatio="none"

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   advanceDialog,
+  answerGradeQuestion,
   advanceDialogUntilScene,
   fieldPos,
   grindBattleUntil,
@@ -158,6 +159,7 @@ test("title menu: はじめから → はい、けす starts over from ハジマ
   await reopenToTitle(page);
   await page.locator('[data-testid="title-newgame"]').click();
   await page.locator('[data-testid="title-confirm-yes"]').click();
+  await answerGradeQuestion(page);
   await waitForScene(page, "Field");
   await page.waitForTimeout(500);
 

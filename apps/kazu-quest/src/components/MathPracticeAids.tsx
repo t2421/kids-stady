@@ -2,7 +2,7 @@
 
 import type { Problem } from "@/lib/curriculum";
 import type { MistakePattern } from "@/lib/curriculum/types";
-import { diagnose } from "@/lib/curriculum/diagnose";
+import { genericMistakeFeedback, mistakeFeedbackFor } from "@/lib/mistakeFeedback";
 import { cherryTop } from "@/lib/curriculum/practice";
 import { CherryDiagram } from "@/components/CherryDiagram";
 import { actionButton, UI_COLORS } from "@/components/uiTheme";
@@ -97,25 +97,9 @@ export function MathHintBody({ problem, level }: { problem: Problem; level: numb
   );
 }
 
-/* 誤答パターンごとの、責めない一言 (LP-03 §1.1 の13種すべてをカバー) */
-const MISTAKE_FEEDBACK: Record<MistakePattern, string> = {
-  offByOne: "おしい! 1つ ちがいだよ",
-  forgotCarry: "くりあがりを わすれていないかな?",
-  forgotBorrow: "くりさがりを わすれていないかな?",
-  echoOperand: "もんだいの すうじを そのまま えらんじゃったかな?",
-  neighborRow: "となりの だんと まちがえたかも",
-  placeShift: "くらいが 1つ ずれているよ",
-  addedDenominators: "ぶんぼは たしちゃ だめだよ",
-  noCommonDenominator: "ぶんぼを そろえてから けいさんしよう",
-  swappedBase: "どちらが もとの かずか たしかめよう",
-  reversedDivision: "わる かずと わられる かずが さかさまかも",
-  doubleCounted: "おなじものを 2かい かぞえていないかな?",
-  unitConfusion: "たんいに ちゅうい してみよう",
-  other: "もういちど かんがえてみよう",
-};
-
+/* 共通の一言 (レッスン別の一言は lib/mistakeFeedback.ts の mistakeFeedbackFor が引く) */
 export function mistakeFeedbackText(pattern: MistakePattern): string {
-  return MISTAKE_FEEDBACK[pattern] ?? MISTAKE_FEEDBACK.other;
+  return genericMistakeFeedback(pattern);
 }
 
 export function MathExplain({
@@ -128,7 +112,8 @@ export function MathExplain({
   chosen: string | null;
   onNext: () => void;
 }) {
-  const pattern = chosen !== null ? diagnose(problem, chosen) : null;
+  /* その単元の レッスンの一言を 先に使う (なければ 共通の一言) */
+  const note = mistakeFeedbackFor(problem, chosen);
   return (
     <div data-testid="math-explain" style={{ ...HINT_BOX, alignItems: "stretch" }}>
       <span
@@ -158,7 +143,7 @@ export function MathExplain({
           <li key={i}>{line}</li>
         ))}
       </ol>
-      {pattern && (
+      {note && (
         <div
           data-testid="mistake-feedback"
           style={{
@@ -169,7 +154,7 @@ export function MathExplain({
             textAlign: "center",
           }}
         >
-          {mistakeFeedbackText(pattern)}
+          {note}
         </div>
       )}
       <button

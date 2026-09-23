@@ -11,6 +11,7 @@ import { memberName, memberStats } from "../../lib/battle/members";
 import { equippedStats, SLOT_LABELS } from "../../lib/battle/equipment";
 import { getSpell } from "../../content/spells";
 import { getItem } from "../../content/items";
+import { inventoryRows } from "../../lib/inventory";
 import type { ItemDef, SpellDef } from "../../content/types";
 import { formatPlaytime } from "../../lib/format";
 import { buildMistakeRows, type MistakeRow } from "./mistakeRows";
@@ -26,12 +27,16 @@ export interface SpellRow {
   target: SpellDef["target"];
 }
 
-/* もちものタブの 1 行 (パーティ共有) */
+/* もちものタブの 1 行 (パーティ共有)。sell/keepsake は すてる・うる の判定用 */
 export interface ItemRow {
   id: string;
   name: string;
   count: number;
   kind: ItemDef["kind"];
+  /* 道具屋での うり値 (たいせつなものは 0) */
+  sell: number;
+  /* たいせつなもの = うる・すてる ができない (lib/inventory.ts) */
+  keepsake: boolean;
 }
 
 export interface MemberStatus {
@@ -101,14 +106,7 @@ export function buildStatusData(save: SaveData): StatusData | null {
     };
   });
 
-  const items = Object.entries(save.inventory.items)
-    .filter(([, count]) => count > 0)
-    .map(([id, count]) => ({
-      id,
-      name: getItem(id)?.name ?? id,
-      count,
-      kind: getItem(id)?.kind ?? "key",
-    }));
+  const items = inventoryRows(save);
 
   return {
     gold: save.inventory.gold,

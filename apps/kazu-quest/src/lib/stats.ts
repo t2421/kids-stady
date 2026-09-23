@@ -14,6 +14,7 @@ import type { LearningLog } from "./learning";
 import { recentDaily } from "./learning";
 import { SKILLS } from "./curriculum";
 import { formatPlaytime } from "./format";
+import { goalsView, isAheadSkill, isCan } from "./goals";
 
 export const STATS_GRADES = [1, 2, 3, 4, 5, 6] as const;
 export const STATS_DAILY_DAYS = 14;
@@ -52,6 +53,25 @@ export interface StatsData {
   orbs: boolean[];
   playtime: string;
   totals: { correct: number; wrong: number };
+  /* さきどり (lib/goals.ts): がっこうの学年より上で「できる」に した単元 */
+  sakidori: SakidoriStat;
+}
+
+export interface SakidoriStat {
+  schoolGrade: number | null;
+  /* 3単元が ぜんぶ できる いちばん上の章 (= 学年) */
+  reachedGrade: number;
+  units: { skillId: string; label: string; grade: number }[];
+}
+
+export function buildSakidori(save: SaveData): SakidoriStat {
+  return {
+    schoolGrade: save.settings.schoolGrade,
+    reachedGrade: goalsView(save).reachedGrade,
+    units: SKILLS.filter((s) => isAheadSkill(save, s.id) && isCan(save, s.id))
+      .map((s) => ({ skillId: s.id, label: s.label, grade: s.grade }))
+      .sort((a, b) => b.grade - a.grade),
+  };
 }
 
 interface Counts {
@@ -149,6 +169,7 @@ export function buildStats(
     { c: 0, w: 0 },
   );
   return {
+    sakidori: buildSakidori(save),
     byGrade: buildByGrade(counts),
     weak: buildWeak(counts),
     daily: buildDaily(learningLog, now),

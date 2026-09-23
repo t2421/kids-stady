@@ -22,7 +22,7 @@ export const G1_ADD_CARRY: LessonDef = {
   concept: [
     {
       text: "7に 4を たすよ。4を 3と 1に わけよう",
-      figure: { kind: "cherry", total: 11, split: [3, 1] },
+      figure: { kind: "cherry", total: 4, split: [3, 1] },
     },
     {
       text: "7と3で 10。10に のこりの 1を たすと 11",
@@ -34,7 +34,7 @@ export const G1_ADD_CARRY: LessonDef = {
     steps: [
       {
         text: "4を 3と 1に わけよう",
-        figure: { kind: "cherry", total: 11, split: [3, 1] },
+        figure: { kind: "cherry", total: 4, split: [3, 1] },
       },
       {
         text: "7と 3を たすと 10",
@@ -50,8 +50,8 @@ export const G1_ADD_CARRY: LessonDef = {
   ],
   levels: [
     { level: 1, label: "9との たしざん" },
-    { level: 2, label: "8・7との たしざん" },
-    { level: 3, label: "ぜんぶ" },
+    { level: 2, label: "くりあがりの ある たしざん ぜんぶ" },
+    { level: 3, label: "おおきい かずに たす (47 + 5 など)" },
   ],
   altExplain: [
     { text: "べつの せつめい: さきに 10の かたまりを つくろう" },

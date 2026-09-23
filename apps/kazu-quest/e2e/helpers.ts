@@ -14,6 +14,8 @@ declare global {
         isActive(key: string): boolean;
         getScene(key: string): { isBusy?: () => boolean } | null;
       };
+      /* 論理解像度 (高さは 画面の縦横比で 540〜720 — src/game/viewport.ts) */
+      scale: { gameSize: { width: number; height: number } };
     };
     __KAZUQUEST_DEBUG__?: {
       teleport(x: number, y: number, facing: string): void;
@@ -64,7 +66,12 @@ declare global {
           string,
           { state: string; reviewDue: number | null; streak: number; passedAt: number | null }
         >;
-        settings: { sound: boolean; volume: 0 | 1 | 2 | 3 };
+        settings: {
+          sound: boolean;
+          volume: 0 | 1 | 2 | 3;
+          answerTime: "normal" | "slow" | "off";
+          schoolGrade: number | null;
+        };
       };
     };
     /* AU-01: 音の診断フック (src/game/audio/sfx.ts が自己インストール)。
@@ -160,10 +167,28 @@ export async function startFromTitleMenu(page: Page, press: "click" | "tap" = "c
   const target = (await cont.isVisible())
     ? cont
     : page.locator('[data-testid="title-newgame"]');
+  const isNewGame = (await target.getAttribute("data-testid")) === "title-newgame";
   if (press === "tap") await target.tap();
   else await target.click();
+  /* はじめから は「いま なんねんせい?」を1回きく。ひみつ = これまでどおりの既定値 */
+  if (isNewGame) await answerGradeQuestion(page, press);
   await waitForScene(page, "Field");
   await page.waitForTimeout(500);
+}
+
+/* はじめから の学年の質問に こたえる (grade 省略 = ひみつ) */
+export async function answerGradeQuestion(
+  page: Page,
+  press: "click" | "tap" = "click",
+  grade: number | null = null,
+) {
+  const target =
+    grade === null
+      ? page.locator('[data-testid="title-grade-skip"]')
+      : page.locator(`[data-testid="title-grade"][data-grade="${grade}"]`);
+  await target.waitFor({ state: "visible", timeout: 10_000 });
+  if (press === "tap") await target.tap();
+  else await target.click();
 }
 
 /* プロフィール作成 → タイトルメニュー → フィールド (ハジマリ村) */

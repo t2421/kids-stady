@@ -185,3 +185,42 @@ describe("LESSONS companionLines", () => {
     expect(LESSONS.g4_decimal.companionLines?.little).toBeTruthy();
   });
 });
+
+/*
+ * workedExample.problem は generate(skill, mulberry32(seed)) の出力だが、
+ * steps の文は手書き。ジェネレータの乱数の使い方が変わると 問題だけ
+ * 入れかわって 説明と食いちがう — 説明のどこかに こたえが出ていることで検出する
+ */
+describe("worked examples stay in sync with their generated problem", () => {
+  for (const lesson of Object.values(LESSONS)) {
+    it(lesson.skillId, () => {
+      const { problem, steps } = lesson.workedExample;
+      const said = steps.map((s) => `${s.text} ${JSON.stringify(s.figure ?? "")}`).join(" ");
+      expect(said, `${lesson.skillId}: "${problem.text}" のこたえ ${problem.answer} が説明に無い`).toContain(
+        problem.answer,
+      );
+    });
+  }
+});
+
+/*
+ * さくらんぼ図は「total は split の2つに わけられる」を見せる図。
+ * g1_add_carry で「4を 3と 1に わけよう」に total: 11 の図が付き、
+ * 「11 は 3 と 1 に わけられるよ」と まちがった式を 見せていた (実機で発覚)
+ */
+describe("cherry figures always split their total exactly", () => {
+  it("total === split[0] + split[1] on every lesson page", () => {
+    for (const lesson of Object.values(LESSONS)) {
+      const pages = [
+        ...lesson.concept,
+        ...lesson.workedExample.steps,
+        ...lesson.altExplain,
+      ];
+      for (const page of pages) {
+        const f = page.figure;
+        if (f?.kind !== "cherry") continue;
+        expect(f.split[0] + f.split[1], `${lesson.skillId}: "${page.text}"`).toBe(f.total);
+      }
+    }
+  });
+});

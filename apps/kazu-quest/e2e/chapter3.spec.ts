@@ -68,15 +68,15 @@ test("chapter 3 golden path: chief → kakeru joins → shop → learn ワリダ
    * ブロックされたままになる */
   await walkLessonToPass(page);
 
-  /* どうぐや: 入口 (14,4) を踏んで入り、店主 (3,3) の品物リストを開いて やめる */
+  /* どうぐや: 入口 (14,4) を踏んで入り、店主 (3,3) の かう/うる の入口を開いて やめる */
   await teleport(page, 14, 5, "up");
   await stepOnce(page, "ArrowUp");
   await onMap(page, "ch3-wakeera-shop");
   await page.waitForTimeout(800);
   await teleport(page, 3, 4, "up");
   const options = page.locator('[data-testid="ui-option"]');
-  /* 「いらっしゃい…」を z で送り、品物リスト (list) が出たら止める
-     (list 表示中に z を押すと先頭の品物を買ってしまう) */
+  /* 「いらっしゃい…」を z で送り、かう/うる の list が出たら止める
+     (list 表示中に z を押すと先頭 = かう を選んでしまう) */
   for (let i = 0; i < 12 && (await options.count()) === 0; i++) {
     await page.keyboard.press("z");
     await page.waitForTimeout(500);

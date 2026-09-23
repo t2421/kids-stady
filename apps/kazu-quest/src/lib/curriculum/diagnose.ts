@@ -32,8 +32,12 @@ function diagnoseByHeuristic(problem: Problem, chosen: string): MistakePattern {
   if (Number.isFinite(chosenNum) && Number.isFinite(answerNum)) {
     const diff = chosenNum - answerNum;
     if (diff === 1 || diff === -1) return "offByOne";
-    if (diff === 10) return "forgotCarry";
-    if (diff === -10) return "forgotBorrow";
+    /*
+     * ±10 は 式の向きで意味が変わる (choices.ts と同じ規則):
+     * たし算・かけ算の −10 = くり上がりを わすれた / ひき算の +10 = くり下がりを わすれた
+     */
+    if ((problem.op === "+" || problem.op === "×") && diff === -10) return "forgotCarry";
+    if (problem.op === "-" && diff === 10) return "forgotBorrow";
   }
 
   /* 分数どうし: えらんだ分子が もとの2つの分子の和 (= 分母を たしてしまう誤り) */

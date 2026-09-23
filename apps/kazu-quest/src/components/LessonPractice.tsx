@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { playSfx } from "@/game/audio/sfx";
 import type { LessonDef } from "@/content/lessons/types";
 import type { Problem } from "@/lib/curriculum";
@@ -17,6 +17,8 @@ import { Keypad } from "@/components/Keypad";
 import { MathHintBody } from "@/components/MathPracticeAids";
 import { UI_COLORS } from "@/components/uiTheme";
 import { setCurrentProblem } from "@/components/currentProblem";
+import { ProblemFigure } from "@/components/ProblemFigure";
+import { mistakeFeedbackFor } from "@/lib/mistakeFeedback";
 
 /*
  * れんしゅう (LP-09): 指定の Lv で generate() した問題を、3問連続で正解する
@@ -29,6 +31,8 @@ import { setCurrentProblem } from "@/components/currentProblem";
  */
 
 const AUTO_ADVANCE_MS = 900;
+/* まちがえたときは 一言を読む時間を とる */
+const WRONG_ADVANCE_MS = 2200;
 
 export function LessonPractice({
   lesson,
@@ -45,6 +49,8 @@ export function LessonPractice({
     generate(lesson.skillId, undefined, { level }),
   );
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  /* まちがえたときの その単元の一言 (lesson.mistakes → 共通の一言) */
+  const [note, setNote] = useState<string | null>(null);
 
   /*
    * テンキー入力 (小3以降) の E2E は DOM に答えを漏らさず
@@ -59,9 +65,20 @@ export function LessonPractice({
 
   const inputMode = inputModeFor("practice", lesson.skillId);
 
-  const settle = (isCorrect: boolean) => {
+  /* 回答後の「つぎへ」タイマー。画面を とじたあとに 発火して 消えた画面の state を
+     さわらないよう、アンマウントで 取り消す */
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (advanceTimer.current !== null) clearTimeout(advanceTimer.current);
+    },
+    [],
+  );
+
+  const settle = (isCorrect: boolean, chosen: string) => {
     if (feedback !== null) return;
     setFeedback(isCorrect ? "correct" : "wrong");
+    setNote(isCorrect ? null : mistakeFeedbackFor(problem, chosen, lesson));
     playSfx(isCorrect ? "correct" : "wrong");
     const result = applyPracticeAnswer(attempt, isCorrect);
     if (!result.levelComplete && result.attempt.hintLevel > attempt.hintLevel) {
@@ -69,7 +86,7 @@ export function LessonPractice({
        * 責めない音なので wrong とは別に鳴らす */
       setTimeout(() => playSfx("hintReveal"), 140);
     }
-    setTimeout(() => {
+    advanceTimer.current = setTimeout(() => {
       if (result.levelComplete) {
         /* Lv1→2 / Lv2→3 だけ短いファンファーレ。Lv3→テストは LessonScreen.tsx が
          * testStart を鳴らすので、ここでは levelUp を重ねない */
@@ -81,7 +98,8 @@ export function LessonPractice({
       setProblem(generate(lesson.skillId, undefined, { level }));
       setProblemSeq((n) => n + 1);
       setFeedback(null);
-    }, AUTO_ADVANCE_MS);
+      setNote(null);
+    }, isCorrect ? AUTO_ADVANCE_MS : WRONG_ADVANCE_MS);
   };
 
   const levelLabel = lesson.levels[level - 1]?.label ?? "";
@@ -113,20 +131,37 @@ export function LessonPractice({
       >
         {problem.text}
       </p>
+      <ProblemFigure problem={problem} />
       {inputMode === "keypad" ? (
         <Keypad
           key={problemSeq}
           expected={problem.answer}
           disabled={feedback !== null}
           tone={feedback}
-          onSubmit={(typed) => settle(isAnswerCorrect(typed, problem.answer))}
+          onSubmit={(typed) => settle(isAnswerCorrect(typed, problem.answer), typed)}
         />
       ) : (
         <MathChoices
           problem={problem}
           feedback={feedback}
-          onChoose={(_choice, isAnswer) => settle(isAnswer)}
+          onChoose={(choice, isAnswer) => settle(isAnswer, choice)}
         />
+      )}
+      {note !== null && (
+        <p
+          data-testid="lesson-mistake-feedback"
+          role="status"
+          style={{
+            margin: 0,
+            fontFamily: "var(--kids-font)",
+            fontWeight: 700,
+            fontSize: "clamp(16px, 2.2vw, 20px)",
+            color: UI_COLORS.yellow,
+            textAlign: "center",
+          }}
+        >
+          {note}
+        </p>
       )}
       {attempt.hintLevel > 0 && <MathHintBody problem={problem} level={attempt.hintLevel} />}
     </div>

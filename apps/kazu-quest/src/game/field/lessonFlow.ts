@@ -143,6 +143,29 @@ export function handleOpenPreview(ui: UiScene, advance: () => void): void {
   EventBus.emit("open-preview");
 }
 
+/* めあて パネルが とじたときの結果。skillId があれば その単元の レッスンへ */
+export interface GoalsClosedPayload {
+  skillId: string | null;
+}
+
+/*
+ * めあて (openGoals): GoalsPanel.tsx を開き、単元が えらばれたら ふつうの
+ * レッスンの流れ (前提チェック つき — handleOpenLesson) に つなぐ。
+ * とじただけなら そのまま advance()
+ */
+export function handleOpenGoals(ui: UiScene, advance: () => void): void {
+  const onClosed = (result: GoalsClosedPayload) => {
+    EventBus.off("goals-closed", onClosed);
+    if (result.skillId) {
+      handleOpenLesson(ui, result.skillId, advance);
+      return;
+    }
+    advance();
+  };
+  EventBus.on("goals-closed", onClosed);
+  EventBus.emit("open-goals");
+}
+
 /* まなびやの先生メニュー (openTeacherMenu, LP-18) の一覧項目 */
 export interface TeacherMenuEntry {
   skillId: string;

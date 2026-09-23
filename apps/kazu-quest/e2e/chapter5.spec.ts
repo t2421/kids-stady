@@ -146,14 +146,14 @@ test("chapter 5 golden path: queen → shop → learn パーセンフレア → 
   await flag(page, "c5.metQueen");
   expect((await getSave(page)).inventory.gold - goldBefore).toBe(1000);
 
-  /* どうぐや: 入口 (14,4) を踏んで入り、店主 (3,3) の品物リストを開いて やめる */
+  /* どうぐや: 入口 (14,4) を踏んで入り、店主 (3,3) の かう/うる の入口を開いて やめる */
   await teleport(page, 14, 5, "up");
   await stepOnce(page, "ArrowUp");
   await onMap(page, "ch5-percen-shop");
   await page.waitForTimeout(800);
   await teleport(page, 3, 4, "up");
-  /* 「いらっしゃい…」を z で送り、品物リスト (list) が出たら止める
-     (list 表示中に z を押すと先頭の品物を買ってしまう) */
+  /* 「いらっしゃい…」を z で送り、かう/うる の list が出たら止める
+     (list 表示中に z を押すと先頭 = かう を選んでしまう) */
   await pressUntilOptions(page);
   await expect(options(page).last()).toHaveText(/やめる/, { timeout: 10_000 });
   expect(await options(page).count()).toBeGreaterThan(1);
@@ -190,6 +190,14 @@ test("chapter 5 golden path: queen → shop → learn パーセンフレア → 
   await teleport(page, 13, 3, "up");
   await page.keyboard.press("z");
   await expect(messageText(page)).toContainText(/門は かたく/, { timeout: 10_000 });
+  /* 門番は「とびらを ひらく さんすうを いま まなぶ?」と きく (めあて — さきどり設計)。
+     ここでは まなばずに 先へ: いいえ → 「いつでも ★ めあて から…」を送る */
+  for (let i = 0; i < 12 && (await options(page).count()) === 0; i++) {
+    await page.keyboard.press("z");
+    await page.waitForTimeout(400);
+  }
+  await expect(page.getByText("とびらを ひらく さんすうを いま まなぶ?")).toBeVisible();
+  await options(page).last().click();
   await advanceDialog(page);
 
   /* 空中庭園: 入口 (21,4) を踏んで入る → 宝箱 (2,8) → 奥 (6,0) → おくにわ */

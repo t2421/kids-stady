@@ -6,9 +6,22 @@ import { UiScene } from "./scenes/UiScene";
 import { BattleScene } from "./scenes/BattleScene";
 import { EndingScene } from "./scenes/EndingScene";
 
-/* 論理解像度。全シーンはこの座標系で描き、Scale.FIT で画面に合わせる */
-export const GAME_WIDTH = 960;
-export const GAME_HEIGHT = 540;
+/*
+ * 論理解像度。全シーンはこの座標系で描き、Scale.FIT で画面に合わせる。
+ *
+ * 幅は 960 固定、高さは 起動したときの 画面の縦横比に合わせて 540 (16:9) 〜 720 (4:3)。
+ * 以前は 540 固定で、4:3 の iPad では 上下に 画面の 37% ぶんの 黒い帯が出て、
+ * タイルも 戦闘の文字も そのぶん 小さかった (UX 監査)。全シーンの配置は
+ * GAME_HEIGHT からの相対 (下から 148px など) なので、高さが変わっても くずれない。
+ * 起動後の 回転・リサイズは Scale.FIT の 帯で 吸収する (作りなおさない)。
+ */
+export { GAME_WIDTH, MIN_GAME_HEIGHT, MAX_GAME_HEIGHT, gameHeightForViewport } from "./viewport";
+import { GAME_WIDTH, MIN_GAME_HEIGHT, gameHeightForViewport } from "./viewport";
+
+export const GAME_HEIGHT =
+  typeof window === "undefined"
+    ? MIN_GAME_HEIGHT
+    : gameHeightForViewport(window.innerWidth, window.innerHeight);
 
 /*
  * 物理エンジンは使わない (グリッド移動は tween + 自前 walkable 判定)。

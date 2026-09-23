@@ -13,6 +13,7 @@ import { inputModeFor } from "@/lib/inputMode";
 import { dqWindow, actionButton, UI_COLORS } from "@/components/uiTheme";
 import { MathChoices } from "@/components/MathChoices";
 import { Keypad } from "@/components/Keypad";
+import { ProblemFigure } from "@/components/ProblemFigure";
 
 /*
  * ほこら/まなびやの「おさらい」(学びの設計 LP-11 §3.6)。EventBus
@@ -259,6 +260,7 @@ export function ReviewScreen() {
         >
           {state.problem.text}
         </p>
+        <ProblemFigure problem={state.problem} />
         {inputMode === "keypad" ? (
           <Keypad
             key={`${state.skillIndex}-${state.questionIndex}`}

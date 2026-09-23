@@ -5,7 +5,8 @@
  */
 
 import { EventBus } from "../EventBus";
-import { autosave, getProfileId, updateSave } from "../session";
+import { autosave, getProfileId, getSave, updateSave } from "../session";
+import { effectiveTimeLimit } from "../../lib/answerTime";
 import { recordAnswer } from "../../lib/save";
 import { recordLearning } from "../../lib/learning";
 import type { MistakeEntry } from "../../lib/mistakes";
@@ -105,7 +106,8 @@ export function requestBattleMath(
   EventBus.emit("math-prompt", {
     requestId,
     skillIds,
-    timeLimitMs,
+    /* せってい の「こたえる じかん」(ゆっくり 1.6倍 / なし)。かいしんは もとの秒数で判定 */
+    timeLimitMs: effectiveTimeLimit(timeLimitMs, getSave().settings.answerTime),
     context: "battle",
   });
 }

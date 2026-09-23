@@ -83,7 +83,13 @@ export const CH6_WORLD: MapDef = {
       y: 5,
       art: "scholar",
       movement: "static",
-      hideIf: { flag: "c6.enSeal", op: "set" },
+      /*
+       * 試練の前は 行き止まりなので、一度 中に入った勇者も通す
+       * (通さないと "from-trial" で出てきた勇者が 閉じこめられる)。
+       */
+      hideIf: {
+        any: [{ flag: "c6.enSeal", op: "set" }, { flag: "c6.enteredTrial", op: "set" }],
+      },
       dialog: [
         {
           pages: [
@@ -116,6 +122,16 @@ export const CH6_WORLD: MapDef = {
             "はやさ・円・ピタゴラ。すべてが そろわねば 門は ひらかぬ。",
             "そして 分数・比・はやさの力、3つとも「できる」に なっておるか。",
             "…そなたの 父も、この 門の 前で とらわれたと きく。",
+          ],
+          /* その場で まなべる (めあて パネル → 前提チェックつきの レッスン)。
+             「まなびやへ いけ」と言われても 子どもは 迷うので、物語の とびらから 直接 つなぐ */
+          then: [
+            {
+              type: "choice",
+              prompt: "とびらを ひらく さんすうを いま まなぶ?",
+              yes: [{ type: "openGoals" }],
+              no: [{ type: "message", pages: ["いつでも 「★ めあて」から まなべるぞ。"] }],
+            },
           ],
         },
       ],
@@ -155,7 +171,11 @@ export const CH6_WORLD: MapDef = {
       x: 21,
       y: 4,
       trigger: "step",
-      commands: [{ type: "transfer", mapId: "ch6-trial", spawn: "entrance" }],
+      /* setFlag は transfer より前に置く (transfer は残りのコマンドを打ち切る) */
+      commands: [
+        { type: "setFlag", flag: "c6.enteredTrial" },
+        { type: "transfer", mapId: "ch6-trial", spawn: "entrance" },
+      ],
     },
     {
       id: "enter-zerom",
